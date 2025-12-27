@@ -1,15 +1,20 @@
 import { Trash2, Store, Calendar, DollarSign, Tag } from "lucide-react";
 import "./ExpenseList.css";
 
-const ExpenseList = ({ expenses, onExpenseDeleted }) => {
+const ExpenseList = ({ expenses, onExpenseDeleted, token }) => {
   const handleDelete = async (id) => {
     if (!window.confirm("Are you sure you want to delete this expense?")) {
       return;
     }
 
     try {
+      const headers = {};
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(`http://localhost:8000/api/expenses/${id}`, {
         method: "DELETE",
+        headers,
       });
 
       if (response.ok) {

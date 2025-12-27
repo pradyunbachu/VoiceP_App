@@ -2,7 +2,7 @@ import { useState, useRef } from "react";
 import { Mic, Square, Loader2, Type } from "lucide-react";
 import "./VoiceRecorder.css";
 
-const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
+const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [extractedExpense, setExtractedExpense] = useState(null);
@@ -169,13 +169,17 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
     try {
       console.log("Processing transcript:", transcriptText);
       // Extract expense information directly (skip transcription step)
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const extractResponse = await fetch(
         "http://localhost:8000/api/extract-expense",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({ transcript: transcriptText }),
         }
       );
@@ -227,13 +231,17 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
   const processExpenseSimple = async (transcriptText) => {
     // Use simple regex-based extraction as fallback
     try {
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const response = await fetch(
         "http://localhost:8000/api/extract-expense-simple",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({ transcript: transcriptText }),
         }
       );
@@ -286,13 +294,17 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
       setTranscript(transcriptData.transcript);
 
       // Step 2: Extract expense information
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const extractResponse = await fetch(
         "http://localhost:8000/api/extract-expense",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({ transcript: transcriptData.transcript }),
         }
       );
@@ -341,13 +353,17 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
     setExtractedExpense(null);
 
     try {
+      const headers = {
+        "Content-Type": "application/json",
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
       const extractResponse = await fetch(
         "http://localhost:8000/api/extract-expense",
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
+          headers,
           body: JSON.stringify({ transcript: manualInput }),
         }
       );

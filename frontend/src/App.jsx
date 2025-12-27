@@ -1,20 +1,45 @@
 import { useState, useEffect } from 'react'
 import Navigation from './components/Navigation'
 import LandingPage from './components/LandingPage'
+import Login from './components/Login'
 import VoiceRecorder from './components/VoiceRecorder'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 import ExpenseList from './components/ExpenseList'
 import './App.css'
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false)
+  const [token, setToken] = useState(null)
+  const [user, setUser] = useState(null)
   const [currentView, setCurrentView] = useState('landing')
   const [expenses, setExpenses] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(false)
 
+  // Check for existing token on mount
+  useEffect(() => {
+    const storedToken = localStorage.getItem('token')
+    const storedUser = localStorage.getItem('user')
+    if (storedToken && storedUser) {
+      setToken(storedToken)
+      setUser(JSON.parse(storedUser))
+      setIsAuthenticated(true)
+      setCurrentView('dashboard')
+    }
+  }, [])
+
   const fetchExpenses = async () => {
+    if (!token) return
     try {
-      const response = await fetch('http://localhost:8000/api/expenses')
+      const response = await fetch('http://localhost:8000/api/expenses', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (response.status === 401) {
+        handleLogout()
+        return
+      }
       const data = await response.json()
       setExpenses(data.expenses || [])
     } catch (error) {
@@ -23,8 +48,17 @@ function App() {
   }
 
   const fetchAnalytics = async () => {
+    if (!token) return
     try {
-      const response = await fetch('http://localhost:8000/api/analytics')
+      const response = await fetch('http://localhost:8000/api/analytics', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (response.status === 401) {
+        handleLogout()
+        return
+      }
       const data = await response.json()
       setAnalytics(data)
     } catch (error) {
@@ -33,12 +67,12 @@ function App() {
   }
 
   useEffect(() => {
-    if (currentView !== 'landing') {
+    if (isAuthenticated && currentView !== 'landing' && currentView !== 'login') {
       fetchExpenses()
       fetchAnalytics()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView])
+  }, [currentView, isAuthenticated, token])
 
   const handleExpenseAdded = () => {
     fetchExpenses()
@@ -57,8 +91,16 @@ function App() {
 
     try {
       const response = await fetch('http://localhost:8000/api/expenses', {
-        method: 'DELETE'
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       })
+
+      if (response.status === 401) {
+        handleLogout()
+        return
+      }
 
       if (response.ok) {
         fetchExpenses()
@@ -72,10 +114,33 @@ function App() {
     }
   }
 
+  const handleLogin = (newToken, userData) => {
+    setToken(newToken)
+    setUser(userData)
+    setIsAuthenticated(true)
+    setCurrentView('dashboard')
+  }
+
+  const handleLogout = () => {
+    localStorage.removeItem('token')
+    localStorage.removeItem('user')
+    setToken(null)
+    setUser(null)
+    setIsAuthenticated(false)
+    setCurrentView('login')
+    setExpenses([])
+    setAnalytics(null)
+  }
+
   const renderView = () => {
+    if (!isAuthenticated) {
+      if (currentView === 'landing') {
+        return <LandingPage onGetStarted={() => setCurrentView('login')} />
+      }
+      return <Login onLogin={handleLogin} />
+    }
+
     switch (currentView) {
-      case 'landing':
-        return <LandingPage onGetStarted={() => setCurrentView('record')} />
       case 'record':
         return (
           <div className="view-container">
@@ -83,6 +148,7 @@ function App() {
               onExpenseAdded={handleExpenseAdded}
               loading={loading}
               setLoading={setLoading}
+              token={token}
             />
           </div>
         )
@@ -105,6 +171,7 @@ function App() {
             <ExpenseList 
               expenses={expenses}
               onExpenseDeleted={handleExpenseDeleted}
+              token={token}
             />
           </div>
         )
@@ -115,6 +182,7 @@ function App() {
               onExpenseAdded={handleExpenseAdded}
               loading={loading}
               setLoading={setLoading}
+              token={token}
             />
           </div>
         )
@@ -123,10 +191,14 @@ function App() {
 
   return (
     <div className="app">
-      <Navigation 
-        currentView={currentView} 
-        onViewChange={setCurrentView}
-      />
+      {isAuthenticated && (
+        <Navigation 
+          currentView={currentView} 
+          onViewChange={setCurrentView}
+          onLogout={handleLogout}
+          user={user}
+        />
+      )}
       <main className="app-main">
         {renderView()}
       </main>

@@ -1,10 +1,10 @@
-import { Mic, BarChart3, List } from "lucide-react";
+import { Mic, BarChart3, List, LogOut } from "lucide-react";
 import "./Navigation.css";
 
-const Navigation = ({ currentView, onViewChange }) => {
+const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
   return (
     <nav className="navigation">
-      <div className="nav-logo" onClick={() => onViewChange("landing")}>
+      <div className="nav-logo" onClick={() => onViewChange("dashboard")}>
         <Mic size={20} />
         <span>Voxalyze</span>
       </div>
@@ -29,6 +29,12 @@ const Navigation = ({ currentView, onViewChange }) => {
         >
           <List size={18} />
           <span>Expenses</span>
+        </button>
+      </div>
+      <div className="nav-user">
+        {user && <span className="nav-username">{user.username}</span>}
+        <button className="nav-logout" onClick={onLogout} title="Logout">
+          <LogOut size={18} />
         </button>
       </div>
     </nav>

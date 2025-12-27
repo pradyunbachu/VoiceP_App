@@ -40,7 +40,8 @@ const Login = ({ onLogin }) => {
 
       const data = await response.json();
       localStorage.setItem("token", data.access_token);
-      onLogin(data.access_token);
+      localStorage.setItem("user", JSON.stringify(data.user));
+      onLogin(data.access_token, data.user);
     } catch (error) {
       setError(error.message);
     } finally {
@@ -88,11 +89,11 @@ const Login = ({ onLogin }) => {
               onChange={(e) => setPassword(e.target.value)}
               required
               placeholder="Enter your password"
-              maxLength={72}
+              minLength={6}
             />
             {!isLogin && (
               <small style={{ color: '#a0a0a0', fontSize: '0.8rem', marginTop: '0.25rem' }}>
-                Must be 4-72 characters
+                Must be at least 6 characters
               </small>
             )}
           </div>

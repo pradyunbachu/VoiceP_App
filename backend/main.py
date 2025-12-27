@@ -1,9 +1,10 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Body
+from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel
 from typing import List, Optional
-from datetime import datetime
+from datetime import datetime, timedelta
 import sqlite3
 import json
 import os
@@ -12,11 +13,24 @@ from groq import Groq
 import io
 import base64
 from dotenv import load_dotenv
+from jose import JWTError, jwt
+from passlib.context import CryptContext
 
 # Load environment variables
 load_dotenv()
 
 app = FastAPI(title="Voxalyze Expense Tracker API")
+
+# JWT Configuration
+SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
+
+# Password hashing
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+# Security
+security = HTTPBearer()
 
 
 # CORS middleware
@@ -42,18 +56,38 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Create expenses table (no user_id needed)
+    # Create users table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT UNIQUE NOT NULL,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL
+        )
+    """)
+    
+    # Create expenses table with user_id
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
             store TEXT NOT NULL,
             items TEXT NOT NULL,
             category TEXT,
             amount REAL,
             date TEXT NOT NULL,
-            created_at TEXT NOT NULL
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id)
         )
     """)
+    
+    # Add user_id column if it doesn't exist (migration for existing databases)
+    try:
+        cursor.execute("ALTER TABLE expenses ADD COLUMN user_id INTEGER")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, ignore
+        pass
     
     # Add category column if it doesn't exist (migration for existing databases)
     try:
@@ -67,6 +101,71 @@ def init_db():
     conn.close()
 
 init_db()
+
+# Authentication helper functions
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verify a password against a hash - handles bcrypt 72 byte limit"""
+    # Truncate password if needed (same logic as hashing)
+    password_bytes = plain_password.encode('utf-8')
+    if len(password_bytes) > 72:
+        truncated = password_bytes[:70]
+        while truncated and (truncated[-1] & 0xC0) == 0x80:
+            truncated = truncated[:-1]
+        plain_password = truncated.decode('utf-8', errors='ignore')
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password: str) -> str:
+    """Hash a password - bcrypt has a 72 byte limit, so we truncate if necessary"""
+    # Convert to bytes to check length
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        # Truncate to 70 bytes (conservative) to avoid cutting UTF-8 characters
+        # Find the last complete UTF-8 character before 70 bytes
+        truncated = password_bytes[:70]
+        # Remove any incomplete UTF-8 sequences at the end
+        while truncated and (truncated[-1] & 0xC0) == 0x80:
+            truncated = truncated[:-1]
+        password = truncated.decode('utf-8', errors='ignore')
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    """Create a JWT access token"""
+    to_encode = data.copy()
+    if expires_delta:
+        expire = datetime.utcnow() + expires_delta
+    else:
+        expire = datetime.utcnow() + timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    to_encode.update({"exp": expire})
+    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    return encoded_jwt
+
+async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    """Get the current authenticated user from JWT token"""
+    credentials_exception = HTTPException(
+        status_code=401,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        token = credentials.credentials
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: int = payload.get("sub")
+        if user_id is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    # Verify user exists
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("SELECT id, username FROM users WHERE id = ?", (user_id,))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if user is None:
+        raise credentials_exception
+    
+    return {"id": user[0], "username": user[1]}
 
 def extract_expense_simple(transcript: str) -> dict:
     """Simple regex-based expense extraction as fallback when Groq is unavailable"""
@@ -314,8 +413,90 @@ async def transcribe_audio(audio: UploadFile = File(...)):
 class TranscriptRequest(BaseModel):
     transcript: str
 
+class UserRegister(BaseModel):
+    username: str
+    password: str
+
+class UserLogin(BaseModel):
+    username: str
+    password: str
+
+# Authentication endpoints
+@app.post("/api/register")
+async def register(user_data: UserRegister):
+    """Register a new user"""
+    # Validate username
+    if not user_data.username or len(user_data.username.strip()) < 3:
+        raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    
+    # Validate password
+    if not user_data.password or len(user_data.password) < 6:
+        raise HTTPException(status_code=400, detail="Password must be at least 6 characters")
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Check if username already exists
+    cursor.execute("SELECT id FROM users WHERE username = ?", (user_data.username,))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Username already exists")
+    
+    # Create user
+    password_hash = get_password_hash(user_data.password)
+    cursor.execute("""
+        INSERT INTO users (username, password_hash, created_at)
+        VALUES (?, ?, ?)
+    """, (user_data.username, password_hash, datetime.now().isoformat()))
+    user_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    # Create access token
+    access_token = create_access_token(data={"sub": user_id})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {"id": user_id, "username": user_data.username}
+    }
+
+@app.post("/api/login")
+async def login(user_data: UserLogin):
+    """Login and get access token"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Get user
+    cursor.execute("SELECT id, username, password_hash FROM users WHERE username = ?", (user_data.username,))
+    user = cursor.fetchone()
+    conn.close()
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    
+    user_id, username, password_hash = user
+    
+    # Verify password
+    if not verify_password(user_data.password, password_hash):
+        raise HTTPException(status_code=401, detail="Incorrect username or password")
+    
+    # Create access token
+    access_token = create_access_token(data={"sub": user_id})
+    
+    return {
+        "access_token": access_token,
+        "token_type": "bearer",
+        "user": {"id": user_id, "username": username}
+    }
+
+@app.get("/api/me")
+async def get_current_user_info(current_user: dict = Depends(get_current_user_dependency)):
+    """Get current user information"""
+    return current_user
+
 @app.post("/api/extract-expense-simple")
-async def extract_expense_simple_endpoint(request: TranscriptRequest):
+async def extract_expense_simple_endpoint(request: TranscriptRequest, current_user: dict = Depends(get_current_user_dependency)):
     """Extract expense information using simple regex (no API needed)"""
     transcript = request.transcript
     if not transcript or len(transcript.strip()) == 0:
@@ -324,13 +505,13 @@ async def extract_expense_simple_endpoint(request: TranscriptRequest):
     try:
         expense_data = extract_expense_simple(transcript)
         
-        # Save to database
+        # Save to database with user_id
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO expenses (store, items, category, amount, date, created_at)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
+            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (current_user["id"], expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
               expense_data["date"], datetime.now().isoformat()))
         expense_id = cursor.lastrowid
         conn.commit()
@@ -348,7 +529,7 @@ async def extract_expense_simple_endpoint(request: TranscriptRequest):
         raise HTTPException(status_code=500, detail=f"Simple extraction error: {str(e)}")
 
 @app.post("/api/extract-expense")
-async def extract_expense(request: TranscriptRequest):
+async def extract_expense(request: TranscriptRequest, current_user: dict = Depends(get_current_user_dependency)):
     """Extract expense information from transcript using Groq (primary) or simple extraction (fallback)"""
     transcript = request.transcript
     if not transcript or len(transcript.strip()) == 0:
@@ -411,13 +592,13 @@ async def extract_expense(request: TranscriptRequest):
             amount = expense_data.get("amount")
             date = expense_data.get("date", datetime.now().strftime("%Y-%m-%d"))
             
-            # Save to database
+            # Save to database with user_id
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO expenses (store, items, category, amount, date, created_at)
-                VALUES (?, ?, ?, ?, ?, ?)
-            """, (store, items, category, amount, date, datetime.now().isoformat()))
+                INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            """, (current_user["id"], store, items, category, amount, date, datetime.now().isoformat()))
             expense_id = cursor.lastrowid
             conn.commit()
             conn.close()
@@ -443,13 +624,13 @@ async def extract_expense(request: TranscriptRequest):
     expense_data = extract_expense_simple(transcript)
     print(f"Simple extraction result: {expense_data}")
     
-    # Save to database
+    # Save to database with user_id
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO expenses (store, items, category, amount, date, created_at)
-        VALUES (?, ?, ?, ?, ?, ?)
-    """, (expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
+        INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    """, (current_user["id"], expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
           expense_data["date"], datetime.now().isoformat()))
     expense_id = cursor.lastrowid
     conn.commit()
@@ -466,12 +647,12 @@ async def extract_expense(request: TranscriptRequest):
     }
 
 @app.get("/api/expenses")
-async def get_expenses():
-    """Get all expenses"""
+async def get_expenses(current_user: dict = Depends(get_current_user_dependency)):
+    """Get all expenses for the current user"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM expenses ORDER BY created_at DESC")
+    cursor.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY created_at DESC", (current_user["id"],))
     rows = cursor.fetchall()
     conn.close()
     
@@ -586,12 +767,12 @@ async def db_viewer():
     return HTMLResponse(content=html)
 
 @app.get("/api/analytics")
-async def get_analytics():
-    """Get analytics data"""
+async def get_analytics(current_user: dict = Depends(get_current_user_dependency)):
+    """Get analytics data for the current user"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM expenses")
+    cursor.execute("SELECT * FROM expenses WHERE user_id = ?", (current_user["id"],))
     rows = cursor.fetchall()
     conn.close()
     
@@ -646,11 +827,11 @@ async def get_analytics():
     }
 
 @app.delete("/api/expenses/{expense_id}")
-async def delete_expense(expense_id: int):
-    """Delete an expense"""
+async def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
+    """Delete an expense (only if it belongs to the current user)"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM expenses WHERE id = ?", (expense_id,))
+    cursor.execute("DELETE FROM expenses WHERE id = ? AND user_id = ?", (expense_id, current_user["id"]))
     conn.commit()
     deleted = cursor.rowcount
     conn.close()
@@ -661,11 +842,11 @@ async def delete_expense(expense_id: int):
     return {"message": "Expense deleted successfully"}
 
 @app.delete("/api/expenses")
-async def delete_all_expenses():
-    """Delete all expenses"""
+async def delete_all_expenses(current_user: dict = Depends(get_current_user_dependency)):
+    """Delete all expenses for the current user"""
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("DELETE FROM expenses")
+    cursor.execute("DELETE FROM expenses WHERE user_id = ?", (current_user["id"],))
     conn.commit()
     deleted = cursor.rowcount
     conn.close()
