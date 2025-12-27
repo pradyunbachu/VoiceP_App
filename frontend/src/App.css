@@ -1,0 +1,26 @@
+.app {
+  min-height: 100vh;
+  padding: 0;
+  max-width: 100%;
+  margin: 0;
+}
+
+.app-main {
+  padding-top: 80px;
+  min-height: calc(100vh - 80px);
+}
+
+.view-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 3rem 2rem;
+}
+
+.loading-state {
+  text-align: center;
+  color: #a0a0a0;
+  padding: 3rem;
+  font-size: 1.1rem;
+}
+
+
