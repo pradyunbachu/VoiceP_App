@@ -50,6 +50,28 @@ function App() {
     fetchAnalytics()
   }
 
+  const handleClearAll = async () => {
+    if (!window.confirm("Are you sure you want to delete ALL expenses? This action cannot be undone.")) {
+      return
+    }
+
+    try {
+      const response = await fetch('http://localhost:8000/api/expenses', {
+        method: 'DELETE'
+      })
+
+      if (response.ok) {
+        fetchExpenses()
+        fetchAnalytics()
+      } else {
+        alert("Failed to clear all expenses")
+      }
+    } catch (error) {
+      console.error('Error clearing expenses:', error)
+      alert("Error clearing expenses")
+    }
+  }
+
   const renderView = () => {
     switch (currentView) {
       case 'landing':
@@ -68,7 +90,10 @@ function App() {
         return (
           <div className="view-container">
             {analytics ? (
-              <AnalyticsDashboard analytics={analytics} />
+              <AnalyticsDashboard 
+                analytics={analytics} 
+                onClearAll={handleClearAll}
+              />
             ) : (
               <div className="loading-state">Loading analytics...</div>
             )}
@@ -84,13 +109,24 @@ function App() {
           </div>
         )
       default:
-        return <LandingPage onGetStarted={() => setCurrentView('record')} />
+        return (
+          <div className="view-container">
+            <VoiceRecorder 
+              onExpenseAdded={handleExpenseAdded}
+              loading={loading}
+              setLoading={setLoading}
+            />
+          </div>
+        )
     }
   }
 
   return (
     <div className="app">
-      <Navigation currentView={currentView} onViewChange={setCurrentView} />
+      <Navigation 
+        currentView={currentView} 
+        onViewChange={setCurrentView}
+      />
       <main className="app-main">
         {renderView()}
       </main>

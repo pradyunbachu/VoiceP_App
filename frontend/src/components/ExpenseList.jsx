@@ -1,4 +1,4 @@
-import { Trash2, Store, Calendar, DollarSign } from "lucide-react";
+import { Trash2, Store, Calendar, DollarSign, Tag } from "lucide-react";
 import "./ExpenseList.css";
 
 const ExpenseList = ({ expenses, onExpenseDeleted }) => {
@@ -56,6 +56,17 @@ const ExpenseList = ({ expenses, onExpenseDeleted }) => {
             <div className="expense-items">
               <p>{expense.items}</p>
             </div>
+
+            {expense.category && (
+              <div className="expense-categories">
+                {expense.category.split(",").map((cat, index) => (
+                  <div key={index} className="expense-category">
+                    <Tag size={14} />
+                    <span>{cat.trim()}</span>
+                  </div>
+                ))}
+              </div>
+            )}
 
             <div className="expense-footer">
               {expense.amount && (

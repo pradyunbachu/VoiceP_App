@@ -73,6 +73,26 @@
   min-height: 2.5rem;
 }
 
+.expense-categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.expense-category {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0.75rem;
+  background: rgba(123, 47, 247, 0.2);
+  border: 1px solid rgba(123, 47, 247, 0.4);
+  border-radius: 12px;
+  color: #b794f6;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
 .expense-footer {
   display: flex;
   justify-content: space-between;

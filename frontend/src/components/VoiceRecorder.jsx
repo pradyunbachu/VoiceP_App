@@ -11,6 +11,8 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
   const [error, setError] = useState("");
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
+  const recognitionRef = useRef(null);
+  const userStoppedRef = useRef(false);
 
   const startRecording = async () => {
     try {
@@ -24,30 +26,57 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
           window.SpeechRecognition || window.webkitSpeechRecognition;
         const recognition = new SpeechRecognition();
 
-        recognition.continuous = false;
-        recognition.interimResults = false;
+        recognition.continuous = true; // Keep listening continuously
+        recognition.interimResults = true; // Show interim results
         recognition.lang = "en-US";
 
-        recognition.onresult = async (event) => {
-          const transcriptText = event.results[0][0].transcript;
-          console.log("Transcript received:", transcriptText);
-          setTranscript(transcriptText);
-          setLoading(true);
-          await processTranscript(transcriptText);
+        recognition.onresult = (event) => {
+          // Combine all results including interim
+          let interimTranscript = "";
+          let finalTranscript = "";
+
+          for (let i = 0; i < event.results.length; i++) {
+            const transcript = event.results[i][0].transcript;
+            if (event.results[i].isFinal) {
+              finalTranscript += transcript + " ";
+            } else {
+              interimTranscript += transcript;
+            }
+          }
+
+          // Update transcript with both final and interim results
+          const fullTranscript = finalTranscript + interimTranscript;
+          setTranscript(fullTranscript.trim());
         };
 
         recognition.onerror = (event) => {
           console.error("Speech recognition error:", event.error);
-          setError(`Speech recognition error: ${event.error}`);
-          setLoading(false);
-          setIsRecording(false);
+          // Only show error if user didn't manually stop
+          if (!userStoppedRef.current) {
+            setError(`Speech recognition error: ${event.error}`);
+            setLoading(false);
+            setIsRecording(false);
+          }
         };
 
         recognition.onend = () => {
-          setIsRecording(false);
+          // Only restart if user didn't manually stop
+          if (!userStoppedRef.current && isRecording) {
+            // Restart recognition if it ended unexpectedly
+            try {
+              recognition.start();
+            } catch (error) {
+              console.error("Error restarting recognition:", error);
+              setIsRecording(false);
+            }
+          } else {
+            setIsRecording(false);
+          }
         };
 
+        recognitionRef.current = recognition;
         mediaRecorderRef.current = recognition;
+        userStoppedRef.current = false;
         recognition.start();
         setIsRecording(true);
       } else {
@@ -99,7 +128,15 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
     }
   };
 
-  const stopRecording = () => {
+  const stopRecording = async () => {
+    userStoppedRef.current = true; // Mark that user manually stopped
+
+    if (recognitionRef.current) {
+      // Stop Web Speech API recognition
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+
     if (mediaRecorderRef.current && isRecording) {
       // Check if it's Web Speech API or MediaRecorder
       if (
@@ -114,7 +151,14 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
           mediaRecorderRef.current.stop();
         }
       }
-      setIsRecording(false);
+    }
+
+    setIsRecording(false);
+
+    // Process the final transcript if we have one
+    if (transcript.trim()) {
+      setLoading(true);
+      await processTranscript(transcript.trim());
     }
   };
 
@@ -419,6 +463,15 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading }) => {
             <p>
               <strong>Items:</strong> {extractedExpense.items}
             </p>
+            {extractedExpense.category && (
+              <p>
+                <strong>Category:</strong>{" "}
+                {extractedExpense.category
+                  .split(",")
+                  .map((cat) => cat.trim())
+                  .join(", ")}
+              </p>
+            )}
             {extractedExpense.amount && (
               <p>
                 <strong>Amount:</strong> ${extractedExpense.amount.toFixed(2)}

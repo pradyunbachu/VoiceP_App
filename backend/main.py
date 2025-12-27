@@ -16,7 +16,8 @@ from dotenv import load_dotenv
 # Load environment variables
 load_dotenv()
 
-app = FastAPI(title="VoiceP Expense Tracker API")
+app = FastAPI(title="Voxalyze Expense Tracker API")
+
 
 # CORS middleware
 app.add_middleware(
@@ -40,16 +41,28 @@ DB_PATH = "expenses.db"
 def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
+    
+    # Create expenses table (no user_id needed)
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS expenses (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
             store TEXT NOT NULL,
             items TEXT NOT NULL,
+            category TEXT,
             amount REAL,
             date TEXT NOT NULL,
             created_at TEXT NOT NULL
         )
     """)
+    
+    # Add category column if it doesn't exist (migration for existing databases)
+    try:
+        cursor.execute("ALTER TABLE expenses ADD COLUMN category TEXT")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, ignore
+        pass
+    
     conn.commit()
     conn.close()
 
@@ -117,29 +130,146 @@ def extract_expense_simple(transcript: str) -> dict:
             store = match.group(1)
             break
     
-    # Extract items (look for list after dash or comma, or common item words)
+    # Extract items - improved logic to avoid store names
     items = ""
-    # Try to find items after a dash or in a list
-    items_match = re.search(r'[-–—]\s*(.+?)(?:\s+for|\s+at|\s+from|$)', transcript, re.IGNORECASE)
+    
+    # First, identify the store name to exclude it from items
+    store_lower = store.lower() if store != "Unknown Store" else ""
+    
+    # Pattern 1: Items after dash (e.g., "groceries - milk, bread, eggs")
+    items_match = re.search(r'[-–—]\s*(.+?)(?:\s+for|\s+at|\s+from|\s+\$|$)', transcript, re.IGNORECASE)
     if items_match:
         items = items_match.group(1).strip()
-    else:
-        # Try to extract common item words
-        item_words = ['milk', 'bread', 'eggs', 'groceries', 'food', 'coffee', 'gas', 'gasoline', 'bananas', 'banana', 'apple', 'apples']
-        found_items = [word for word in item_words if word in transcript_lower]
-        if found_items:
-            items = ', '.join(found_items)
-        else:
-            # Try to find any noun-like words before the store name
-            # Look for words before "at" or "from"
-            before_store = re.search(r'(.+?)\s+(?:at|from)\s+', transcript, re.IGNORECASE)
-            if before_store:
-                # Remove common verbs and articles
-                text = before_store.group(1).lower()
-                text = re.sub(r'\b(bought|got|purchased|brought|i|a|an|the|some)\b', '', text)
+        # Clean up: remove trailing store names or amounts
+        items = re.sub(r'\s+(?:at|from|for)\s+.*$', '', items, flags=re.IGNORECASE)
+        items = re.sub(r'\s+\$?\d+.*$', '', items)  # Remove trailing amounts
+    
+    # Pattern 2: Items before "at" or "from" (e.g., "bought laptop MacBook from Apple")
+    if not items:
+        # Look for "bought [item] from [store]" or "bought [item] at [store]"
+        before_store = re.search(r'(?:bought|got|purchased|brought)\s+(?:a|an|the|some)?\s*(.+?)\s+(?:at|from)\s+', transcript, re.IGNORECASE)
+        if before_store:
+            text = before_store.group(1).strip()
+            # Remove articles at the start
+            text = re.sub(r'^\s*(a|an|the|some)\s+', '', text, flags=re.IGNORECASE)
+            # Remove trailing "for" or amounts
+            text = re.sub(r'\s+for\s+.*$', '', text, flags=re.IGNORECASE)
+            text = re.sub(r'\s+\$?\d+.*$', '', text)
+            # Remove the store name if it appears in the items
+            if store_lower:
+                text = re.sub(r'\b' + re.escape(store_lower) + r'\b', '', text, flags=re.IGNORECASE)
+            text = text.strip()
+            if text and len(text) > 2:  # Make sure we have actual content
                 items = text.strip()
-                if items:
-                    items = items.title()  # Capitalize first letter of each word
+    
+    # Pattern 3: Items after "for" but before store (e.g., "spent $1000 for laptop at Apple")
+    if not items:
+        after_for = re.search(r'for\s+\$?\d+.*?\s+(.+?)(?:\s+at|\s+from|$)', transcript, re.IGNORECASE)
+        if not after_for:
+            after_for = re.search(r'for\s+(.+?)(?:\s+at|\s+from|\s+\$|$)', transcript, re.IGNORECASE)
+        if after_for:
+            text = after_for.group(1).strip()
+            # Remove store names and amounts
+            text = re.sub(r'\s+(?:at|from)\s+.*$', '', text, flags=re.IGNORECASE)
+            text = re.sub(r'\s+\$?\d+.*$', '', text)
+            # Remove the store name if it appears
+            if store_lower:
+                text = re.sub(r'\b' + re.escape(store_lower) + r'\b', '', text, flags=re.IGNORECASE)
+            text = text.strip()
+            if text and len(text) > 2:
+                items = text.strip()
+    
+    # Pattern 4: Extract item words that are NOT the store name
+    if not items:
+        # Common item keywords
+        item_keywords = ['laptop', 'computer', 'macbook', 'iphone', 'ipad', 'phone', 'tablet', 
+                        'groceries', 'food', 'milk', 'bread', 'eggs', 'coffee', 'gas', 'gasoline',
+                        'banana', 'bananas', 'book', 'books', 'shirt', 'shirts', 'shoes', 'pants', 'jacket']
+        
+        # Find item keywords in transcript
+        found_items = []
+        for keyword in item_keywords:
+            if keyword in transcript_lower:
+                # Make sure it's not part of the store name
+                if store_lower and keyword in store_lower:
+                    continue
+                # Check if keyword appears before "from" or "at"
+                keyword_pos = transcript_lower.find(keyword)
+                store_marker_pos = min(
+                    transcript_lower.find(' from ', keyword_pos),
+                    transcript_lower.find(' at ', keyword_pos)
+                )
+                if store_marker_pos == -1:
+                    store_marker_pos = len(transcript_lower)
+                # If keyword is before store marker, it's likely an item
+                if keyword_pos < store_marker_pos:
+                    found_items.append(keyword)
+        
+        if found_items:
+            # Take the first meaningful item (prefer longer/more specific ones)
+            items = max(found_items, key=len).title()
+    
+    # Final cleanup: remove store name if it somehow got in
+    if items and store_lower:
+        items_clean = re.sub(r'\b' + re.escape(store_lower) + r'\b', '', items, flags=re.IGNORECASE)
+        items_clean = ' '.join(items_clean.split())  # Normalize whitespace
+        if items_clean and len(items_clean) > 2:
+            items = items_clean.strip()
+    
+    # Clean up items: remove extra whitespace, capitalize properly
+    if items:
+        items = ' '.join(items.split())  # Normalize whitespace
+        # Don't capitalize if it's already a proper noun (like "MacBook")
+        if items.lower() not in ['apple', 'google', 'microsoft', 'amazon', 'walmart', 'target', 'macbook', 'iphone', 'ipad']:
+            items = items.title()
+    
+    # Extract categories based on items and store (can have multiple categories)
+    categories = []
+    transcript_lower = transcript.lower()
+    items_lower = items.lower() if items else ""
+    
+    # Category mapping based on keywords
+    category_keywords = {
+        "Electronics": ["laptop", "computer", "macbook", "iphone", "ipad", "phone", "tablet", "tv", "television", "headphones", "speaker", "camera", "gaming", "console", "nintendo", "playstation", "xbox", "electronic", "device"],
+        "Groceries": ["groceries", "milk", "bread", "eggs", "food", "banana", "bananas", "apple", "apples", "vegetables", "fruit", "fruits", "meat", "chicken", "beef", "pork", "fish", "dairy", "cheese", "yogurt", "produce"],
+        "Clothing": ["shirt", "shirts", "pants", "jacket", "shoes", "sneakers", "dress", "jeans", "sweater", "hoodie", "clothes", "clothing", "apparel"],
+        "Transportation": ["gas", "gasoline", "fuel", "uber", "lyft", "taxi", "bus", "train", "flight", "airline", "parking"],
+        "Dining": ["restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "pizza", "burger", "fast food", "takeout"],
+        "Entertainment": ["movie", "cinema", "netflix", "spotify", "game", "games", "book", "books", "magazine", "subscription"],
+        "Health": ["pharmacy", "medicine", "prescription", "vitamin", "supplement", "gym", "fitness", "doctor", "hospital"],
+        "Home": ["furniture", "bed", "chair", "table", "sofa", "couch", "lamp", "decor", "kitchen", "appliance", "refrigerator", "washer", "dryer"],
+        "Utilities": ["electric", "electricity", "water", "internet", "phone bill", "cable", "utility"],
+        "Other": []
+    }
+    
+    # Check for category matches - can match multiple categories
+    matched_categories = set()
+    for cat, keywords in category_keywords.items():
+        if cat == "Other":
+            continue  # Skip "Other" for now
+        for keyword in keywords:
+            if keyword in transcript_lower or keyword in items_lower:
+                matched_categories.add(cat)
+                break
+    
+    # If categories found, use them; otherwise try to infer from store
+    if matched_categories:
+        categories = sorted(list(matched_categories))  # Sort for consistency
+    else:
+        store_lower = store.lower() if store != "Unknown Store" else ""
+        if any(word in store_lower for word in ["walmart", "target", "kroger", "safeway", "whole foods", "trader joe"]):
+            categories = ["Groceries"]
+        elif any(word in store_lower for word in ["apple", "best buy", "microcenter", "fry's"]):
+            categories = ["Electronics"]
+        elif any(word in store_lower for word in ["nike", "adidas", "h&m", "zara", "old navy"]):
+            categories = ["Clothing"]
+        elif any(word in store_lower for word in ["shell", "chevron", "bp", "exxon", "mobil"]):
+            categories = ["Transportation"]
+        else:
+            categories = ["Other"]
+    
+    # Join multiple categories with comma
+    category = ", ".join(categories) if categories else "Other"
     
     # Use today's date
     date = datetime.now().strftime("%Y-%m-%d")
@@ -147,6 +277,7 @@ def extract_expense_simple(transcript: str) -> dict:
     return {
         "store": store,
         "items": items if items else "Various items",
+        "category": category,
         "amount": amount,
         "date": date
     }
@@ -155,6 +286,7 @@ class ExpenseResponse(BaseModel):
     id: int
     store: str
     items: str
+    category: Optional[str]
     amount: Optional[float]
     date: str
     created_at: str
@@ -163,12 +295,13 @@ class AnalyticsResponse(BaseModel):
     total_expenses: float
     expense_count: int
     expenses_by_store: dict
+    expenses_by_category: dict
     expenses_by_date: List[dict]
     recent_expenses: List[ExpenseResponse]
 
 @app.get("/")
 async def root():
-    return {"message": "VoiceP Expense Tracker API"}
+    return {"message": "Voxalyze Expense Tracker API"}
 
 @app.post("/api/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
@@ -195,9 +328,9 @@ async def extract_expense_simple_endpoint(request: TranscriptRequest):
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute("""
-            INSERT INTO expenses (store, items, amount, date, created_at)
-            VALUES (?, ?, ?, ?, ?)
-        """, (expense_data["store"], expense_data["items"], expense_data["amount"], 
+            INSERT INTO expenses (store, items, category, amount, date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
               expense_data["date"], datetime.now().isoformat()))
         expense_id = cursor.lastrowid
         conn.commit()
@@ -228,20 +361,34 @@ async def extract_expense(request: TranscriptRequest):
         print("Using Groq for extraction")
         try:
             prompt = f"""Extract expense information from the following voice transcript. 
-            Return a JSON object with: store (store name), items (list of items purchased as a comma-separated string), 
-            amount (total amount spent as a number), and date (date of purchase in YYYY-MM-DD format, use today's date if not mentioned).
+            Return a JSON object with:
+            - store: The name of the store/merchant where the purchase was made (e.g., "Walmart", "Apple", "Target")
+            - items: The actual items/products purchased. CRITICAL RULES:
+              1. Extract the PRODUCT, not the store name
+              2. If transcript says "bought a laptop MacBook from Apple", items = "laptop" or "MacBook", store = "Apple"
+              3. If transcript says "groceries at Walmart", items = "groceries", store = "Walmart"
+              4. If transcript says "bought apple from Apple", items = "apple" (the fruit), store = "Apple" (the store)
+              5. The item is what was purchased, the store is where it was bought
+            - category: Categorize the expense. Can be MULTIPLE categories separated by commas if items belong to different categories.
+              Available categories: "Electronics", "Groceries", "Clothing", "Transportation", "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"
+              Examples: "Electronics, Groceries" (if buying both), "Groceries" (if only groceries), "Electronics" (if only electronics)
+            - amount: Total amount spent as a number (e.g., 45.50 for $45.50)
+            - date: Date of purchase in YYYY-MM-DD format (use today's date if not mentioned)
             
             Transcript: "{transcript}"
             
-            Return only valid JSON, no additional text."""
+            Return only valid JSON, no additional text. Examples:
+            - "bought a laptop MacBook from Apple for $800" → {{"store": "Apple", "items": "MacBook", "category": "Electronics", "amount": 800, "date": "2024-01-15"}}
+            - "groceries at Walmart for $45.50" → {{"store": "Walmart", "items": "groceries", "category": "Groceries", "amount": 45.50, "date": "2024-01-15"}}
+            - "bought fruits and an iPhone at Target for $900" → {{"store": "Target", "items": "fruits, iPhone", "category": "Groceries, Electronics", "amount": 900, "date": "2024-01-15"}}"""
             
             response = groq_client.chat.completions.create(
                 model="llama-3.1-70b-versatile",  # Fast and accurate Groq model
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that extracts expense information from voice transcripts. Always return valid JSON with keys: store, items, amount, date."},
+                    {"role": "system", "content": "You are a helpful assistant that extracts expense information from voice transcripts. Always return valid JSON with keys: store, items, category, amount, date. CRITICAL RULES: 1) The 'items' field must contain the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'groceries'), NEVER the store name. 2) The 'store' field contains where the purchase was made. 3) The 'category' field can contain MULTIPLE categories separated by commas if the purchase includes items from different categories (e.g., 'Groceries, Electronics' for buying fruits and an iPhone). Available categories: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. If someone says 'bought fruits and iPhone at Target', items='fruits, iPhone', store='Target', category='Groceries, Electronics'. NEVER put the store name in the items field."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.3
+                temperature=0.2  # Lower temperature for more consistent extraction
             )
             
             # Parse the response
@@ -260,6 +407,7 @@ async def extract_expense(request: TranscriptRequest):
             # Validate and set defaults
             store = expense_data.get("store", "Unknown Store")
             items = expense_data.get("items", "")
+            category = expense_data.get("category")
             amount = expense_data.get("amount")
             date = expense_data.get("date", datetime.now().strftime("%Y-%m-%d"))
             
@@ -267,9 +415,9 @@ async def extract_expense(request: TranscriptRequest):
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO expenses (store, items, amount, date, created_at)
-                VALUES (?, ?, ?, ?, ?)
-            """, (store, items, amount, date, datetime.now().isoformat()))
+                INSERT INTO expenses (store, items, category, amount, date, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (store, items, category, amount, date, datetime.now().isoformat()))
             expense_id = cursor.lastrowid
             conn.commit()
             conn.close()
@@ -279,6 +427,7 @@ async def extract_expense(request: TranscriptRequest):
                 "id": expense_id,
                 "store": store,
                 "items": items,
+                "category": category,
                 "amount": amount,
                 "date": date,
                 "message": "Expense saved successfully (using Groq)"
@@ -298,9 +447,9 @@ async def extract_expense(request: TranscriptRequest):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute("""
-        INSERT INTO expenses (store, items, amount, date, created_at)
-        VALUES (?, ?, ?, ?, ?)
-    """, (expense_data["store"], expense_data["items"], expense_data["amount"], 
+        INSERT INTO expenses (store, items, category, amount, date, created_at)
+        VALUES (?, ?, ?, ?, ?, ?)
+    """, (expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
           expense_data["date"], datetime.now().isoformat()))
     expense_id = cursor.lastrowid
     conn.commit()
@@ -310,9 +459,10 @@ async def extract_expense(request: TranscriptRequest):
         "id": expense_id,
         "store": expense_data["store"],
         "items": expense_data["items"],
+        "category": expense_data.get("category"),
         "amount": expense_data["amount"],
         "date": expense_data["date"],
-                "message": "Expense saved successfully (using simple extraction - Groq unavailable)"
+        "message": "Expense saved successfully (using simple extraction - Groq unavailable)"
     }
 
 @app.get("/api/expenses")
@@ -350,10 +500,10 @@ async def db_viewer():
     <!DOCTYPE html>
     <html>
     <head>
-        <title>VoiceP Database Viewer</title>
+        <title>Voxalyze Database Viewer</title>
         <style>
             body {{
-                font-family: monospace;
+                font-family: 'Ubuntu', monospace;
                 background: #0a0a0a;
                 color: #e0e0e0;
                 padding: 2rem;
@@ -393,7 +543,7 @@ async def db_viewer():
         </style>
     </head>
     <body>
-        <h1>🎤 VoiceP Database Viewer</h1>
+        <h1>🎤 Voxalyze Database Viewer</h1>
         
         <h2>Schema</h2>
         <div class="schema">{schema[0] if schema else 'No schema found'}</div>
@@ -459,6 +609,21 @@ async def get_analytics():
         amount = float(exp.get("amount") or 0) if exp.get("amount") is not None else 0
         expenses_by_store[store] = expenses_by_store.get(store, 0) + amount
     
+    # Expenses by category (handle multiple categories per expense)
+    expenses_by_category = {}
+    for exp in expenses:
+        categories_str = exp.get("category") or "Other"
+        amount = float(exp.get("amount") or 0) if exp.get("amount") is not None else 0
+        
+        # Split multiple categories (comma-separated)
+        categories = [cat.strip() for cat in categories_str.split(",")] if categories_str else ["Other"]
+        
+        # Distribute amount evenly across categories, or you could use the full amount for each
+        # Using full amount for each category (so if $100 is Electronics, Groceries, both get $100)
+        for category in categories:
+            if category:
+                expenses_by_category[category] = expenses_by_category.get(category, 0) + amount
+    
     # Expenses by date
     expenses_by_date = {}
     for exp in expenses:
@@ -475,6 +640,7 @@ async def get_analytics():
         "total_expenses": total_expenses,
         "expense_count": expense_count,
         "expenses_by_store": expenses_by_store,
+        "expenses_by_category": expenses_by_category,
         "expenses_by_date": expenses_by_date_list,
         "recent_expenses": recent_expenses
     }
@@ -493,6 +659,18 @@ async def delete_expense(expense_id: int):
         raise HTTPException(status_code=404, detail="Expense not found")
     
     return {"message": "Expense deleted successfully"}
+
+@app.delete("/api/expenses")
+async def delete_all_expenses():
+    """Delete all expenses"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM expenses")
+    conn.commit()
+    deleted = cursor.rowcount
+    conn.close()
+    
+    return {"message": f"All expenses deleted successfully ({deleted} expenses removed)"}
 
 if __name__ == "__main__":
     import uvicorn

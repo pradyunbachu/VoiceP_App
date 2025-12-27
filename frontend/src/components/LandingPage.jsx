@@ -7,7 +7,7 @@ const LandingPage = ({ onGetStarted }) => {
       <div className="landing-content">
         <div className="landing-logo">
           <Mic size={80} className="logo-icon" />
-          <h1>VoiceP</h1>
+          <h1>Voxalyze</h1>
           <p className="landing-tagline">Voice Powered Expense Tracker</p>
           <p className="landing-description">
             Simply speak about your purchases and let AI extract all the details.

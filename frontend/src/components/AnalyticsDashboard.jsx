@@ -1,10 +1,10 @@
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { TrendingUp, DollarSign, ShoppingBag, Calendar } from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2 } from 'lucide-react'
 import './AnalyticsDashboard.css'
 
 const COLORS = ['#00d4ff', '#7b2ff7', '#f06292', '#4ade80', '#fbbf24', '#a78bfa']
 
-const AnalyticsDashboard = ({ analytics }) => {
+const AnalyticsDashboard = ({ analytics, onClearAll }) => {
   if (!analytics) return null
 
   // Prepare data for charts
@@ -13,11 +13,23 @@ const AnalyticsDashboard = ({ analytics }) => {
     .sort((a, b) => b.value - a.value)
     .slice(0, 5)
 
+  const categoryData = Object.entries(analytics.expenses_by_category || {})
+    .map(([name, value]) => ({ name, value }))
+    .sort((a, b) => b.value - a.value)
+
   const dateData = (analytics.expenses_by_date || []).slice(-7)
 
   return (
     <div className="analytics-dashboard">
-      <h2>Analytics Dashboard</h2>
+      <div className="dashboard-header">
+        <h2>Analytics Dashboard</h2>
+        {analytics.expense_count > 0 && (
+          <button className="clear-all-button" onClick={onClearAll}>
+            <Trash2 size={18} />
+            <span>Clear All</span>
+          </button>
+        )}
+      </div>
 
       <div className="stats-grid">
         <div className="stat-card">
@@ -130,12 +142,12 @@ const AnalyticsDashboard = ({ analytics }) => {
         </div>
 
         <div className="chart-container">
-          <h3>Expenses by Store</h3>
-          {storeData.length > 0 ? (
+          <h3>Expenses by Category</h3>
+          {categoryData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
-                  data={storeData}
+                  data={categoryData}
                   cx="50%"
                   cy="50%"
                   labelLine={false}
@@ -144,7 +156,7 @@ const AnalyticsDashboard = ({ analytics }) => {
                   fill="#8884d8"
                   dataKey="value"
                 >
-                  {storeData.map((entry, index) => (
+                  {categoryData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
@@ -161,7 +173,7 @@ const AnalyticsDashboard = ({ analytics }) => {
             </ResponsiveContainer>
           ) : (
             <div className="empty-chart">
-              <p>No expense data yet. Start recording expenses to see the breakdown!</p>
+              <p>No category data yet. Start recording expenses to see the breakdown!</p>
             </div>
           )}
         </div>

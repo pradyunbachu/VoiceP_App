@@ -67,6 +67,17 @@
   border-color: rgba(0, 212, 255, 0.4);
 }
 
+.logout-button {
+  border-color: rgba(255, 107, 107, 0.3);
+  color: #ff6b6b;
+}
+
+.logout-button:hover {
+  background: rgba(255, 107, 107, 0.1);
+  border-color: rgba(255, 107, 107, 0.5);
+  color: #ff6b6b;
+}
+
 @media (max-width: 768px) {
   .navigation {
     padding: 1rem;

@@ -6,7 +6,7 @@ const Navigation = ({ currentView, onViewChange }) => {
     <nav className="navigation">
       <div className="nav-logo" onClick={() => onViewChange("landing")}>
         <Mic size={20} />
-        <span>VoiceP</span>
+        <span>Voxalyze</span>
       </div>
       <div className="nav-tabs">
         <button
