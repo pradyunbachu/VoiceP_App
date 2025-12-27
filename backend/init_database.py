@@ -3,7 +3,7 @@
 import sqlite3
 import os
 
-DB_PATH = "expenses.db"
+DB_PATH = "voxalyze.db"
 
 def init_database():
     """Initialize or migrate the database"""

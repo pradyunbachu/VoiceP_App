@@ -47,7 +47,7 @@ if not groq_api_key or groq_api_key == "your_groq_api_key_here":
 groq_client = Groq(api_key=groq_api_key) if groq_api_key and groq_api_key != "your_groq_api_key_here" else None
 
 # Database setup
-DB_PATH = "expenses.db"
+DB_PATH = "voxalyze.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

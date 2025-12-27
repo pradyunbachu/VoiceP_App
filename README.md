@@ -35,7 +35,7 @@ A modern expense tracking application that lets you record expenses using your v
   - Ensures app works even without API keys
 - SQLite - Lightweight, file-based database
 
-  - Stores expenses locally in expenses.db
+  - Stores expenses locally in voxalyze.db
   - Tracks: store, items, category, amount, date, and timestamps
   - Provides analytics aggregation (totals, by store, by date, by category)
 
@@ -95,7 +95,7 @@ VoiceP_App/
 │   ├── requirements.txt      # Python dependencies
 │   ├── .env                  # Environment variables (API keys) - NOT in git
 │   ├── .env.example          # Template for environment variables
-│   ├── expenses.db           # SQLite database - NOT in git
+│   ├── voxalyze.db           # SQLite database - NOT in git
 │   └── venv/                 # Virtual environment - NOT in git
 ├── frontend/
 │   ├── src/
@@ -285,7 +285,7 @@ The app has multiple layers of fallbacks to ensure it always works:
 - "Failed to fetch" error: Make sure backend is running on port 8000
 - No transcription: Check browser microphone permissions
 - Poor extraction: Add Groq API key for better accuracy
-- Database errors: Check file permissions on `expenses.db`
+- Database errors: Check file permissions on `voxalyze.db`
 
 ## License
 
