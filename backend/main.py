@@ -14,7 +14,7 @@ import io
 import base64
 from dotenv import load_dotenv
 from jose import JWTError, jwt
-from passlib.context import CryptContext
+import bcrypt
 
 # Load environment variables
 load_dotenv()
@@ -25,9 +25,6 @@ app = FastAPI(title="Voxalyze Expense Tracker API")
 SECRET_KEY = os.getenv("SECRET_KEY", "your-secret-key-change-in-production")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
-
-# Password hashing
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # Security
 security = HTTPBearer()
@@ -104,29 +101,17 @@ init_db()
 
 # Authentication helper functions
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against a hash - handles bcrypt 72 byte limit"""
-    # Truncate password if needed (same logic as hashing)
-    password_bytes = plain_password.encode('utf-8')
-    if len(password_bytes) > 72:
-        truncated = password_bytes[:70]
-        while truncated and (truncated[-1] & 0xC0) == 0x80:
-            truncated = truncated[:-1]
-        plain_password = truncated.decode('utf-8', errors='ignore')
-    return pwd_context.verify(plain_password, hashed_password)
+    """Verify a password against a hash"""
+    return bcrypt.checkpw(
+        plain_password.encode('utf-8'),
+        hashed_password.encode('utf-8')
+    )
 
 def get_password_hash(password: str) -> str:
-    """Hash a password - bcrypt has a 72 byte limit, so we truncate if necessary"""
-    # Convert to bytes to check length
-    password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        # Truncate to 70 bytes (conservative) to avoid cutting UTF-8 characters
-        # Find the last complete UTF-8 character before 70 bytes
-        truncated = password_bytes[:70]
-        # Remove any incomplete UTF-8 sequences at the end
-        while truncated and (truncated[-1] & 0xC0) == 0x80:
-            truncated = truncated[:-1]
-        password = truncated.decode('utf-8', errors='ignore')
-    return pwd_context.hash(password)
+    """Hash a password using bcrypt"""
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password.encode('utf-8'), salt)
+    return hashed.decode('utf-8')
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
     """Create a JWT access token"""
@@ -149,10 +134,11 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
     try:
         token = credentials.credentials
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        user_id: int = payload.get("sub")
-        if user_id is None:
+        user_id_str: str = payload.get("sub")
+        if user_id_str is None:
             raise credentials_exception
-    except JWTError:
+        user_id = int(user_id_str)  # Convert back to int
+    except (JWTError, ValueError, TypeError):
         raise credentials_exception
     
     # Verify user exists
@@ -452,8 +438,8 @@ async def register(user_data: UserRegister):
     conn.commit()
     conn.close()
     
-    # Create access token
-    access_token = create_access_token(data={"sub": user_id})
+    # Create access token (sub must be a string per JWT spec)
+    access_token = create_access_token(data={"sub": str(user_id)})
     
     return {
         "access_token": access_token,
@@ -481,8 +467,8 @@ async def login(user_data: UserLogin):
     if not verify_password(user_data.password, password_hash):
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
-    # Create access token
-    access_token = create_access_token(data={"sub": user_id})
+    # Create access token (sub must be a string per JWT spec)
+    access_token = create_access_token(data={"sub": str(user_id)})
     
     return {
         "access_token": access_token,
