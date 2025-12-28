@@ -153,6 +153,42 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
     
     return {"id": user[0], "username": user[1]}
 
+def parse_relative_date(transcript: str) -> str:
+    """Parse relative date terms from transcript and return YYYY-MM-DD format"""
+    transcript_lower = transcript.lower()
+    today = datetime.now()
+    
+    # Check for relative date terms
+    if re.search(r'\byesterday\b', transcript_lower):
+        date = today - timedelta(days=1)
+    elif re.search(r'\btomorrow\b', transcript_lower):
+        date = today + timedelta(days=1)
+    elif re.search(r'\btoday\b', transcript_lower):
+        date = today
+    elif re.search(r'\blast\s+week\b', transcript_lower):
+        date = today - timedelta(weeks=1)
+    elif re.search(r'\blast\s+month\b', transcript_lower):
+        date = today - timedelta(days=30)
+    elif re.search(r'\b(\d+)\s+days?\s+ago\b', transcript_lower):
+        match = re.search(r'\b(\d+)\s+days?\s+ago\b', transcript_lower)
+        if match:
+            days_ago = int(match.group(1))
+            date = today - timedelta(days=days_ago)
+        else:
+            date = today
+    elif re.search(r'\bin\s+(\d+)\s+days?\b', transcript_lower):
+        match = re.search(r'\bin\s+(\d+)\s+days?\b', transcript_lower)
+        if match:
+            days_ahead = int(match.group(1))
+            date = today + timedelta(days=days_ahead)
+        else:
+            date = today
+    else:
+        # Default to today if no relative date found
+        date = today
+    
+    return date.strftime("%Y-%m-%d")
+
 def extract_expense_simple(transcript: str) -> dict:
     """Simple regex-based expense extraction as fallback when Groq is unavailable"""
     transcript_lower = transcript.lower()
@@ -162,7 +198,7 @@ def extract_expense_simple(transcript: str) -> dict:
     amount_patterns = [
         r'\$(\d+\.?\d*)',  # $45.50
         r'(\d+\.?\d*)\s*dollars?',  # 45.50 dollars
-        r'for\s+(\d+\.?\d*)',  # for 45.50
+        r'for\s+(\d+\.?\d*)',  # for 45.50 or for 2350 (will be handled specially)
         r'(\d+\.?\d*)\s*bucks?',  # 45.50 bucks
         r'(\d+)\s*cent',  # 14 cent -> 0.14
         r'(\d+)\s*cents',  # 14 cents -> 0.14
@@ -195,6 +231,24 @@ def extract_expense_simple(transcript: str) -> dict:
                         amount = num1 + (num2 / 100.0)
                     else:
                         amount = num1
+                    break
+                elif 'for\s+' in pattern:  # Handle "for 2350" -> $23.50
+                    num_str = match.group(1)
+                    # If it's a whole number (no decimal), check if it should be split
+                    if '.' not in num_str:
+                        num = int(num_str)
+                        num_digits = len(num_str)
+                        # If 3-5 digits and reasonable amount, likely dollars.cents format
+                        # e.g., 2350 -> 23.50, 350 -> 3.50, 1234 -> 12.34
+                        if 3 <= num_digits <= 5 and num < 100000:
+                            # Split last 2 digits as cents
+                            dollars = num // 100
+                            cents = num % 100
+                            amount = dollars + (cents / 100.0)
+                        else:
+                            amount = float(num)
+                    else:
+                        amount = float(num_str)
                     break
                 else:
                     amount = float(match.group(1))
@@ -356,8 +410,8 @@ def extract_expense_simple(transcript: str) -> dict:
     # Join multiple categories with comma
     category = ", ".join(categories) if categories else "Other"
     
-    # Use today's date
-    date = datetime.now().strftime("%Y-%m-%d")
+    # Parse relative date from transcript (yesterday, tomorrow, etc.)
+    date = parse_relative_date(transcript)
     
     return {
         "store": store,
@@ -527,6 +581,10 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
     if groq_client:
         print("Using Groq for extraction")
         try:
+            today_str = datetime.now().strftime("%Y-%m-%d")
+            yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+            tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+            
             prompt = f"""Extract expense information from the following voice transcript. 
             Return a JSON object with:
             - store: The name of the store/merchant where the purchase was made (e.g., "Walmart", "Apple", "Target")
@@ -539,20 +597,28 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             - category: Categorize the expense. Can be MULTIPLE categories separated by commas if items belong to different categories.
               Available categories: "Electronics", "Groceries", "Clothing", "Transportation", "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"
               Examples: "Electronics, Groceries" (if buying both), "Groceries" (if only groceries), "Electronics" (if only electronics)
-            - amount: Total amount spent as a number (e.g., 45.50 for $45.50)
-            - date: Date of purchase in YYYY-MM-DD format (use today's date if not mentioned)
+            - amount: Total amount spent as a number (e.g., 45.50 for $45.50). IMPORTANT: If someone says a number like "2350" after "for", interpret it as dollars and cents: "2350" = 23.50, "350" = 3.50, "1234" = 12.34. Only interpret large numbers (6+ digits) as whole dollar amounts.
+            - date: Date of purchase in YYYY-MM-DD format. IMPORTANT: Handle relative dates correctly:
+              - "yesterday" = {yesterday_str}
+              - "tomorrow" = {tomorrow_str}
+              - "today" = {today_str}
+              - "last week" = date from 7 days ago
+              - "X days ago" = date from X days ago
+              - "in X days" = date X days from now
+              - If no date mentioned, use today's date ({today_str})
             
             Transcript: "{transcript}"
             
             Return only valid JSON, no additional text. Examples:
-            - "bought a laptop MacBook from Apple for $800" → {{"store": "Apple", "items": "MacBook", "category": "Electronics", "amount": 800, "date": "2024-01-15"}}
-            - "groceries at Walmart for $45.50" → {{"store": "Walmart", "items": "groceries", "category": "Groceries", "amount": 45.50, "date": "2024-01-15"}}
-            - "bought fruits and an iPhone at Target for $900" → {{"store": "Target", "items": "fruits, iPhone", "category": "Groceries, Electronics", "amount": 900, "date": "2024-01-15"}}"""
+            - "bought a laptop MacBook from Apple for $800" → {{"store": "Apple", "items": "MacBook", "category": "Electronics", "amount": 800, "date": "{today_str}"}}
+            - "groceries at Walmart for $45.50 yesterday" → {{"store": "Walmart", "items": "groceries", "category": "Groceries", "amount": 45.50, "date": "{yesterday_str}"}}
+            - "bought fruits and an iPhone at Target for $900 tomorrow" → {{"store": "Target", "items": "fruits, iPhone", "category": "Groceries, Electronics", "amount": 900, "date": "{tomorrow_str}"}}
+            - "bought candy for 2350" → {{"store": "Unknown Store", "items": "candy", "category": "Groceries", "amount": 23.50, "date": "{today_str}"}}"""
             
             response = groq_client.chat.completions.create(
                 model="llama-3.1-70b-versatile",  # Fast and accurate Groq model
                 messages=[
-                    {"role": "system", "content": "You are a helpful assistant that extracts expense information from voice transcripts. Always return valid JSON with keys: store, items, category, amount, date. CRITICAL RULES: 1) The 'items' field must contain the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'groceries'), NEVER the store name. 2) The 'store' field contains where the purchase was made. 3) The 'category' field can contain MULTIPLE categories separated by commas if the purchase includes items from different categories (e.g., 'Groceries, Electronics' for buying fruits and an iPhone). Available categories: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. If someone says 'bought fruits and iPhone at Target', items='fruits, iPhone', store='Target', category='Groceries, Electronics'. NEVER put the store name in the items field."},
+                    {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. Always return valid JSON with keys: store, items, category, amount, date. CRITICAL RULES: 1) The 'items' field must contain the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'groceries'), NEVER the store name. 2) The 'store' field contains where the purchase was made. 3) The 'category' field can contain MULTIPLE categories separated by commas if the purchase includes items from different categories (e.g., 'Groceries, Electronics' for buying fruits and an iPhone). Available categories: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. If someone says 'bought fruits and iPhone at Target', items='fruits, iPhone', store='Target', category='Groceries, Electronics'. NEVER put the store name in the items field. 4) For amounts: If someone says a number like '2350' after 'for', interpret it as dollars and cents: '2350' = 23.50, '350' = 3.50, '1234' = 12.34. Only interpret large numbers (6+ digits) as whole dollar amounts. 5) For dates: Handle relative dates correctly - 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}, 'last week' = {(datetime.now() - timedelta(weeks=1)).strftime('%Y-%m-%d')}, 'X days ago' = calculate from today. Today is {datetime.now().strftime('%Y-%m-%d')}."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2  # Lower temperature for more consistent extraction
@@ -576,7 +642,14 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             items = expense_data.get("items", "")
             category = expense_data.get("category")
             amount = expense_data.get("amount")
-            date = expense_data.get("date", datetime.now().strftime("%Y-%m-%d"))
+            # If Groq didn't extract date or extracted a relative date term, parse it
+            date_str = expense_data.get("date", "")
+            if date_str and (date_str.lower() in ["yesterday", "tomorrow", "today"] or "ago" in date_str.lower() or "last week" in date_str.lower()):
+                date = parse_relative_date(transcript)
+            elif date_str:
+                date = date_str  # Use the date Groq provided
+            else:
+                date = parse_relative_date(transcript)  # Parse from transcript or default to today
             
             # Save to database with user_id
             conn = sqlite3.connect(DB_PATH)
