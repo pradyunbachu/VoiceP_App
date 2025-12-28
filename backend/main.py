@@ -190,12 +190,16 @@ def parse_relative_date(transcript: str) -> str:
     return date.strftime("%Y-%m-%d")
 
 def parse_amount(amount_str: str) -> float:
-    """Parse amount string to float, handling special cases"""
+    """Parse amount string to float, handling special cases
+    Only applies dollars.cents logic to 4-5 digit numbers (e.g., 2350 -> 23.50)
+    Numbers like 700, 800 are clearly whole dollars, not 7.00 or 8.00"""
     try:
         if '.' not in amount_str:
             num = int(amount_str)
             num_digits = len(amount_str)
-            if 3 <= num_digits <= 5 and num < 100000:
+            # Only apply dollars.cents logic to 4-5 digit numbers
+            # 3-digit numbers like 700, 800 are clearly whole dollars
+            if 4 <= num_digits <= 5 and num < 100000:
                 dollars = num // 100
                 cents = num % 100
                 return dollars + (cents / 100.0)
@@ -221,11 +225,73 @@ def extract_store(transcript: str) -> str:
             break
     return store
 
-def clean_item_name(item: str) -> str:
-    """Clean up item name"""
-    item = re.sub(r'\b(got|bought|purchased|the|a|an|some)\b', '', item, flags=re.IGNORECASE)
+def clean_item_name(item: str, store: str = "") -> str:
+    """Clean up item name - remove common words and store names"""
+    # Remove common prefixes
+    item = re.sub(r'\b(i|I|got|bought|purchased|the|a|an|some)\b', '', item, flags=re.IGNORECASE)
+    
+    # Remove store name if it appears in the item
+    if store and store != "Unknown Store":
+        store_lower = store.lower()
+        item = re.sub(r'\b' + re.escape(store_lower) + r'\b', '', item, flags=re.IGNORECASE)
+    
+    # Remove "from [store]" pattern first
+    item = re.sub(r'\bfrom\s+\w+\b', '', item, flags=re.IGNORECASE)
+    
+    # Remove "at [store]" pattern
+    item = re.sub(r'\bat\s+\w+\b', '', item, flags=re.IGNORECASE)
+    
+    # Clean up extra spaces before removing standalone words
+    item = re.sub(r'\s+', ' ', item)
     item = item.strip()
-    return item.title() if item else "Various items"
+    
+    # Remove standalone "from" and "at" words
+    item = re.sub(r'\bfrom\b', '', item, flags=re.IGNORECASE)
+    item = re.sub(r'\bat\b', '', item, flags=re.IGNORECASE)
+    
+    # Clean up extra spaces
+    item = re.sub(r'\s+', ' ', item)
+    item = item.strip()
+    
+    # If empty after cleaning, return default
+    if not item:
+        return "Various items"
+    
+    # Capitalize properly - handle special cases like "iPad", "iPhone", "MacBook"
+    item_lower = item.lower()
+    special_cases = {
+        'ipad': 'iPad',
+        'iphone': 'iPhone',
+        'macbook': 'MacBook',
+        'imac': 'iMac',
+        'ipod': 'iPod'
+    }
+    
+    if item_lower in special_cases:
+        return special_cases[item_lower]
+    
+    # For regular items, capitalize first letter of each word
+    words = item.split()
+    cleaned_words = []
+    for word in words:
+        word_lower = word.lower()
+        if word_lower in special_cases:
+            cleaned_words.append(special_cases[word_lower])
+        elif word_lower in ['a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'from']:
+            # Skip these words entirely if they're standalone
+            continue
+        else:
+            cleaned_words.append(word.capitalize())
+    
+    if cleaned_words:
+        item = ' '.join(cleaned_words)
+        # Always capitalize first letter
+        if item:
+            item = item[0].upper() + item[1:] if len(item) > 1 else item.upper()
+    else:
+        item = "Various items"
+    
+    return item
 
 def categorize_item(item: str, store: str) -> str:
     """Categorize a single item"""
@@ -262,8 +328,9 @@ def extract_expense_simple(transcript: str):
     transcript_lower = transcript.lower()
 
     # First, try to detect multiple items with individual prices
-    # Pattern: "item1 for $X and item2 for $Y"
-    multi_item_pattern = r'([a-z\s]+?)\s+for\s+\$?(\d+\.?\d*)\s+and\s+([a-z\s]+?)\s+for\s+\$?(\d+\.?\d*)'
+    # Pattern: "item1 for $X and item2 for $Y" or "bought item1 for $X and item2 for $Y"
+    # More flexible pattern to catch variations like "I bought eggs from Walmart for $7 and I bought an iPad from Walmart for $700"
+    multi_item_pattern = r'(?:i\s+)?(?:bought|got|purchased)?\s*(.+?)\s+for\s+\$?(\d+\.?\d*)\s+and\s+(?:i\s+)?(?:bought|got|purchased)?\s*(.+?)\s+for\s+\$?(\d+\.?\d*)'
     multi_match = re.search(multi_item_pattern, transcript_lower, re.IGNORECASE)
 
     if multi_match:
@@ -281,9 +348,9 @@ def extract_expense_simple(transcript: str):
         store = extract_store(transcript)
         date = parse_relative_date(transcript)
 
-        # Clean up items
-        item1 = clean_item_name(item1)
-        item2 = clean_item_name(item2)
+        # Clean up items (pass store name to remove it from item names)
+        item1 = clean_item_name(item1, store)
+        item2 = clean_item_name(item2, store)
 
         # Categorize each item
         category1 = categorize_item(item1, store)
@@ -712,7 +779,7 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
               4. If transcript says "bought apple from Apple", items = "apple" (the fruit), store = "Apple" (the store)
               5. The item is what was purchased, the store is where it was bought
             - category: Categorize the expense. Available categories: "Electronics", "Groceries", "Clothing", "Transportation", "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"
-            - amount: Total amount spent as a number (e.g., 45.50 for $45.50). IMPORTANT: If someone says a number like "2350" after "for", interpret it as dollars and cents: "2350" = 23.50, "350" = 3.50, "1234" = 12.34. Only interpret large numbers (6+ digits) as whole dollar amounts.
+             - amount: Total amount spent as a number (e.g., 45.50 for $45.50). IMPORTANT: Only apply dollars.cents interpretation to 4-5 digit numbers like "2350" = 23.50, "1234" = 12.34. Numbers like "700", "800", "900" are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. Only 6+ digit numbers are definitely whole dollar amounts.
             - date: Date of purchase in YYYY-MM-DD format. IMPORTANT: Handle relative dates correctly:
               - "yesterday" = {yesterday_str}
               - "tomorrow" = {tomorrow_str}
@@ -734,7 +801,7 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             response = groq_client.chat.completions.create(
                 model="llama-3.1-70b-versatile",  # Fast and accurate Groq model
                 messages=[
-                    {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'candy'), NEVER the store name. 2) The 'store' field contains where the purchase was made. 3) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 4) If transcript says 'I got candy for $5 and an iPad for $700 at Target', create TWO separate expense objects: one for candy ($5, Groceries), one for iPad ($700, Electronics). 5) For amounts: If someone says '2350' after 'for', interpret as $23.50. '350' = $3.50, '1234' = $12.34. Only 6+ digit numbers are whole dollars. 6) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
+                     {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain ONLY the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'candy', 'eggs', 'iPad'), NEVER include words like 'I', 'bought', 'got', 'from [store]', or the store name. Just the item name. 2) The 'store' field contains where the purchase was made. 3) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 4) If transcript says 'I bought eggs from Walmart for $7 and I bought an iPad from Walmart for $700', create TWO separate expense objects: items='eggs' (NOT 'I eggs from Walmart'), amount=7, and items='iPad' (NOT 'I iPad from Walmart'), amount=700. 5) For amounts: Only apply dollars.cents interpretation to 4-5 digit numbers like '2350' = 23.50, '1234' = 12.34. Numbers like '700', '800', '900' are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. 6) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2  # Lower temperature for more consistent extraction
