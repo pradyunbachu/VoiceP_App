@@ -203,7 +203,18 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       const expenseData = await extractResponse.json();
       console.log("Expense data received:", expenseData);
-      setExtractedExpense(expenseData);
+      // Handle both old format (single expense) and new format (array of expenses)
+      if (expenseData.expenses) {
+        // New format with expenses array
+        setExtractedExpense(expenseData);
+      } else {
+        // Old format (single expense) - convert to new format for compatibility
+        setExtractedExpense({
+          expenses: [expenseData],
+          count: 1,
+          message: expenseData.message
+        });
+      }
       onExpenseAdded();
     } catch (error) {
       console.error("Error processing transcript:", error);
@@ -248,7 +259,16 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       if (response.ok) {
         const expenseData = await response.json();
-        setExtractedExpense(expenseData);
+        // Handle both old format (single expense) and new format (array of expenses)
+        if (expenseData.expenses) {
+          setExtractedExpense(expenseData);
+        } else {
+          setExtractedExpense({
+            expenses: [expenseData],
+            count: 1,
+            message: expenseData.message
+          });
+        }
         onExpenseAdded();
       }
     } catch (error) {
@@ -469,34 +489,34 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
         </div>
       )}
 
-      {extractedExpense && (
+      {extractedExpense && extractedExpense.expenses && (
         <div className="expense-result">
-          <h3>✅ Expense Saved!</h3>
-          <div className="expense-details">
-            <p>
-              <strong>Store:</strong> {extractedExpense.store}
-            </p>
-            <p>
-              <strong>Items:</strong> {extractedExpense.items}
-            </p>
-            {extractedExpense.category && (
+          <h3>✅ {extractedExpense.count > 1 ? `${extractedExpense.count} Expenses Saved!` : 'Expense Saved!'}</h3>
+          {extractedExpense.expenses.map((expense, index) => (
+            <div key={expense.id || index} className="expense-details" style={{marginBottom: extractedExpense.count > 1 ? '15px' : '0', paddingBottom: extractedExpense.count > 1 ? '15px' : '0', borderBottom: index < extractedExpense.count - 1 ? '1px solid #eee' : 'none'}}>
+              {extractedExpense.count > 1 && <h4 style={{marginTop: '0', color: '#666'}}>Item {index + 1}</h4>}
               <p>
-                <strong>Category:</strong>{" "}
-                {extractedExpense.category
-                  .split(",")
-                  .map((cat) => cat.trim())
-                  .join(", ")}
+                <strong>Store:</strong> {expense.store}
               </p>
-            )}
-            {extractedExpense.amount && (
               <p>
-                <strong>Amount:</strong> ${extractedExpense.amount.toFixed(2)}
+                <strong>Items:</strong> {expense.items}
               </p>
-            )}
-            <p>
-              <strong>Date:</strong> {extractedExpense.date}
-            </p>
-          </div>
+              {expense.category && (
+                <p>
+                  <strong>Category:</strong>{" "}
+                  {expense.category}
+                </p>
+              )}
+              {expense.amount && (
+                <p>
+                  <strong>Amount:</strong> ${expense.amount.toFixed(2)}
+                </p>
+              )}
+              <p>
+                <strong>Date:</strong> {expense.date}
+              </p>
+            </div>
+          ))}
         </div>
       )}
     </div>

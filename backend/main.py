@@ -189,10 +189,124 @@ def parse_relative_date(transcript: str) -> str:
     
     return date.strftime("%Y-%m-%d")
 
-def extract_expense_simple(transcript: str) -> dict:
-    """Simple regex-based expense extraction as fallback when Groq is unavailable"""
+def parse_amount(amount_str: str) -> float:
+    """Parse amount string to float, handling special cases"""
+    try:
+        if '.' not in amount_str:
+            num = int(amount_str)
+            num_digits = len(amount_str)
+            if 3 <= num_digits <= 5 and num < 100000:
+                dollars = num // 100
+                cents = num % 100
+                return dollars + (cents / 100.0)
+            else:
+                return float(num)
+        else:
+            return float(amount_str)
+    except:
+        return 0.0
+
+def extract_store(transcript: str) -> str:
+    """Extract store name from transcript"""
+    store = "Unknown Store"
+    store_patterns = [
+        r'at\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
+        r'from\s+([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)',
+        r'([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*)\s+for',
+    ]
+    for pattern in store_patterns:
+        match = re.search(pattern, transcript)
+        if match:
+            store = match.group(1)
+            break
+    return store
+
+def clean_item_name(item: str) -> str:
+    """Clean up item name"""
+    item = re.sub(r'\b(got|bought|purchased|the|a|an|some)\b', '', item, flags=re.IGNORECASE)
+    item = item.strip()
+    return item.title() if item else "Various items"
+
+def categorize_item(item: str, store: str) -> str:
+    """Categorize a single item"""
+    item_lower = item.lower()
+    store_lower = store.lower() if store != "Unknown Store" else ""
+
+    category_keywords = {
+        "Electronics": ["laptop", "computer", "macbook", "iphone", "ipad", "phone", "tablet", "tv"],
+        "Groceries": ["groceries", "milk", "bread", "eggs", "food", "banana", "candy", "apple"],
+        "Clothing": ["shirt", "pants", "jacket", "shoes"],
+        "Transportation": ["gas", "gasoline", "fuel"],
+        "Dining": ["restaurant", "cafe", "coffee", "lunch", "dinner"],
+        "Entertainment": ["movie", "game", "book"],
+        "Health": ["pharmacy", "medicine"],
+        "Home": ["furniture", "bed", "chair"],
+        "Utilities": ["electric", "water", "internet"],
+    }
+
+    for cat, keywords in category_keywords.items():
+        for keyword in keywords:
+            if keyword in item_lower:
+                return cat
+
+    if any(word in store_lower for word in ["walmart", "target", "kroger"]):
+        return "Groceries"
+    elif any(word in store_lower for word in ["apple", "best buy"]):
+        return "Electronics"
+
+    return "Other"
+
+def extract_expense_simple(transcript: str):
+    """Simple regex-based expense extraction as fallback when Groq is unavailable
+    Returns a list of expense dicts if multiple items detected, otherwise a single dict"""
     transcript_lower = transcript.lower()
-    
+
+    # First, try to detect multiple items with individual prices
+    # Pattern: "item1 for $X and item2 for $Y"
+    multi_item_pattern = r'([a-z\s]+?)\s+for\s+\$?(\d+\.?\d*)\s+and\s+([a-z\s]+?)\s+for\s+\$?(\d+\.?\d*)'
+    multi_match = re.search(multi_item_pattern, transcript_lower, re.IGNORECASE)
+
+    if multi_match:
+        # Found multiple items with individual prices
+        item1 = multi_match.group(1).strip()
+        amount1_str = multi_match.group(2)
+        item2 = multi_match.group(3).strip()
+        amount2_str = multi_match.group(4)
+
+        # Parse amounts
+        amount1 = parse_amount(amount1_str)
+        amount2 = parse_amount(amount2_str)
+
+        # Extract store (same for both)
+        store = extract_store(transcript)
+        date = parse_relative_date(transcript)
+
+        # Clean up items
+        item1 = clean_item_name(item1)
+        item2 = clean_item_name(item2)
+
+        # Categorize each item
+        category1 = categorize_item(item1, store)
+        category2 = categorize_item(item2, store)
+
+        return [
+            {
+                "store": store,
+                "items": item1,
+                "category": category1,
+                "amount": amount1,
+                "date": date
+            },
+            {
+                "store": store,
+                "items": item2,
+                "category": category2,
+                "amount": amount2,
+                "date": date
+            }
+        ]
+
+    # If no multi-item pattern, extract as single expense
     # Extract amount (look for $XX.XX or XX dollars)
     amount = None
     amount_patterns = [
@@ -585,8 +699,11 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
             tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
             
-            prompt = f"""Extract expense information from the following voice transcript. 
-            Return a JSON object with:
+            prompt = f"""Extract expense information from the following voice transcript.
+            CRITICAL: If the transcript mentions MULTIPLE items with DIFFERENT prices, return a JSON ARRAY of expense objects.
+            If it's a single purchase or multiple items with one total price, return a JSON ARRAY with one object.
+
+            Each expense object should have:
             - store: The name of the store/merchant where the purchase was made (e.g., "Walmart", "Apple", "Target")
             - items: The actual items/products purchased. CRITICAL RULES:
               1. Extract the PRODUCT, not the store name
@@ -594,9 +711,7 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
               3. If transcript says "groceries at Walmart", items = "groceries", store = "Walmart"
               4. If transcript says "bought apple from Apple", items = "apple" (the fruit), store = "Apple" (the store)
               5. The item is what was purchased, the store is where it was bought
-            - category: Categorize the expense. Can be MULTIPLE categories separated by commas if items belong to different categories.
-              Available categories: "Electronics", "Groceries", "Clothing", "Transportation", "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"
-              Examples: "Electronics, Groceries" (if buying both), "Groceries" (if only groceries), "Electronics" (if only electronics)
+            - category: Categorize the expense. Available categories: "Electronics", "Groceries", "Clothing", "Transportation", "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"
             - amount: Total amount spent as a number (e.g., 45.50 for $45.50). IMPORTANT: If someone says a number like "2350" after "for", interpret it as dollars and cents: "2350" = 23.50, "350" = 3.50, "1234" = 12.34. Only interpret large numbers (6+ digits) as whole dollar amounts.
             - date: Date of purchase in YYYY-MM-DD format. IMPORTANT: Handle relative dates correctly:
               - "yesterday" = {yesterday_str}
@@ -609,16 +724,17 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             
             Transcript: "{transcript}"
             
-            Return only valid JSON, no additional text. Examples:
-            - "bought a laptop MacBook from Apple for $800" → {{"store": "Apple", "items": "MacBook", "category": "Electronics", "amount": 800, "date": "{today_str}"}}
-            - "groceries at Walmart for $45.50 yesterday" → {{"store": "Walmart", "items": "groceries", "category": "Groceries", "amount": 45.50, "date": "{yesterday_str}"}}
-            - "bought fruits and an iPhone at Target for $900 tomorrow" → {{"store": "Target", "items": "fruits, iPhone", "category": "Groceries, Electronics", "amount": 900, "date": "{tomorrow_str}"}}
-            - "bought candy for 2350" → {{"store": "Unknown Store", "items": "candy", "category": "Groceries", "amount": 23.50, "date": "{today_str}"}}"""
+            Return only valid JSON array, no additional text. Examples:
+            - "bought a laptop MacBook from Apple for $800" → [{{"store": "Apple", "items": "MacBook", "category": "Electronics", "amount": 800, "date": "{today_str}"}}]
+            - "groceries at Walmart for $45.50 yesterday" → [{{"store": "Walmart", "items": "groceries", "category": "Groceries", "amount": 45.50, "date": "{yesterday_str}"}}]
+            - "I went to Target and got candy for $5 and an iPad for $700" → [{{"store": "Target", "items": "candy", "category": "Groceries", "amount": 5, "date": "{today_str}"}}, {{"store": "Target", "items": "iPad", "category": "Electronics", "amount": 700, "date": "{today_str}"}}]
+            - "bought milk for $3 at Walmart and a laptop for $800 at Best Buy" → [{{"store": "Walmart", "items": "milk", "category": "Groceries", "amount": 3, "date": "{today_str}"}}, {{"store": "Best Buy", "items": "laptop", "category": "Electronics", "amount": 800, "date": "{today_str}"}}]
+            - "bought candy for 2350" → [{{"store": "Unknown Store", "items": "candy", "category": "Groceries", "amount": 23.50, "date": "{today_str}"}}]"""
             
             response = groq_client.chat.completions.create(
                 model="llama-3.1-70b-versatile",  # Fast and accurate Groq model
                 messages=[
-                    {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. Always return valid JSON with keys: store, items, category, amount, date. CRITICAL RULES: 1) The 'items' field must contain the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'groceries'), NEVER the store name. 2) The 'store' field contains where the purchase was made. 3) The 'category' field can contain MULTIPLE categories separated by commas if the purchase includes items from different categories (e.g., 'Groceries, Electronics' for buying fruits and an iPhone). Available categories: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. If someone says 'bought fruits and iPhone at Target', items='fruits, iPhone', store='Target', category='Groceries, Electronics'. NEVER put the store name in the items field. 4) For amounts: If someone says a number like '2350' after 'for', interpret it as dollars and cents: '2350' = 23.50, '350' = 3.50, '1234' = 12.34. Only interpret large numbers (6+ digits) as whole dollar amounts. 5) For dates: Handle relative dates correctly - 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}, 'last week' = {(datetime.now() - timedelta(weeks=1)).strftime('%Y-%m-%d')}, 'X days ago' = calculate from today. Today is {datetime.now().strftime('%Y-%m-%d')}."},
+                    {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'candy'), NEVER the store name. 2) The 'store' field contains where the purchase was made. 3) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 4) If transcript says 'I got candy for $5 and an iPad for $700 at Target', create TWO separate expense objects: one for candy ($5, Groceries), one for iPad ($700, Electronics). 5) For amounts: If someone says '2350' after 'for', interpret as $23.50. '350' = $3.50, '1234' = $12.34. Only 6+ digit numbers are whole dollars. 6) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2  # Lower temperature for more consistent extraction
@@ -635,42 +751,56 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
                 content = content[:-3]
             content = content.strip()
             
-            expense_data = json.loads(content)
-            
-            # Validate and set defaults
-            store = expense_data.get("store", "Unknown Store")
-            items = expense_data.get("items", "")
-            category = expense_data.get("category")
-            amount = expense_data.get("amount")
-            # If Groq didn't extract date or extracted a relative date term, parse it
-            date_str = expense_data.get("date", "")
-            if date_str and (date_str.lower() in ["yesterday", "tomorrow", "today"] or "ago" in date_str.lower() or "last week" in date_str.lower()):
-                date = parse_relative_date(transcript)
-            elif date_str:
-                date = date_str  # Use the date Groq provided
-            else:
-                date = parse_relative_date(transcript)  # Parse from transcript or default to today
-            
-            # Save to database with user_id
+            expenses_data = json.loads(content)
+
+            # Ensure we have an array
+            if not isinstance(expenses_data, list):
+                expenses_data = [expenses_data]
+
+            # Process and save each expense
+            saved_expenses = []
             conn = sqlite3.connect(DB_PATH)
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            """, (current_user["id"], store, items, category, amount, date, datetime.now().isoformat()))
-            expense_id = cursor.lastrowid
+
+            for expense_data in expenses_data:
+                # Validate and set defaults
+                store = expense_data.get("store", "Unknown Store")
+                items = expense_data.get("items", "")
+                category = expense_data.get("category")
+                amount = expense_data.get("amount")
+                # If Groq didn't extract date or extracted a relative date term, parse it
+                date_str = expense_data.get("date", "")
+                if date_str and (date_str.lower() in ["yesterday", "tomorrow", "today"] or "ago" in date_str.lower() or "last week" in date_str.lower()):
+                    date = parse_relative_date(transcript)
+                elif date_str:
+                    date = date_str  # Use the date Groq provided
+                else:
+                    date = parse_relative_date(transcript)  # Parse from transcript or default to today
+
+                # Save to database with user_id
+                cursor.execute("""
+                    INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (current_user["id"], store, items, category, amount, date, datetime.now().isoformat()))
+                expense_id = cursor.lastrowid
+
+                saved_expenses.append({
+                    "id": expense_id,
+                    "store": store,
+                    "items": items,
+                    "category": category,
+                    "amount": amount,
+                    "date": date
+                })
+
             conn.commit()
             conn.close()
-            
-            print(f"Groq extraction successful: {expense_data}")
+
+            print(f"Groq extraction successful: {len(saved_expenses)} expense(s) saved")
             return {
-                "id": expense_id,
-                "store": store,
-                "items": items,
-                "category": category,
-                "amount": amount,
-                "date": date,
-                "message": "Expense saved successfully (using Groq)"
+                "expenses": saved_expenses,
+                "count": len(saved_expenses),
+                "message": f"{len(saved_expenses)} expense(s) saved successfully (using Groq)"
             }
         except Exception as e:
             print(f"Groq error: {str(e)}")
@@ -680,29 +810,42 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
     
     # Fallback to simple extraction if Groq fails or unavailable
     print("Using simple extraction (Groq unavailable or failed)")
-    expense_data = extract_expense_simple(transcript)
-    print(f"Simple extraction result: {expense_data}")
-    
+    expenses_data = extract_expense_simple(transcript)
+    print(f"Simple extraction result: {expenses_data}")
+
+    # Ensure we have a list
+    if not isinstance(expenses_data, list):
+        expenses_data = [expenses_data]
+
     # Save to database with user_id
+    saved_expenses = []
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("""
-        INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    """, (current_user["id"], expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"], 
-          expense_data["date"], datetime.now().isoformat()))
-    expense_id = cursor.lastrowid
+
+    for expense_data in expenses_data:
+        cursor.execute("""
+            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (current_user["id"], expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"],
+              expense_data["date"], datetime.now().isoformat()))
+        expense_id = cursor.lastrowid
+
+        saved_expenses.append({
+            "id": expense_id,
+            "store": expense_data["store"],
+            "items": expense_data["items"],
+            "category": expense_data.get("category"),
+            "amount": expense_data["amount"],
+            "date": expense_data["date"]
+        })
+
     conn.commit()
     conn.close()
-    
+
     return {
-        "id": expense_id,
-        "store": expense_data["store"],
-        "items": expense_data["items"],
-        "category": expense_data.get("category"),
-        "amount": expense_data["amount"],
-        "date": expense_data["date"],
-        "message": "Expense saved successfully (using simple extraction - Groq unavailable)"
+        "expenses": saved_expenses,
+        "count": len(saved_expenses),
+        "message": f"{len(saved_expenses)} expense(s) saved successfully (using simple extraction - Groq unavailable)"
     }
 
 @app.get("/api/expenses")
