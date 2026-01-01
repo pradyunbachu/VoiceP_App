@@ -63,8 +63,8 @@
 
 .form-group input:focus {
   outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.1);
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.1);
   background: rgba(15, 15, 15, 0.8);
 }
 
@@ -82,17 +82,18 @@
   font-weight: 600;
   border: none;
   border-radius: 8px;
-  background: linear-gradient(135deg, #00d4ff 0%, #7b2ff7 100%);
+  background: #22c55e;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
   margin-top: 0.5rem;
 }
 
 .submit-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 212, 255, 0.5);
+  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
+  background: #16a34a;
 }
 
 .submit-button:disabled {
@@ -120,7 +121,7 @@
 .switch-button {
   background: none;
   border: none;
-  color: #00d4ff;
+  color: #22c55e;
   cursor: pointer;
   font-weight: 600;
   text-decoration: underline;
@@ -129,6 +130,6 @@
 }
 
 .switch-button:hover {
-  color: #7b2ff7;
+  color: #16a34a;
 }
 

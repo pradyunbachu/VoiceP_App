@@ -45,34 +45,21 @@
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
   position: relative;
   overflow: hidden;
 }
 
 .record-button {
-  background: linear-gradient(135deg, #00d4ff 0%, #7b2ff7 100%);
+  background: #22c55e;
   color: white;
 }
 
-.record-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
-  transition: left 0.5s;
-}
-
-.record-button:hover:not(:disabled)::before {
-  left: 100%;
-}
 
 .record-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 212, 255, 0.5);
+  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
+  background: #16a34a;
 }
 
 .record-button:disabled {
@@ -81,14 +68,15 @@
 }
 
 .stop-button {
-  background: linear-gradient(135deg, #f06292 0%, #ff6b6b 100%);
+  background: #dc2626;
   color: white;
   animation: pulse 2s infinite;
 }
 
 .stop-button:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(240, 98, 146, 0.5);
+  box-shadow: 0 8px 30px rgba(220, 38, 38, 0.5);
+  background: #b91c1c;
 }
 
 @keyframes pulse {
@@ -108,12 +96,12 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: #00d4ff;
+  color: #22c55e;
 }
 
 .spinner {
   animation: spin 1s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(0, 212, 255, 0.6));
+  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
 }
 
 @keyframes spin {
@@ -159,7 +147,7 @@
 }
 
 .expense-details strong {
-  color: #00d4ff;
+  color: #22c55e;
   margin-right: 0.5rem;
   font-weight: 600;
 }
@@ -171,19 +159,19 @@
   padding: 1rem 2rem;
   font-size: 1rem;
   font-weight: 600;
-  border: 2px solid rgba(0, 212, 255, 0.5);
+  border: 2px solid rgba(34, 197, 94, 0.5);
   border-radius: 50px;
   background: transparent;
-  color: #00d4ff;
+  color: #22c55e;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .manual-button:hover:not(:disabled) {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: #00d4ff;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: #22c55e;
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
 }
 
 .manual-button:disabled {
@@ -236,8 +224,8 @@
 
 .manual-textarea:focus {
   outline: none;
-  border-color: #00d4ff;
-  box-shadow: 0 0 0 3px rgba(0, 212, 255, 0.2);
+  border-color: #22c55e;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
   background: rgba(15, 15, 15, 0.8);
 }
 
@@ -253,16 +241,17 @@
   font-weight: 600;
   border: none;
   border-radius: 12px;
-  background: linear-gradient(135deg, #00d4ff 0%, #7b2ff7 100%);
+  background: #22c55e;
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(0, 212, 255, 0.3);
+  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
 }
 
 .submit-manual-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(0, 212, 255, 0.5);
+  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
+  background: #16a34a;
 }
 
 .submit-manual-button:disabled {

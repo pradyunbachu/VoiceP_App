@@ -5,6 +5,7 @@ import "./Login.css";
 const Login = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,7 +17,7 @@ const Login = ({ onLogin }) => {
 
     try {
       const endpoint = isLogin ? "/api/login" : "/api/register";
-      const body = { username, password };
+      const body = isLogin ? { username, password } : { username, email, password };
 
       const response = await fetch(`http://localhost:8000${endpoint}`, {
         method: "POST",
@@ -80,6 +81,23 @@ const Login = ({ onLogin }) => {
             )}
           </div>
 
+          {!isLogin && (
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                placeholder="Enter your email"
+              />
+              <small style={{ color: '#a0a0a0', fontSize: '0.8rem', marginTop: '0.25rem' }}>
+                Required for account creation
+              </small>
+            </div>
+          )}
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -125,6 +143,7 @@ const Login = ({ onLogin }) => {
               onClick={() => {
                 setIsLogin(!isLogin);
                 setError("");
+                setEmail("");
               }}
               className="switch-button"
             >

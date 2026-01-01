@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #00d4ff;
+  color: #22c55e;
   font-size: 1.2rem;
   font-weight: 700;
   cursor: pointer;
@@ -57,14 +57,14 @@
 }
 
 .nav-tab.active {
-  background: rgba(0, 212, 255, 0.1);
-  border-color: rgba(0, 212, 255, 0.3);
-  color: #00d4ff;
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }
 
 .nav-tab.active:hover {
-  background: rgba(0, 212, 255, 0.15);
-  border-color: rgba(0, 212, 255, 0.4);
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.4);
 }
 
 .nav-user {

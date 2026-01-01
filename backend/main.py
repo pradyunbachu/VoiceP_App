@@ -53,15 +53,64 @@ def init_db():
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Create users table
-    cursor.execute("""
-        CREATE TABLE IF NOT EXISTS users (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            username TEXT UNIQUE NOT NULL,
-            password_hash TEXT NOT NULL,
-            created_at TEXT NOT NULL
-        )
-    """)
+    # Check existing table structure
+    cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='users'")
+    table_exists = cursor.fetchone()
+    
+    if table_exists:
+        # Table exists, check columns
+        cursor.execute("PRAGMA table_info(users)")
+        columns = {row[1]: row for row in cursor.fetchall()}
+        
+        has_email = 'email' in columns
+        has_google_id = 'google_id' in columns
+        
+        # If table needs migration (missing email or has google_id)
+        if not has_email or has_google_id:
+            # Create new table with correct schema
+            cursor.execute("""
+                CREATE TABLE users_new (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    username TEXT UNIQUE NOT NULL,
+                    email TEXT UNIQUE NOT NULL,
+                    password_hash TEXT NOT NULL,
+                    created_at TEXT NOT NULL
+                )
+            """)
+            
+            # Migrate existing data
+            if has_email:
+                # Email column exists, just copy data
+                cursor.execute("""
+                    INSERT INTO users_new (id, username, email, password_hash, created_at)
+                    SELECT id, username, email, password_hash, created_at
+                    FROM users
+                    WHERE password_hash IS NOT NULL
+                """)
+            else:
+                # No email column, add placeholder emails
+                cursor.execute("""
+                    INSERT INTO users_new (id, username, email, password_hash, created_at)
+                    SELECT id, username, username || '@example.com', password_hash, created_at
+                    FROM users
+                    WHERE password_hash IS NOT NULL
+                """)
+            
+            # Replace old table with new one
+            cursor.execute("DROP TABLE users")
+            cursor.execute("ALTER TABLE users_new RENAME TO users")
+            conn.commit()
+    else:
+        # Table doesn't exist, create it with email column
+        cursor.execute("""
+            CREATE TABLE users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                username TEXT UNIQUE NOT NULL,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+        """)
     
     # Create expenses table with user_id
     cursor.execute("""
@@ -144,14 +193,14 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
     # Verify user exists
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute("SELECT id, username FROM users WHERE id = ?", (user_id,))
+    cursor.execute("SELECT id, username, email FROM users WHERE id = ?", (user_id,))
     user = cursor.fetchone()
     conn.close()
     
     if user is None:
         raise credentials_exception
     
-    return {"id": user[0], "username": user[1]}
+    return {"id": user[0], "username": user[1], "email": user[2] if len(user) > 2 else None}
 
 def parse_relative_date(transcript: str) -> str:
     """Parse relative date terms from transcript and return YYYY-MM-DD format"""
@@ -636,19 +685,38 @@ class TranscriptRequest(BaseModel):
 
 class UserRegister(BaseModel):
     username: str
+    email: str
     password: str
 
 class UserLogin(BaseModel):
     username: str
     password: str
 
+class ExpenseUpdate(BaseModel):
+    store: Optional[str] = None
+    items: Optional[str] = None
+    category: Optional[str] = None
+    amount: Optional[float] = None
+    date: Optional[str] = None
+
 # Authentication endpoints
 @app.post("/api/register")
 async def register(user_data: UserRegister):
     """Register a new user"""
+    import re
+    
     # Validate username
     if not user_data.username or len(user_data.username.strip()) < 3:
         raise HTTPException(status_code=400, detail="Username must be at least 3 characters")
+    
+    # Validate email
+    if not user_data.email or not user_data.email.strip():
+        raise HTTPException(status_code=400, detail="Email is required")
+    
+    # Basic email validation
+    email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+    if not re.match(email_pattern, user_data.email):
+        raise HTTPException(status_code=400, detail="Invalid email format")
     
     # Validate password
     if not user_data.password or len(user_data.password) < 6:
@@ -663,12 +731,18 @@ async def register(user_data: UserRegister):
         conn.close()
         raise HTTPException(status_code=400, detail="Username already exists")
     
+    # Check if email already exists
+    cursor.execute("SELECT id FROM users WHERE email = ?", (user_data.email.lower().strip(),))
+    if cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
     # Create user
     password_hash = get_password_hash(user_data.password)
     cursor.execute("""
-        INSERT INTO users (username, password_hash, created_at)
-        VALUES (?, ?, ?)
-    """, (user_data.username, password_hash, datetime.now().isoformat()))
+        INSERT INTO users (username, email, password_hash, created_at)
+        VALUES (?, ?, ?, ?)
+    """, (user_data.username, user_data.email.lower().strip(), password_hash, datetime.now().isoformat()))
     user_id = cursor.lastrowid
     conn.commit()
     conn.close()
@@ -679,7 +753,7 @@ async def register(user_data: UserRegister):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {"id": user_id, "username": user_data.username}
+        "user": {"id": user_id, "username": user_data.username, "email": user_data.email}
     }
 
 @app.post("/api/login")
@@ -688,15 +762,15 @@ async def login(user_data: UserLogin):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     
-    # Get user
-    cursor.execute("SELECT id, username, password_hash FROM users WHERE username = ?", (user_data.username,))
+    # Get user (including email)
+    cursor.execute("SELECT id, username, email, password_hash FROM users WHERE username = ?", (user_data.username,))
     user = cursor.fetchone()
     conn.close()
     
     if not user:
         raise HTTPException(status_code=401, detail="Incorrect username or password")
     
-    user_id, username, password_hash = user
+    user_id, username, email, password_hash = user
     
     # Verify password
     if not verify_password(user_data.password, password_hash):
@@ -708,7 +782,7 @@ async def login(user_data: UserLogin):
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "user": {"id": user_id, "username": username}
+        "user": {"id": user_id, "username": username, "email": email}
     }
 
 @app.get("/api/me")
@@ -1094,6 +1168,60 @@ async def get_analytics(current_user: dict = Depends(get_current_user_dependency
         "expenses_by_date": expenses_by_date_list,
         "recent_expenses": recent_expenses
     }
+
+@app.put("/api/expenses/{expense_id}")
+async def update_expense(
+    expense_id: int,
+    expense_update: ExpenseUpdate,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Update an expense (only if it belongs to the current user)"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Check if expense exists and belongs to user
+    cursor.execute("SELECT id FROM expenses WHERE id = ? AND user_id = ?", (expense_id, current_user["id"]))
+    if not cursor.fetchone():
+        conn.close()
+        raise HTTPException(status_code=404, detail="Expense not found")
+    
+    # Build update query dynamically
+    updates = []
+    params = []
+    
+    if expense_update.store is not None:
+        updates.append("store = ?")
+        params.append(expense_update.store)
+    
+    if expense_update.items is not None:
+        updates.append("items = ?")
+        params.append(expense_update.items)
+    
+    if expense_update.category is not None:
+        updates.append("category = ?")
+        params.append(expense_update.category)
+    
+    if expense_update.amount is not None:
+        updates.append("amount = ?")
+        params.append(expense_update.amount)
+    
+    if expense_update.date is not None:
+        updates.append("date = ?")
+        params.append(expense_update.date)
+    
+    if not updates:
+        conn.close()
+        raise HTTPException(status_code=400, detail="No fields to update")
+    
+    params.append(expense_id)
+    params.append(current_user["id"])
+    
+    query = f"UPDATE expenses SET {', '.join(updates)} WHERE id = ? AND user_id = ?"
+    cursor.execute(query, params)
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Expense updated successfully"}
 
 @app.delete("/api/expenses/{expense_id}")
 async def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user_dependency)):

@@ -2,7 +2,7 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2 } from 'lucide-react'
 import './AnalyticsDashboard.css'
 
-const COLORS = ['#00d4ff', '#7b2ff7', '#f06292', '#4ade80', '#fbbf24', '#a78bfa']
+const COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
 
 const AnalyticsDashboard = ({ analytics, onClearAll }) => {
   if (!analytics) return null
@@ -33,7 +33,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' }}>
+          <div className="stat-icon" style={{ background: '#22c55e' }}>
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
@@ -43,7 +43,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)' }}>
+          <div className="stat-icon" style={{ background: '#16a34a' }}>
             <ShoppingBag size={24} />
           </div>
           <div className="stat-content">
@@ -53,7 +53,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)' }}>
+          <div className="stat-icon" style={{ background: '#15803d' }}>
             <TrendingUp size={24} />
           </div>
           <div className="stat-content">
@@ -67,7 +67,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)' }}>
+          <div className="stat-icon" style={{ background: '#4ade80' }}>
             <Calendar size={24} />
           </div>
           <div className="stat-content">
@@ -99,10 +99,10 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
                 <Line 
                   type="monotone" 
                   dataKey="amount" 
-                  stroke="#00d4ff" 
+                  stroke="#22c55e" 
                   strokeWidth={3}
                   name="Amount"
-                  dot={{ fill: '#00d4ff', r: 4 }}
+                  dot={{ fill: '#22c55e', r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -131,7 +131,11 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
                   }}
                 />
                 <Legend wrapperStyle={{ color: '#e0e0e0' }} />
-                <Bar dataKey="value" fill="#7b2ff7" name="Amount Spent" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="value" name="Amount Spent" radius={[8, 8, 0, 0]}>
+                  {storeData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           ) : (

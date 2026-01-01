@@ -84,6 +84,11 @@ function App() {
     fetchAnalytics()
   }
 
+  const handleExpenseUpdated = () => {
+    fetchExpenses()
+    fetchAnalytics()
+  }
+
   const handleClearAll = async () => {
     if (!window.confirm("Are you sure you want to delete ALL expenses? This action cannot be undone.")) {
       return
@@ -171,6 +176,7 @@ function App() {
             <ExpenseList 
               expenses={expenses}
               onExpenseDeleted={handleExpenseDeleted}
+              onExpenseUpdated={handleExpenseUpdated}
               token={token}
             />
           </div>
