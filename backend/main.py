@@ -932,6 +932,7 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             Return only valid JSON array, no additional text. Examples:
             - "bought a laptop MacBook from Apple for $800" → [{{"store": "Apple", "items": "MacBook", "category": "Electronics", "amount": 800, "date": "{today_str}"}}]
             - "groceries at Walmart for $45.50 yesterday" → [{{"store": "Walmart", "items": "groceries", "category": "Groceries", "amount": 45.50, "date": "{yesterday_str}"}}]
+            - "I bought an iPad from Target for $700" → [{{"store": "Target", "items": "iPad", "category": "Electronics", "amount": 700, "date": "{today_str}"}}]
             - "I went to Target and got candy for $5 and an iPad for $700" → [{{"store": "Target", "items": "candy", "category": "Groceries", "amount": 5, "date": "{today_str}"}}, {{"store": "Target", "items": "iPad", "category": "Electronics", "amount": 700, "date": "{today_str}"}}]
             - "bought milk for $3 at Walmart and a laptop for $800 at Best Buy" → [{{"store": "Walmart", "items": "milk", "category": "Groceries", "amount": 3, "date": "{today_str}"}}, {{"store": "Best Buy", "items": "laptop", "category": "Electronics", "amount": 800, "date": "{today_str}"}}]
             - "bought candy for 2350" → [{{"store": "Unknown Store", "items": "candy", "category": "Groceries", "amount": 23.50, "date": "{today_str}"}}]"""
@@ -939,10 +940,10 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             response = groq_client.chat.completions.create(
                 model="llama-3.1-70b-versatile",  # Fast and accurate Groq model
                 messages=[
-                     {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain ONLY the PRODUCT/ITEM purchased. NEVER include articles (a, an, the), action words (I, bought, got, purchased), or store names. Examples: 'iPad' (NOT 'an iPad', NOT 'N iPad', NOT 'n iPad'), 'laptop' (NOT 'a laptop'), 'milk' (NOT 'the milk'). 2) For Apple products, use EXACT capitalization: 'iPad', 'iPhone', 'MacBook', 'iMac', 'iPod'. 3) If transcript says 'an iPad', extract as 'iPad'. If transcript says 'a laptop', extract as 'laptop'. Remove ALL articles completely. 4) The 'store' field contains where the purchase was made. 5) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 6) If transcript says 'I bought eggs from Walmart for $7 and I bought an iPad from Walmart for $700', create TWO separate expense objects: items='eggs', amount=7, and items='iPad' (NOT 'an iPad', NOT 'N iPad'), amount=700. 7) For amounts: Only apply dollars.cents interpretation to 4-5 digit numbers like '2350' = 23.50, '1234' = 12.34. Numbers like '700', '800', '900' are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. 8) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
+                     {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain ONLY the PRODUCT/ITEM purchased. NEVER include articles (a, an, the), action words (I, bought, got, purchased), or store names. CRITICAL: When you see 'an iPad', 'an iPhone', or 'an' before ANY product, extract ONLY the product name WITHOUT the article. DO NOT extract 'an' as 'n' or 'N'. Examples: 'iPad' (NOT 'an iPad', NOT 'N iPad', NOT 'n iPad', NOT 'N Ipad'), 'laptop' (NOT 'a laptop'), 'milk' (NOT 'the milk'), 'iPhone' (NOT 'an iPhone', NOT 'N iPhone'). 2) For Apple products, use EXACT capitalization: 'iPad', 'iPhone', 'MacBook', 'iMac', 'iPod'. NEVER write 'Ipad', 'Iphone', etc. 3) Article removal examples: 'I bought an iPad' -> items='iPad', 'I got a laptop' -> items='laptop', 'I purchased the milk' -> items='milk'. The article 'an' should be COMPLETELY REMOVED, not converted to 'n'. 4) The 'store' field contains where the purchase was made. 5) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 6) If transcript says 'I bought eggs from Walmart for $7 and I bought an iPad from Walmart for $700', create TWO separate expense objects: items='eggs', amount=7, and items='iPad' (NOT 'an iPad', NOT 'N iPad', NOT 'N Ipad'), amount=700. 7) For amounts: Only apply dollars.cents interpretation to 4-5 digit numbers like '2350' = 23.50, '1234' = 12.34. Numbers like '700', '800', '900' are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. 8) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
                     {"role": "user", "content": prompt}
                 ],
-                temperature=0.2  # Lower temperature for more consistent extraction
+                temperature=0.1  # Even lower temperature for more consistent extraction
             )
             
             # Parse the response
@@ -975,10 +976,10 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
                 # Clean up items: remove articles and fix capitalization
                 if items:
                     items_original = items
-                    
+
                     # First, normalize to lowercase for pattern matching
                     items_lower = items.lower().strip()
-                    
+
                     # Product name mappings
                     product_fixes = {
                         'ipad': 'iPad',
@@ -987,54 +988,54 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
                         'imac': 'iMac',
                         'ipod': 'iPod',
                     }
-                    
-                    # Special handling for patterns like "N Ipad", "n ipad", "an ipad", etc.
-                    # Check if it matches patterns like "n ipad", "N Ipad", "an ipad"
+
+                    # First pass: Remove any leading articles (including the problematic "N ")
+                    # This catches patterns like "N Ipad", "n ipad", "an iPad", "a laptop", etc.
+                    items_cleaned = re.sub(r'^(n|N|a|an|A|An|the|The)\s+', '', items).strip()
+
+                    # Normalize cleaned version to lowercase for matching
+                    items_cleaned_lower = items_cleaned.lower()
+
+                    # Check if the cleaned item matches any product name
+                    matched = False
                     for product_key, product_value in product_fixes.items():
-                        # Pattern: "N Ipad", "n ipad", "N ipad", "n Ipad"
-                        if re.match(r'^(n|N)\s+' + product_key + r'$', items_lower):
+                        # Exact match (e.g., "ipad" -> "iPad")
+                        if items_cleaned_lower == product_key:
                             items = product_value
+                            matched = True
                             break
-                        # Pattern: "an ipad", "a ipad", "the ipad"
-                        elif re.match(r'^(a|an|the)\s+' + product_key + r'$', items_lower):
-                            items = product_value
+                        # Match with additional words (e.g., "ipad pro" -> "iPad Pro")
+                        elif items_cleaned_lower.startswith(product_key + ' '):
+                            remaining = items_cleaned[len(product_key):].strip()
+                            items = product_value + (' ' + remaining.title() if remaining else '')
+                            matched = True
                             break
-                        # Pattern: just the product name (case variations)
-                        elif items_lower == product_key or items_lower == 'ipad' or items_lower == 'Ipad':
-                            items = product_value
+                        # Match anywhere in the string
+                        elif product_key in items_cleaned_lower:
+                            # Replace the product name with proper capitalization
+                            items = re.sub(r'\b' + product_key + r'\b', product_value, items_cleaned, flags=re.IGNORECASE)
+                            matched = True
                             break
-                        # Pattern: product name with other text (e.g., "ipad pro", "n ipad pro")
-                        elif items_lower.startswith(product_key) or items_lower.startswith('n ' + product_key) or items_lower.startswith('an ' + product_key):
-                            # Remove leading "n " or "an " if present
-                            cleaned = re.sub(r'^(n|an|a|the)\s+', '', items_lower, flags=re.IGNORECASE)
-                            if cleaned.startswith(product_key):
-                                remaining = cleaned[len(product_key):].strip()
-                                items = product_value + (' ' + remaining.title() if remaining else '')
-                            break
-                    
-                    # If no product match found, do general cleanup
-                    if items == items_original:
-                        # Remove leading/trailing articles
-                        items = re.sub(r'^(a|an|the|n|N)\s+', '', items, flags=re.IGNORECASE)
-                        items = re.sub(r'\s+(a|an|the)$', '', items, flags=re.IGNORECASE)
-                        items = items.strip()
-                        
-                        # Check if it contains product names anywhere and fix them
-                        items_lower_after_clean = items.lower()
-                        for product_key, product_value in product_fixes.items():
-                            if product_key in items_lower_after_clean:
-                                # Replace the product name with proper capitalization
-                                items = re.sub(r'\b' + product_key + r'\b', product_value, items, flags=re.IGNORECASE)
-                                break
-                    
-                    # Final safety check: if it still starts with "N " or "n ", remove it
-                    items = re.sub(r'^(n|N)\s+', '', items)
-                    items = items.strip()
-                    
-                    # If it's just "Ipad" (capital I, lowercase pad), fix it
-                    if items == "Ipad":
-                        items = "iPad"
-                    
+
+                    # If no product-specific match was found, use the cleaned version
+                    if not matched:
+                        items = items_cleaned
+
+                    # Additional cleanup for any remaining articles or single letters
+                    items = re.sub(r'^(n|N|a|an|A|An|the|The)\s+', '', items).strip()
+
+                    # Fix common capitalization issues for Apple products
+                    if items.lower() == 'ipad' or items == 'Ipad' or items == 'IPad' or items == 'IPAD':
+                        items = 'iPad'
+                    elif items.lower() == 'iphone' or items == 'Iphone' or items == 'IPhone' or items == 'IPHONE':
+                        items = 'iPhone'
+                    elif items.lower() == 'macbook' or items == 'Macbook' or items == 'MacBook':
+                        items = 'MacBook'
+                    elif items.lower() == 'imac' or items == 'Imac' or items == 'IMac':
+                        items = 'iMac'
+                    elif items.lower() == 'ipod' or items == 'Ipod' or items == 'IPod':
+                        items = 'iPod'
+
                     print(f"Items cleaned: '{items_original}' -> '{items}'")
                 
                 category = expense_data.get("category")
