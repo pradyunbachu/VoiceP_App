@@ -135,6 +135,69 @@
   font-style: italic;
 }
 
+.recording-indicator {
+  margin: 2rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+  padding: 2rem;
+}
+
+.recording-dots {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.recording-dots span {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #dc2626;
+  animation: recordingPulse 1.4s ease-in-out infinite;
+}
+
+.recording-dots span:nth-child(1) {
+  animation-delay: 0s;
+}
+
+.recording-dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.recording-dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes recordingPulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.5);
+    opacity: 0.7;
+  }
+}
+
+.recording-text {
+  color: #dc2626;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  animation: recordingTextPulse 2s ease-in-out infinite;
+}
+
+@keyframes recordingTextPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.6;
+  }
+}
+
 .expense-details {
   display: flex;
   flex-direction: column;

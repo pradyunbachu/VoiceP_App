@@ -11,154 +11,71 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
   const [error, setError] = useState("");
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const recognitionRef = useRef(null);
-  const userStoppedRef = useRef(false);
+  const streamRef = useRef(null);
 
   const startRecording = async () => {
     try {
-      // Check if Web Speech API is available (free, no API needed)
-      if (
-        "webkitSpeechRecognition" in window ||
-        "SpeechRecognition" in window
-      ) {
-        // Use Web Speech API (free, browser-based)
-        const SpeechRecognition =
-          window.SpeechRecognition || window.webkitSpeechRecognition;
-        const recognition = new SpeechRecognition();
-
-        recognition.continuous = true; // Keep listening continuously
-        recognition.interimResults = true; // Show interim results
-        recognition.lang = "en-US";
-
-        recognition.onresult = (event) => {
-          // Combine all results including interim
-          let interimTranscript = "";
-          let finalTranscript = "";
-
-          for (let i = 0; i < event.results.length; i++) {
-            const transcript = event.results[i][0].transcript;
-            if (event.results[i].isFinal) {
-              finalTranscript += transcript + " ";
-            } else {
-              interimTranscript += transcript;
-            }
-          }
-
-          // Update transcript with both final and interim results
-          const fullTranscript = finalTranscript + interimTranscript;
-          setTranscript(fullTranscript.trim());
-        };
-
-        recognition.onerror = (event) => {
-          console.error("Speech recognition error:", event.error);
-          // Only show error if user didn't manually stop
-          if (!userStoppedRef.current) {
-            setError(`Speech recognition error: ${event.error}`);
-            setLoading(false);
-            setIsRecording(false);
-          }
-        };
-
-        recognition.onend = () => {
-          // Only restart if user didn't manually stop
-          if (!userStoppedRef.current && isRecording) {
-            // Restart recognition if it ended unexpectedly
-            try {
-              recognition.start();
-            } catch (error) {
-              console.error("Error restarting recognition:", error);
-              setIsRecording(false);
-            }
-          } else {
-            setIsRecording(false);
-          }
-        };
-
-        recognitionRef.current = recognition;
-        mediaRecorderRef.current = recognition;
-        userStoppedRef.current = false;
-        recognition.start();
-        setIsRecording(true);
-      } else {
-        // Fallback to MediaRecorder + backend transcription
-        const stream = await navigator.mediaDevices.getUserMedia({
-          audio: true,
-        });
-
-        // Try to find a supported audio format
-        let mimeType = "audio/webm";
-        if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-          mimeType = "audio/webm;codecs=opus";
-        } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-          mimeType = "audio/webm";
-        } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-          mimeType = "audio/mp4";
-        } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
-          mimeType = "audio/ogg";
-        }
-
-        const mediaRecorder = new MediaRecorder(stream, {
-          mimeType: mimeType,
-        });
-
-        mediaRecorderRef.current = mediaRecorder;
-        audioChunksRef.current = [];
-
-        mediaRecorder.ondataavailable = (event) => {
-          if (event.data.size > 0) {
-            audioChunksRef.current.push(event.data);
-          }
-        };
-
-        mediaRecorder.onstop = async () => {
-          const blobType = mediaRecorder.mimeType || "audio/webm";
-          const audioBlob = new Blob(audioChunksRef.current, {
-            type: blobType,
-          });
-          await processAudio(audioBlob, blobType);
-          stream.getTracks().forEach((track) => track.stop());
-        };
-
-        mediaRecorder.start();
-        setIsRecording(true);
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        throw new Error("MediaRecorder is not available in this browser");
       }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: true,
+      });
+
+      streamRef.current = stream;
+
+      // Try to find a supported audio format
+      let mimeType = "audio/webm";
+      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
+        mimeType = "audio/webm;codecs=opus";
+      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
+        mimeType = "audio/webm";
+      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
+        mimeType = "audio/mp4";
+      } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
+        mimeType = "audio/ogg";
+      }
+
+      const mediaRecorder = new MediaRecorder(stream, {
+        mimeType: mimeType,
+      });
+
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) {
+          audioChunksRef.current.push(event.data);
+        }
+      };
+
+      mediaRecorder.onstop = async () => {
+        const blobType = mediaRecorder.mimeType || "audio/webm";
+        const audioBlob = new Blob(audioChunksRef.current, {
+          type: blobType,
+        });
+        await processAudio(audioBlob, blobType);
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach((track) => track.stop());
+          streamRef.current = null;
+        }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setTranscript(""); // Clear any previous transcript
+      setError(""); // Clear any previous errors
     } catch (error) {
       console.error("Error accessing microphone:", error);
-      alert("Error accessing microphone. Please check permissions.");
+      setError("Error accessing microphone. Please check permissions.");
     }
   };
 
   const stopRecording = async () => {
-    userStoppedRef.current = true; // Mark that user manually stopped
-
-    if (recognitionRef.current) {
-      // Stop Web Speech API recognition
-      recognitionRef.current.stop();
-      recognitionRef.current = null;
-    }
-
     if (mediaRecorderRef.current && isRecording) {
-      // Check if it's Web Speech API or MediaRecorder
-      if (
-        mediaRecorderRef.current.stop &&
-        typeof mediaRecorderRef.current.stop === "function"
-      ) {
-        if (mediaRecorderRef.current.abort) {
-          // Web Speech API
-          mediaRecorderRef.current.stop();
-        } else {
-          // MediaRecorder
-          mediaRecorderRef.current.stop();
-        }
-      }
-    }
-
-    setIsRecording(false);
-
-    // Process the final transcript if we have one
-    if (transcript.trim()) {
-      setLoading(true);
-      await processTranscript(transcript.trim());
+      mediaRecorderRef.current.stop();
+      setIsRecording(false);
     }
   };
 
@@ -285,7 +202,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
     setExtractedExpense(null);
 
     try {
-      // Step 1: Transcribe audio
+      // Step 1: Transcribe audio using Deepgram API (via backend)
       const formData = new FormData();
       // Determine file extension based on mime type
       let extension = "webm";
@@ -306,7 +223,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       if (!transcriptResponse.ok) {
         const errorText = await transcriptResponse.text();
         throw new Error(
-          `Transcription failed: ${transcriptResponse.status} - ${errorText}`
+          `Deepgram transcription failed: ${transcriptResponse.status} - ${errorText}`
         );
       }
 
@@ -351,7 +268,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       // Check if it's a quota error
       if (errorMessage.includes("quota") || errorMessage.includes("429")) {
         setError(
-          "OpenAI API quota exceeded. You can use the manual text input below instead."
+          "Deepgram API quota exceeded. Please try again later or use manual text input."
         );
       } else {
         setError(`Error: ${errorDetails}`);
@@ -482,7 +399,18 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
         </div>
       )}
 
-      {transcript && (
+      {isRecording && (
+        <div className="recording-indicator">
+          <div className="recording-dots">
+            <span></span>
+            <span></span>
+            <span></span>
+          </div>
+          <p className="recording-text">Recording... Speak now</p>
+        </div>
+      )}
+
+      {transcript && !isRecording && (
         <div className="transcript-section">
           <h3>Transcript:</h3>
           <p className="transcript-text">{transcript}</p>

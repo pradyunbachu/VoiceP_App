@@ -10,6 +10,7 @@ import json
 import os
 import re
 from groq import Groq
+import httpx
 import io
 import base64
 from dotenv import load_dotenv
@@ -45,6 +46,13 @@ if not groq_api_key or groq_api_key == "your_groq_api_key_here":
     print("WARNING: GROQ_API_KEY not set. Please set your API key in .env file")
     print("Get a free API key at: https://console.groq.com/")
 groq_client = Groq(api_key=groq_api_key) if groq_api_key and groq_api_key != "your_groq_api_key_here" else None
+
+# Initialize Deepgram API key for voice transcription
+deepgram_api_key = os.getenv("DEEPGRAM_API_KEY", "")
+if not deepgram_api_key or deepgram_api_key == "your_deepgram_api_key_here":
+    print("WARNING: DEEPGRAM_API_KEY not set. Please set your API key in .env file")
+    print("Get a free API key at: https://console.deepgram.com/")
+deepgram_available = deepgram_api_key and deepgram_api_key != "your_deepgram_api_key_here"
 
 # Database setup
 DB_PATH = "voxalyze.db"
@@ -674,11 +682,64 @@ async def root():
 
 @app.post("/api/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
-    """Transcribe audio file to text - Note: Frontend uses Web Speech API for free transcription"""
-    raise HTTPException(
-        status_code=501, 
-        detail="Backend transcription not available. Please use Web Speech API in the browser (already implemented in frontend)."
-    )
+    """Transcribe audio file to text using Deepgram API"""
+    if not deepgram_available:
+        raise HTTPException(
+            status_code=503,
+            detail="Deepgram API key not configured. Please set DEEPGRAM_API_KEY in .env file. Get a free API key at: https://console.deepgram.com/"
+        )
+    
+    try:
+        # Read audio file content
+        audio_content = await audio.read()
+        
+        # Use Deepgram REST API directly
+        url = "https://api.deepgram.com/v1/listen"
+        headers = {
+            "Authorization": f"Token {deepgram_api_key}",
+        }
+        params = {
+            "model": "nova-2",
+            "language": "en-US",
+            "smart_format": "true",
+            "punctuate": "true",
+        }
+        
+        # Send audio to Deepgram API
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                url,
+                headers=headers,
+                params=params,
+                files={"audio": (audio.filename or "audio.webm", audio_content, audio.content_type or "audio/webm")}
+            )
+            response.raise_for_status()
+            result = response.json()
+        
+        # Extract transcript from response
+        if result.get("results") and result["results"].get("channels") and len(result["results"]["channels"]) > 0:
+            transcript = result["results"]["channels"][0]["alternatives"][0]["transcript"]
+            return {"transcript": transcript}
+        else:
+            raise HTTPException(
+                status_code=500,
+                detail="No transcript returned from Deepgram API"
+            )
+            
+    except httpx.HTTPStatusError as e:
+        print(f"Deepgram API HTTP error: {e.response.status_code} - {e.response.text}")
+        raise HTTPException(
+            status_code=e.response.status_code,
+            detail=f"Deepgram API error: {e.response.text}"
+        )
+    except Exception as e:
+        print(f"Deepgram transcription error: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Transcription failed: {str(e)}"
+        )
 
 class TranscriptRequest(BaseModel):
     transcript: str
@@ -848,10 +909,13 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             - store: The name of the store/merchant where the purchase was made (e.g., "Walmart", "Apple", "Target")
             - items: The actual items/products purchased. CRITICAL RULES:
               1. Extract the PRODUCT, not the store name
-              2. If transcript says "bought a laptop MacBook from Apple", items = "laptop" or "MacBook", store = "Apple"
-              3. If transcript says "groceries at Walmart", items = "groceries", store = "Walmart"
-              4. If transcript says "bought apple from Apple", items = "apple" (the fruit), store = "Apple" (the store)
-              5. The item is what was purchased, the store is where it was bought
+              2. Remove ALL articles (a, an, the) and action words (I, bought, got, purchased) from the item name
+              3. If transcript says "bought a laptop MacBook from Apple", items = "MacBook" or "laptop", store = "Apple"
+              4. If transcript says "bought an iPad from Target", items = "iPad" (NOT "an iPad" or "N iPad"), store = "Target"
+              5. If transcript says "groceries at Walmart", items = "groceries", store = "Walmart"
+              6. If transcript says "bought apple from Apple", items = "apple" (the fruit), store = "Apple" (the store)
+              7. The item is what was purchased, the store is where it was bought
+              8. For Apple products, use proper capitalization: "iPad", "iPhone", "MacBook", "iMac", "iPod"
             - category: Categorize the expense. Available categories: "Electronics", "Groceries", "Clothing", "Transportation", "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"
              - amount: Total amount spent as a number (e.g., 45.50 for $45.50). IMPORTANT: Only apply dollars.cents interpretation to 4-5 digit numbers like "2350" = 23.50, "1234" = 12.34. Numbers like "700", "800", "900" are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. Only 6+ digit numbers are definitely whole dollar amounts.
             - date: Date of purchase in YYYY-MM-DD format. IMPORTANT: Handle relative dates correctly:
@@ -875,7 +939,7 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
             response = groq_client.chat.completions.create(
                 model="llama-3.1-70b-versatile",  # Fast and accurate Groq model
                 messages=[
-                     {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain ONLY the PRODUCT/ITEM purchased (like 'laptop', 'MacBook', 'milk', 'candy', 'eggs', 'iPad'), NEVER include words like 'I', 'bought', 'got', 'from [store]', or the store name. Just the item name. 2) The 'store' field contains where the purchase was made. 3) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 4) If transcript says 'I bought eggs from Walmart for $7 and I bought an iPad from Walmart for $700', create TWO separate expense objects: items='eggs' (NOT 'I eggs from Walmart'), amount=7, and items='iPad' (NOT 'I iPad from Walmart'), amount=700. 5) For amounts: Only apply dollars.cents interpretation to 4-5 digit numbers like '2350' = 23.50, '1234' = 12.34. Numbers like '700', '800', '900' are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. 6) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
+                     {"role": "system", "content": f"You are a helpful assistant that extracts expense information from voice transcripts. CRITICAL: Always return a JSON ARRAY of expense objects. If transcript mentions MULTIPLE items with DIFFERENT prices, create SEPARATE expense objects. Each object has keys: store, items, category, amount, date. RULES: 1) The 'items' field must contain ONLY the PRODUCT/ITEM purchased. NEVER include articles (a, an, the), action words (I, bought, got, purchased), or store names. Examples: 'iPad' (NOT 'an iPad', NOT 'N iPad', NOT 'n iPad'), 'laptop' (NOT 'a laptop'), 'milk' (NOT 'the milk'). 2) For Apple products, use EXACT capitalization: 'iPad', 'iPhone', 'MacBook', 'iMac', 'iPod'. 3) If transcript says 'an iPad', extract as 'iPad'. If transcript says 'a laptop', extract as 'laptop'. Remove ALL articles completely. 4) The 'store' field contains where the purchase was made. 5) Each expense should have ONE category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other. 6) If transcript says 'I bought eggs from Walmart for $7 and I bought an iPad from Walmart for $700', create TWO separate expense objects: items='eggs', amount=7, and items='iPad' (NOT 'an iPad', NOT 'N iPad'), amount=700. 7) For amounts: Only apply dollars.cents interpretation to 4-5 digit numbers like '2350' = 23.50, '1234' = 12.34. Numbers like '700', '800', '900' are whole dollars (700, 800, 900), NOT 7.00, 8.00, 9.00. 8) For dates: 'yesterday' = {(datetime.now() - timedelta(days=1)).strftime('%Y-%m-%d')}, 'tomorrow' = {(datetime.now() + timedelta(days=1)).strftime('%Y-%m-%d')}, 'today' = {datetime.now().strftime('%Y-%m-%d')}. Today is {datetime.now().strftime('%Y-%m-%d')}."},
                     {"role": "user", "content": prompt}
                 ],
                 temperature=0.2  # Lower temperature for more consistent extraction
@@ -907,6 +971,72 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
                 # Validate and set defaults
                 store = expense_data.get("store", "Unknown Store")
                 items = expense_data.get("items", "")
+                
+                # Clean up items: remove articles and fix capitalization
+                if items:
+                    items_original = items
+                    
+                    # First, normalize to lowercase for pattern matching
+                    items_lower = items.lower().strip()
+                    
+                    # Product name mappings
+                    product_fixes = {
+                        'ipad': 'iPad',
+                        'iphone': 'iPhone',
+                        'macbook': 'MacBook',
+                        'imac': 'iMac',
+                        'ipod': 'iPod',
+                    }
+                    
+                    # Special handling for patterns like "N Ipad", "n ipad", "an ipad", etc.
+                    # Check if it matches patterns like "n ipad", "N Ipad", "an ipad"
+                    for product_key, product_value in product_fixes.items():
+                        # Pattern: "N Ipad", "n ipad", "N ipad", "n Ipad"
+                        if re.match(r'^(n|N)\s+' + product_key + r'$', items_lower):
+                            items = product_value
+                            break
+                        # Pattern: "an ipad", "a ipad", "the ipad"
+                        elif re.match(r'^(a|an|the)\s+' + product_key + r'$', items_lower):
+                            items = product_value
+                            break
+                        # Pattern: just the product name (case variations)
+                        elif items_lower == product_key or items_lower == 'ipad' or items_lower == 'Ipad':
+                            items = product_value
+                            break
+                        # Pattern: product name with other text (e.g., "ipad pro", "n ipad pro")
+                        elif items_lower.startswith(product_key) or items_lower.startswith('n ' + product_key) or items_lower.startswith('an ' + product_key):
+                            # Remove leading "n " or "an " if present
+                            cleaned = re.sub(r'^(n|an|a|the)\s+', '', items_lower, flags=re.IGNORECASE)
+                            if cleaned.startswith(product_key):
+                                remaining = cleaned[len(product_key):].strip()
+                                items = product_value + (' ' + remaining.title() if remaining else '')
+                            break
+                    
+                    # If no product match found, do general cleanup
+                    if items == items_original:
+                        # Remove leading/trailing articles
+                        items = re.sub(r'^(a|an|the|n|N)\s+', '', items, flags=re.IGNORECASE)
+                        items = re.sub(r'\s+(a|an|the)$', '', items, flags=re.IGNORECASE)
+                        items = items.strip()
+                        
+                        # Check if it contains product names anywhere and fix them
+                        items_lower_after_clean = items.lower()
+                        for product_key, product_value in product_fixes.items():
+                            if product_key in items_lower_after_clean:
+                                # Replace the product name with proper capitalization
+                                items = re.sub(r'\b' + product_key + r'\b', product_value, items, flags=re.IGNORECASE)
+                                break
+                    
+                    # Final safety check: if it still starts with "N " or "n ", remove it
+                    items = re.sub(r'^(n|N)\s+', '', items)
+                    items = items.strip()
+                    
+                    # If it's just "Ipad" (capital I, lowercase pad), fix it
+                    if items == "Ipad":
+                        items = "iPad"
+                    
+                    print(f"Items cleaned: '{items_original}' -> '{items}'")
+                
                 category = expense_data.get("category")
                 amount = expense_data.get("amount")
                 # If Groq didn't extract date or extracted a relative date term, parse it
