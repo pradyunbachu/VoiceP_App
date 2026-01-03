@@ -138,7 +138,7 @@
 
 .section-header h3 {
   color: #ffffff;
-  font-size: 1.3rem;
+  font-size: 1.2rem;
   font-weight: 600;
   margin: 0;
 }
@@ -150,7 +150,7 @@
 }
 
 .budget-comparison-card {
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.3);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
@@ -158,8 +158,9 @@
 }
 
 .budget-comparison-card:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .budget-card-header {
@@ -170,14 +171,14 @@
 }
 
 .budget-category-name {
-  color: #22c55e;
-  font-size: 1.1rem;
+  color: #ffffff;
   font-weight: 600;
+  font-size: 1.1rem;
 }
 
 .budget-stats-row {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  display: flex;
+  justify-content: space-between;
   gap: 1rem;
   margin-bottom: 1rem;
 }
@@ -185,52 +186,57 @@
 .budget-stat-item {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  flex: 1;
 }
 
 .budget-stat-label {
-  color: #707070;
-  font-size: 0.85rem;
+  color: #a0a0a0;
+  font-size: 0.875rem;
+  margin-bottom: 0.25rem;
 }
 
 .budget-stat-value {
   color: #ffffff;
-  font-size: 1.1rem;
   font-weight: 600;
+  font-size: 1rem;
 }
 
 .budget-stat-value.spent {
-  color: #eab308;
+  color: #f59e0b;
 }
 
 .budget-stat-value.negative {
-  color: #dc2626;
+  color: #ef4444;
 }
 
 .budget-progress-container {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .budget-progress-bar {
   width: 100%;
-  height: 10px;
+  height: 8px;
   background: rgba(255, 255, 255, 0.1);
-  border-radius: 5px;
+  border-radius: 4px;
   overflow: hidden;
+  margin-bottom: 0.5rem;
 }
 
 .budget-progress-fill {
   height: 100%;
   transition: width 0.3s ease;
-  border-radius: 5px;
 }
 
 .budget-percentage {
-  font-size: 0.9rem;
-  font-weight: 600;
-  text-align: right;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.budget-period {
+  font-size: 0.75rem;
+  color: #a0a0a0;
+  text-align: center;
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 768px) {
@@ -243,10 +249,6 @@
   }
 
   .budget-comparison-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .budget-stats-row {
     grid-template-columns: 1fr;
   }
 }

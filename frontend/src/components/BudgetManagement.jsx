@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { DollarSign, Plus, Trash2, Edit2, Check, X, AlertTriangle, Calendar } from "lucide-react";
+import { DollarSign, Plus, Trash2, Edit2, Check, X, AlertTriangle } from "lucide-react";
 import { CATEGORIES } from "../constants/categories";
 import LoadingSkeleton from "./LoadingSkeleton";
 import "./BudgetManagement.css";
@@ -38,7 +38,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
-      // Build URL with optional month/year filters
       let url = "http://localhost:8000/api/budgets/check";
       const params = new URLSearchParams();
       if (filterMonth) params.append("month", filterMonth);
@@ -47,9 +46,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
         url += `?${params.toString()}`;
       }
 
-      const response = await fetch(url, {
-        headers,
-      });
+      const response = await fetch(url, { headers });
 
       if (response.ok) {
         const data = await response.json();
@@ -89,7 +86,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           amount: parseFloat(formData.amount),
           month: parseInt(formData.month),
           year: parseInt(formData.year),
-          recurring: formData.repeatInterval && formData.repeatUnit,
+          recurring: formData.recurring && formData.repeatInterval && formData.repeatUnit,
           repeat_interval: formData.repeatInterval ? parseInt(formData.repeatInterval) : null,
           repeat_unit: formData.repeatUnit || null,
         }),
@@ -97,7 +94,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
 
       if (response.ok) {
         setShowAddForm(false);
-        // Reset form to current month/year
         const now = new Date();
         setFormData({
           category: "",
@@ -105,6 +101,8 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           month: now.getMonth() + 1,
           year: now.getFullYear(),
           recurring: false,
+          repeatInterval: "",
+          repeatUnit: "",
         });
         fetchBudgets();
         if (onBudgetChange) {
@@ -114,28 +112,17 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           showToast("Budget created successfully", "success");
         }
       } else {
-        let errorMsg = "Failed to create budget";
-        try {
-          const error = await response.json();
-          errorMsg = error.detail || error.message || errorMsg;
-        } catch (e) {
-          // If response is not JSON, use status text
-          errorMsg = response.statusText || `Error ${response.status}`;
-        }
+        const error = await response.json();
+        const errorMsg = error.detail || "Failed to create budget";
         if (showToast) {
           showToast(errorMsg, "error");
         }
-        throw new Error(errorMsg);
       }
     } catch (error) {
       console.error("Error creating budget:", error);
       if (showToast) {
-        const errorMsg = error.message || "Failed to create budget. Please check if the database is initialized.";
-        if (!error.message || !error.message.includes("Failed to create")) {
-          showToast(errorMsg, "error");
-        }
+        showToast("Failed to create budget", "error");
       }
-      throw error;
     }
   };
 
@@ -148,6 +135,9 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
+      // Determine if recurring based on repeat_interval and repeat_unit
+      const isRecurring = editForm.repeatInterval && editForm.repeatUnit;
+      
       const response = await fetch(`http://localhost:8000/api/budgets/${id}`, {
         method: "PUT",
         headers,
@@ -156,9 +146,9 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           amount: parseFloat(editForm.amount),
           month: parseInt(editForm.month),
           year: parseInt(editForm.year),
-          recurring: editForm.repeatInterval && editForm.repeatUnit,
-          repeat_interval: editForm.repeatInterval ? parseInt(editForm.repeatInterval) : null,
-          repeat_unit: editForm.repeatUnit || null,
+          recurring: isRecurring,
+          repeat_interval: editForm.repeatInterval && editForm.repeatInterval.trim() !== "" ? parseInt(editForm.repeatInterval) : null,
+          repeat_unit: editForm.repeatUnit && editForm.repeatUnit.trim() !== "" ? editForm.repeatUnit : null,
         }),
       });
 
@@ -182,18 +172,17 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           showToast("Budget updated successfully", "success");
         }
       } else {
-        const errorMsg = "Failed to update budget";
+        const error = await response.json();
+        const errorMsg = error.detail || "Failed to update budget";
         if (showToast) {
           showToast(errorMsg, "error");
         }
-        throw new Error(errorMsg);
       }
     } catch (error) {
       console.error("Error updating budget:", error);
-      if (showToast && !error.message.includes("Failed to update")) {
-        showToast(error.message || "Failed to update budget", "error");
+      if (showToast) {
+        showToast("Failed to update budget", "error");
       }
-      throw error;
     }
   };
 
@@ -222,18 +211,15 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           showToast("Budget deleted successfully", "success");
         }
       } else {
-        const errorMsg = "Failed to delete budget";
         if (showToast) {
-          showToast(errorMsg, "error");
+          showToast("Failed to delete budget", "error");
         }
-        throw new Error(errorMsg);
       }
     } catch (error) {
       console.error("Error deleting budget:", error);
-      if (showToast && !error.message.includes("Failed to delete")) {
-        showToast(error.message || "Failed to delete budget", "error");
+      if (showToast) {
+        showToast("Failed to delete budget", "error");
       }
-      throw error;
     }
   };
 
@@ -245,7 +231,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
       month: budget.month,
       year: budget.year,
       recurring: budget.recurring || false,
-      repeatInterval: (budget.repeat_interval || budget.repeat_interval === 0) ? budget.repeat_interval.toString() : "",
+      repeatInterval: (budget.repeat_interval !== null && budget.repeat_interval !== undefined) ? budget.repeat_interval.toString() : "",
       repeatUnit: budget.repeat_unit || "",
     });
   };
@@ -264,32 +250,9 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
     });
   };
 
-  const getAlertColor = (alertLevel) => {
-    switch (alertLevel) {
-      case "exceeded":
-        return "#dc2626";
-      case "warning":
-        return "#eab308";
-      case "caution":
-        return "#f59e0b";
-      default:
-        return "#22c55e";
-    }
-  };
-
-  const getAlertIcon = (alertLevel) => {
-    if (alertLevel === "exceeded" || alertLevel === "warning") {
-      return <AlertTriangle size={18} />;
-    }
-    return null;
-  };
-
-  const currentMonth = new Date().toLocaleString("default", { month: "long", year: "numeric" });
-
   if (loading) {
     return (
       <div className="budget-management">
-        <h2>Budget Management</h2>
         <LoadingSkeleton type="card" count={3} />
       </div>
     );
@@ -311,6 +274,28 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
         </button>
       </div>
 
+      <div className="budget-filters">
+        <select
+          value={filterMonth || ""}
+          onChange={(e) => setFilterMonth(e.target.value ? parseInt(e.target.value) : null)}
+        >
+          <option value="">All Months</option>
+          {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+            <option key={m} value={m}>
+              {new Date(2000, m - 1).toLocaleString("default", { month: "long" })}
+            </option>
+          ))}
+        </select>
+        <input
+          type="number"
+          placeholder="Year (optional)"
+          value={filterYear || ""}
+          onChange={(e) => setFilterYear(e.target.value ? parseInt(e.target.value) : null)}
+          min="2020"
+          max="2100"
+        />
+      </div>
+
       {showAddForm && (
         <form className="budget-form" onSubmit={handleCreate}>
           <h3>Create New Budget</h3>
@@ -328,7 +313,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label>Amount ($)</label>
               <input
@@ -342,7 +326,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
               />
             </div>
           </div>
-
           <div className="form-row">
             <div className="form-group">
               <label>Month</label>
@@ -358,7 +341,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                 ))}
               </select>
             </div>
-
             <div className="form-group">
               <label>Year</label>
               <input
@@ -371,42 +353,34 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
               />
             </div>
           </div>
-
           <div className="form-row">
-            <div className="form-group" style={{gridColumn: '1 / -1'}}>
-              <label>Repeat Budget</label>
-              <div style={{display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
-                <span style={{color: '#a0a0a0'}}>Every</span>
+            <div className="form-group">
+              <label>Repeat Every (Optional)</label>
+              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                 <input
                   type="number"
                   min="1"
-                  max="100"
+                  placeholder="e.g., 1"
                   value={formData.repeatInterval}
-                  onChange={(e) => setFormData({...formData, repeatInterval: e.target.value})}
-                  placeholder="1"
-                  style={{
-                    width: '80px',
-                    padding: '0.75rem',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    fontFamily: "'Ubuntu', sans-serif",
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({
+                      ...formData, 
+                      repeatInterval: val,
+                      recurring: val && formData.repeatUnit ? true : false
+                    });
                   }}
+                  style={{width: '80px'}}
                 />
                 <select
                   value={formData.repeatUnit}
-                  onChange={(e) => setFormData({...formData, repeatUnit: e.target.value})}
-                  style={{
-                    padding: '0.75rem',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    borderRadius: '8px',
-                    color: '#ffffff',
-                    fontSize: '1rem',
-                    fontFamily: "'Ubuntu', sans-serif",
-                    cursor: 'pointer',
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setFormData({
+                      ...formData, 
+                      repeatUnit: val,
+                      recurring: formData.repeatInterval && val ? true : false
+                    });
                   }}
                 >
                   <option value="">No repeat</option>
@@ -422,28 +396,12 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
               )}
             </div>
           </div>
-
           <div className="form-actions">
-            <button type="submit" className="submit-button">
+            <button type="submit" className="save-button">
               <Check size={16} />
               <span>Create Budget</span>
             </button>
-            <button
-              type="button"
-              className="cancel-button"
-              onClick={() => {
-                setShowAddForm(false);
-        // Reset form to current month/year
-        const now = new Date();
-        setFormData({
-          category: "",
-          amount: "",
-          month: now.getMonth() + 1,
-          year: now.getFullYear(),
-          recurring: false,
-        });
-              }}
-            >
+            <button type="button" className="cancel-button" onClick={() => setShowAddForm(false)}>
               <X size={16} />
               <span>Cancel</span>
             </button>
@@ -452,24 +410,23 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
       )}
 
       {budgets.length === 0 ? (
-        <div className="empty-budget-state">
-          <h3>No budgets set</h3>
-          <p>Create a budget to track your spending and get alerts when you're approaching limits.</p>
+        <div className="empty-state">
+          <DollarSign size={48} />
+          <h3>No budgets yet</h3>
+          <p>Create a budget to start tracking your spending</p>
         </div>
       ) : (
-        <div className="budgets-list">
+        <div className="budget-list">
           {budgets.map((budget) => (
             <div key={budget.id} className="budget-card">
               {editingId === budget.id ? (
                 <div className="budget-edit-form">
-                  <h4 style={{color: '#ffffff', marginBottom: '1rem'}}>Edit Budget</h4>
                   <div className="edit-form-row">
                     <div className="edit-form-group">
                       <label>Category</label>
                       <select
-                        value={editForm.category || ""}
+                        value={editForm.category}
                         onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                        className="edit-form-select"
                       >
                         <option value="">Select Category</option>
                         {CATEGORIES.map(cat => (
@@ -485,7 +442,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                         min="0"
                         value={editForm.amount}
                         onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
-                        className="edit-form-input"
                       />
                     </div>
                   </div>
@@ -495,7 +451,6 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                       <select
                         value={editForm.month}
                         onChange={(e) => setEditForm({...editForm, month: parseInt(e.target.value)})}
-                        className="edit-form-select"
                       >
                         {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
                           <option key={m} value={m}>
@@ -512,28 +467,39 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                         max="2100"
                         value={editForm.year}
                         onChange={(e) => setEditForm({...editForm, year: parseInt(e.target.value)})}
-                        className="edit-form-input"
                       />
                     </div>
                   </div>
                   <div className="edit-form-row">
-                    <div className="edit-form-group" style={{gridColumn: '1 / -1'}}>
-                      <label>Repeat Budget</label>
-                      <div style={{display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap'}}>
-                        <span style={{color: '#a0a0a0'}}>Every</span>
+                    <div className="edit-form-group">
+                      <label>Repeat Every (Optional)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
                         <input
                           type="number"
                           min="1"
-                          max="100"
-                          value={editForm.repeatInterval}
-                          onChange={(e) => setEditForm({...editForm, repeatInterval: e.target.value})}
-                          placeholder="1"
-                          className="edit-form-input"
+                          placeholder="e.g., 1"
+                          value={editForm.repeatInterval || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditForm({
+                              ...editForm, 
+                              repeatInterval: val,
+                              recurring: val && editForm.repeatUnit ? true : false
+                            });
+                          }}
                           style={{width: '80px'}}
+                          className="edit-form-input"
                         />
                         <select
-                          value={editForm.repeatUnit || ""}
-                          onChange={(e) => setEditForm({...editForm, repeatUnit: e.target.value})}
+                          value={editForm.repeatUnit || ''}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setEditForm({
+                              ...editForm, 
+                              repeatUnit: val,
+                              recurring: editForm.repeatInterval && val ? true : false
+                            });
+                          }}
                           className="edit-form-select"
                         >
                           <option value="">No repeat</option>
@@ -550,17 +516,11 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                     </div>
                   </div>
                   <div className="edit-actions">
-                    <button
-                      className="save-button"
-                      onClick={() => handleUpdate(budget.id)}
-                    >
+                    <button className="save-button" onClick={() => handleUpdate(budget.id)}>
                       <Check size={16} />
                       <span>Save</span>
                     </button>
-                    <button
-                      className="cancel-button"
-                      onClick={cancelEdit}
-                    >
+                    <button className="cancel-button" onClick={cancelEdit}>
                       <X size={16} />
                       <span>Cancel</span>
                     </button>
@@ -571,89 +531,58 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                   <div className="budget-card-header">
                     <div className="budget-category">
                       <DollarSign size={20} />
-                      <span>{budget.category}</span>
+                      <span>{budget.category?.trim() || 'Uncategorized'}</span>
+                      {budget.recurring && (
+                        <span className="recurring-badge" title={`Repeats every ${budget.repeat_interval} ${budget.repeat_unit}`}>
+                          Recurring
+                        </span>
+                      )}
                     </div>
                     <div className="budget-actions">
-                      <button
-                        className="edit-budget-button"
-                        onClick={() => startEdit(budget)}
-                        title="Edit budget"
-                      >
+                      <button className="edit-budget-button" onClick={() => startEdit(budget)}>
                         <Edit2 size={16} />
                       </button>
-                      <button
-                        className="delete-budget-button"
-                        onClick={() => handleDelete(budget.id)}
-                        title="Delete budget"
-                      >
+                      <button className="delete-budget-button" onClick={() => handleDelete(budget.id)}>
                         <Trash2 size={16} />
                       </button>
                     </div>
                   </div>
-
                   <div className="budget-stats">
                     <div className="budget-stat">
-                      <span className="stat-label">Budget</span>
-                      <span className="stat-value">${budget.amount.toFixed(2)}</span>
+                      <span className="budget-label">Budget:</span>
+                      <span className="budget-value">${budget.amount.toFixed(2)}</span>
                     </div>
                     <div className="budget-stat">
-                      <span className="stat-label">Spent</span>
-                      <span className="stat-value spent">${budget.actual_spending.toFixed(2)}</span>
+                      <span className="budget-label">Spent:</span>
+                      <span className="budget-value spent">${budget.actual_spending?.toFixed(2) || "0.00"}</span>
                     </div>
                     <div className="budget-stat">
-                      <span className="stat-label">Remaining</span>
-                      <span className={`stat-value ${budget.remaining < 0 ? "negative" : ""}`}>
-                        ${budget.remaining.toFixed(2)}
+                      <span className="budget-label">Remaining:</span>
+                      <span className={`budget-value ${budget.remaining < 0 ? 'negative' : ''}`}>
+                        ${budget.remaining?.toFixed(2) || budget.amount.toFixed(2)}
                       </span>
                     </div>
                   </div>
-
                   <div className="budget-progress">
-                    <div className="progress-bar-container">
+                    <div className="budget-progress-bar">
                       <div
-                        className="progress-bar"
+                        className="budget-progress-fill"
                         style={{
-                          width: `${Math.min(budget.percentage_used, 100)}%`,
-                          backgroundColor: getAlertColor(budget.alert_level),
+                          width: `${Math.min(budget.percentage_used || 0, 100)}%`,
+                          backgroundColor: 
+                            (budget.percentage_used || 0) >= 100 ? '#dc2626' :
+                            (budget.percentage_used || 0) >= 90 ? '#eab308' :
+                            (budget.percentage_used || 0) >= 75 ? '#f59e0b' :
+                            '#22c55e'
                         }}
                       />
                     </div>
-                    <div className="progress-info">
-                      <span className="progress-percentage">
-                        {budget.percentage_used.toFixed(1)}% used
-                      </span>
-                      {budget.alert_level !== "ok" && (
-                        <span
-                          className="alert-badge"
-                          style={{ color: getAlertColor(budget.alert_level) }}
-                        >
-                          {getAlertIcon(budget.alert_level)}
-                          {budget.alert_level === "exceeded" && " Budget Exceeded"}
-                          {budget.alert_level === "warning" && " Warning: 90%+ Used"}
-                          {budget.alert_level === "caution" && " Caution: 75%+ Used"}
-                        </span>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="budget-period">
-                    <Calendar size={14} />
-                    <span>
-                      {new Date(budget.year, budget.month - 1).toLocaleString("default", {
-                        month: "long",
-                        year: "numeric",
-                      })}
+                    <span className="budget-percentage">
+                      {budget.percentage_used?.toFixed(1) || 0}% used
                     </span>
-                    {budget.recurring && budget.repeat_interval && budget.repeat_unit && (
-                      <span className="recurring-badge" style={{marginLeft: '0.5rem', fontSize: '0.85rem', color: '#22c55e', fontWeight: '600'}}>
-                        Repeats every {budget.repeat_interval} {budget.repeat_unit}
-                      </span>
-                    )}
-                    {budget.actual_spending === 0 && (
-                      <span className="budget-note" style={{marginLeft: '0.5rem', fontSize: '0.85rem', color: '#707070'}}>
-                        (Only expenses in this month/year are counted)
-                      </span>
-                    )}
+                  </div>
+                  <div className="budget-date">
+                    {new Date(budget.year, budget.month - 1).toLocaleString("default", { month: "long", year: "numeric" })}
                   </div>
                 </>
               )}

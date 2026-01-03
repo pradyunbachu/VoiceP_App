@@ -1,230 +1,255 @@
-import { useState, useEffect, useCallback } from 'react'
-import Navigation from './components/Navigation'
-import LandingPage from './components/LandingPage'
-import Login from './components/Login'
-import VoiceRecorder from './components/VoiceRecorder'
-import AnalyticsDashboard from './components/AnalyticsDashboard'
-import ExpenseList from './components/ExpenseList'
-import BudgetManagement from './components/BudgetManagement'
-import ToastContainer from './components/ToastContainer'
-import LoadingSkeleton from './components/LoadingSkeleton'
-import './App.css'
+import { useState, useEffect, useCallback } from "react";
+import Navigation from "./components/Navigation";
+import LandingPage from "./components/LandingPage";
+import Login from "./components/Login";
+import VoiceRecorder from "./components/VoiceRecorder";
+import AnalyticsDashboard from "./components/AnalyticsDashboard";
+import ExpenseList from "./components/ExpenseList";
+import BudgetManagement from "./components/BudgetManagement";
+import ToastContainer from "./components/ToastContainer";
+import LoadingSkeleton from "./components/LoadingSkeleton";
+import "./App.css";
 
 // Utility function for API calls with retry
-const fetchWithRetry = async (url, options = {}, maxRetries = 3, delay = 1000) => {
+const fetchWithRetry = async (
+  url,
+  options = {},
+  maxRetries = 3,
+  delay = 1000
+) => {
   for (let i = 0; i < maxRetries; i++) {
     try {
-      const response = await fetch(url, options)
+      const response = await fetch(url, options);
       if (response.ok || response.status === 401) {
-        return response
+        return response;
       }
       // Retry on server errors (5xx) or network errors
       if (i < maxRetries - 1 && (response.status >= 500 || !response.ok)) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
-        continue
+        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
+        continue;
       }
-      return response
+      return response;
     } catch (error) {
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
-        continue
+        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
+        continue;
       }
-      throw error
+      throw error;
     }
   }
-}
+};
 
 function App() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false)
-  const [token, setToken] = useState(null)
-  const [user, setUser] = useState(null)
-  const [currentView, setCurrentView] = useState('landing')
-  const [expenses, setExpenses] = useState([])
-  const [analytics, setAnalytics] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [toasts, setToasts] = useState([])
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [token, setToken] = useState(null);
+  const [user, setUser] = useState(null);
+  const [currentView, setCurrentView] = useState("landing");
+  const [expenses, setExpenses] = useState([]);
+  const [analytics, setAnalytics] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [toasts, setToasts] = useState([]);
 
   // Toast notification helper
-  const showToast = useCallback((message, type = 'info', duration = 5000) => {
-    const id = Date.now() + Math.random()
-    setToasts(prev => [...prev, { id, message, type, duration }])
-  }, [])
+  const showToast = useCallback((message, type = "info", duration = 5000) => {
+    const id = Date.now() + Math.random();
+    setToasts((prev) => [...prev, { id, message, type, duration }]);
+  }, []);
 
   const removeToast = useCallback((id) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id))
-  }, [])
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
 
   // Check for existing token on mount
   useEffect(() => {
-    const storedToken = localStorage.getItem('token')
-    const storedUser = localStorage.getItem('user')
+    const storedToken = localStorage.getItem("token");
+    const storedUser = localStorage.getItem("user");
     if (storedToken && storedUser) {
-      setToken(storedToken)
-      setUser(JSON.parse(storedUser))
-      setIsAuthenticated(true)
-      setCurrentView('dashboard')
+      setToken(storedToken);
+      setUser(JSON.parse(storedUser));
+      setIsAuthenticated(true);
+      setCurrentView("dashboard");
     }
-  }, [])
+  }, []);
 
   const fetchExpenses = async (showLoading = true) => {
-    if (!token) return
-    if (showLoading) setLoading(true)
+    if (!token) return;
+    if (showLoading) setLoading(true);
     try {
-      const response = await fetchWithRetry('http://localhost:8000/api/expenses', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const response = await fetchWithRetry(
+        "http://localhost:8000/api/expenses",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      })
-      
+      );
+
       if (response.status === 401) {
-        handleLogout()
-        showToast('Session expired. Please login again.', 'warning')
-        return
+        handleLogout();
+        showToast("Session expired. Please login again.", "warning");
+        return;
       }
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch expenses: ${response.status}`)
+        throw new Error(`Failed to fetch expenses: ${response.status}`);
       }
-      
-      const data = await response.json()
-      setExpenses(data.expenses || [])
+
+      const data = await response.json();
+      setExpenses(data.expenses || []);
     } catch (error) {
-      console.error('Error fetching expenses:', error)
-      showToast('Failed to load expenses. Please try again.', 'error')
+      console.error("Error fetching expenses:", error);
+      showToast("Failed to load expenses. Please try again.", "error");
     } finally {
-      if (showLoading) setLoading(false)
+      if (showLoading) setLoading(false);
     }
-  }
+  };
 
   const fetchAnalytics = async (showLoading = true) => {
-    if (!token) return
-    if (showLoading) setLoading(true)
+    if (!token) return;
+    if (showLoading) setLoading(true);
     try {
-      const response = await fetchWithRetry('http://localhost:8000/api/analytics', {
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const response = await fetchWithRetry(
+        "http://localhost:8000/api/analytics",
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      })
-      
+      );
+
       if (response.status === 401) {
-        handleLogout()
-        showToast('Session expired. Please login again.', 'warning')
-        return
+        handleLogout();
+        showToast("Session expired. Please login again.", "warning");
+        return;
       }
-      
+
       if (!response.ok) {
-        throw new Error(`Failed to fetch analytics: ${response.status}`)
+        throw new Error(`Failed to fetch analytics: ${response.status}`);
       }
-      
-      const data = await response.json()
-      setAnalytics(data)
+
+      const data = await response.json();
+      setAnalytics(data);
     } catch (error) {
-      console.error('Error fetching analytics:', error)
-      showToast('Failed to load analytics. Please try again.', 'error')
+      console.error("Error fetching analytics:", error);
+      showToast("Failed to load analytics. Please try again.", "error");
     } finally {
-      if (showLoading) setLoading(false)
+      if (showLoading) setLoading(false);
     }
-  }
+  };
 
   useEffect(() => {
-    if (isAuthenticated && currentView !== 'landing' && currentView !== 'login') {
-      fetchExpenses()
-      fetchAnalytics()
+    if (
+      isAuthenticated &&
+      currentView !== "landing" &&
+      currentView !== "login"
+    ) {
+      fetchExpenses();
+      fetchAnalytics();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, isAuthenticated, token])
+  }, [currentView, isAuthenticated, token]);
 
   const handleExpenseAdded = () => {
     // Toast notification is already shown in VoiceRecorder component
-    fetchExpenses(false)
-    fetchAnalytics(false)
-  }
+    fetchExpenses(false);
+    fetchAnalytics(false);
+  };
 
   const handleExpenseDeleted = () => {
     // Toast notification is already shown in ExpenseList component
-    fetchExpenses(false)
-    fetchAnalytics(false)
-  }
+    fetchExpenses(false);
+    fetchAnalytics(false);
+  };
 
   const handleExpenseUpdated = () => {
     // Toast notification is already shown in ExpenseList component
-    fetchExpenses(false)
-    fetchAnalytics(false)
-  }
+    fetchExpenses(false);
+    fetchAnalytics(false);
+  };
 
   const handleExpensesChange = (newExpenses) => {
-    setExpenses(newExpenses)
-  }
+    setExpenses(newExpenses);
+  };
 
   const handleClearAll = async () => {
-    if (!window.confirm("Are you sure you want to delete ALL expenses? This action cannot be undone.")) {
-      return
+    if (
+      !window.confirm(
+        "Are you sure you want to delete ALL expenses? This action cannot be undone."
+      )
+    ) {
+      return;
     }
 
     try {
-      const response = await fetchWithRetry('http://localhost:8000/api/expenses', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
+      const response = await fetchWithRetry(
+        "http://localhost:8000/api/expenses",
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
         }
-      })
+      );
 
       if (response.status === 401) {
-        handleLogout()
-        return
+        handleLogout();
+        return;
       }
 
       if (response.ok) {
-        showToast('All expenses deleted successfully', 'success')
-        fetchExpenses(false)
-        fetchAnalytics(false)
+        showToast("All expenses deleted successfully", "success");
+        fetchExpenses(false);
+        fetchAnalytics(false);
       } else {
-        const error = await response.json()
-        throw new Error(error.detail || 'Failed to clear all expenses')
+        const error = await response.json();
+        throw new Error(error.detail || "Failed to clear all expenses");
       }
     } catch (error) {
-      console.error('Error clearing expenses:', error)
-      showToast(error.message || 'Failed to clear expenses. Please try again.', 'error')
+      console.error("Error clearing expenses:", error);
+      showToast(
+        error.message || "Failed to clear expenses. Please try again.",
+        "error"
+      );
     }
-  }
-
-  const handleBudgetChange = () => {
-    fetchAnalytics(false)
-  }
+  };
 
   const handleLogin = (newToken, userData) => {
-    setToken(newToken)
-    setUser(userData)
-    setIsAuthenticated(true)
-    setCurrentView('dashboard')
-    showToast(`Welcome back, ${userData.username}!`, 'success')
-  }
+    setToken(newToken);
+    setUser(userData);
+    setIsAuthenticated(true);
+    setCurrentView("dashboard");
+    showToast(`Welcome back, ${userData.username}!`, "success");
+  };
+
+  const handleBudgetChange = () => {
+    fetchAnalytics(false);
+  };
 
   const handleLogout = () => {
-    localStorage.removeItem('token')
-    localStorage.removeItem('user')
-    setToken(null)
-    setUser(null)
-    setIsAuthenticated(false)
-    setCurrentView('login')
-    setExpenses([])
-    setAnalytics(null)
-    showToast('Logged out successfully', 'info')
-  }
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+    setCurrentView("login");
+    setExpenses([]);
+    setAnalytics(null);
+    showToast("Logged out successfully", "info");
+  };
 
   const renderView = () => {
     if (!isAuthenticated) {
-      if (currentView === 'landing') {
-        return <LandingPage onGetStarted={() => setCurrentView('login')} />
+      if (currentView === "landing") {
+        return <LandingPage onGetStarted={() => setCurrentView("login")} />;
       }
-      return <Login onLogin={handleLogin} showToast={showToast} />
+      return <Login onLogin={handleLogin} showToast={showToast} />;
     }
 
     switch (currentView) {
-      case 'record':
+      case "record":
         return (
           <div className="view-container">
-            <VoiceRecorder 
+            <VoiceRecorder
               onExpenseAdded={handleExpenseAdded}
               loading={loading}
               setLoading={setLoading}
@@ -232,8 +257,8 @@ function App() {
               showToast={showToast}
             />
           </div>
-        )
-      case 'dashboard':
+        );
+      case "dashboard":
         return (
           <div className="view-container">
             {loading && !analytics ? (
@@ -242,8 +267,8 @@ function App() {
                 <LoadingSkeleton type="card" count={3} />
               </div>
             ) : analytics ? (
-              <AnalyticsDashboard 
-                analytics={analytics} 
+              <AnalyticsDashboard
+                analytics={analytics}
                 onClearAll={handleClearAll}
                 token={token}
                 showToast={showToast}
@@ -255,11 +280,11 @@ function App() {
               </div>
             )}
           </div>
-        )
-      case 'expenses':
+        );
+      case "expenses":
         return (
           <div className="view-container">
-            <ExpenseList 
+            <ExpenseList
               expenses={expenses}
               onExpenseDeleted={handleExpenseDeleted}
               onExpenseUpdated={handleExpenseUpdated}
@@ -268,21 +293,21 @@ function App() {
               showToast={showToast}
             />
           </div>
-        )
-      case 'budgets':
+        );
+      case "budgets":
         return (
           <div className="view-container">
-            <BudgetManagement 
+            <BudgetManagement
               token={token}
               onBudgetChange={handleBudgetChange}
               showToast={showToast}
             />
           </div>
-        )
+        );
       default:
         return (
           <div className="view-container">
-            <VoiceRecorder 
+            <VoiceRecorder
               onExpenseAdded={handleExpenseAdded}
               loading={loading}
               setLoading={setLoading}
@@ -290,26 +315,24 @@ function App() {
               showToast={showToast}
             />
           </div>
-        )
+        );
     }
-  }
+  };
 
   return (
     <div className="app">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       {isAuthenticated && (
-        <Navigation 
-          currentView={currentView} 
+        <Navigation
+          currentView={currentView}
           onViewChange={setCurrentView}
           onLogout={handleLogout}
           user={user}
         />
       )}
-      <main className="app-main">
-        {renderView()}
-      </main>
+      <main className="app-main">{renderView()}</main>
     </div>
-  )
+  );
 }
 
-export default App
+export default App;

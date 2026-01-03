@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, AlertTriangle, Wallet } from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, Wallet, AlertTriangle } from 'lucide-react'
 import LoadingSkeleton from './LoadingSkeleton'
 import './AnalyticsDashboard.css'
 
@@ -235,7 +235,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
                 return (
                   <div key={budget.id} className="budget-comparison-card">
                     <div className="budget-card-header">
-                      <span className="budget-category-name">{budget.category}</span>
+                      <span className="budget-category-name">{budget.category?.trim() || 'Uncategorized'}</span>
                       {percentage >= 75 && (
                         <AlertTriangle size={18} style={{ color: alertColor }} />
                       )}
@@ -270,6 +270,9 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
                         {percentage.toFixed(1)}% used
                       </span>
                     </div>
+                    <div className="budget-period">
+                      {new Date(budget.year, budget.month - 1).toLocaleString("default", { month: "long", year: "numeric" })}
+                    </div>
                   </div>
                 )
               })}
@@ -277,6 +280,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
           )}
         </div>
       )}
+
     </div>
   )
 }

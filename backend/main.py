@@ -1618,7 +1618,7 @@ async def get_budgets(
     month: Optional[int] = None,
     year: Optional[int] = None
 ):
-    """Get budgets for the current user, optionally filtered by month/year"""
+    """Get budgets for the current user"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
@@ -1634,7 +1634,6 @@ async def get_budgets(
             (current_user["id"], year)
         )
     else:
-        # Get current month/year by default
         now = datetime.now()
         cursor.execute(
             "SELECT * FROM budgets WHERE user_id = ? AND month = ? AND year = ? ORDER BY category",
@@ -1652,37 +1651,31 @@ async def create_budget(
     budget: BudgetCreate,
     current_user: dict = Depends(get_current_user_dependency)
 ):
-    """Create a new budget for a category"""
+    """Create a new budget"""
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         
-        # Ensure budgets table exists (in case it wasn't created on startup)
-        cursor.execute("""
-            CREATE TABLE IF NOT EXISTS budgets (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER NOT NULL,
-                category TEXT NOT NULL,
-                amount REAL NOT NULL,
-                month INTEGER NOT NULL,
-                year INTEGER NOT NULL,
-                recurring INTEGER DEFAULT 0,
-                repeat_interval INTEGER DEFAULT NULL,
-                repeat_unit TEXT DEFAULT NULL,
-                created_at TEXT NOT NULL,
-                updated_at TEXT NOT NULL,
-                FOREIGN KEY (user_id) REFERENCES users(id),
-                UNIQUE(user_id, category, month, year)
-            )
-        """)
+        # Ensure recurring columns exist
+        try:
+            cursor.execute("ALTER TABLE budgets ADD COLUMN recurring INTEGER DEFAULT 0")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_interval INTEGER DEFAULT NULL")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
+        try:
+            cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_unit TEXT DEFAULT NULL")
+            conn.commit()
+        except sqlite3.OperationalError:
+            pass
         
-        # Add columns if they don't exist
-        for column, col_type in [("recurring", "INTEGER DEFAULT 0"), ("repeat_interval", "INTEGER DEFAULT NULL"), ("repeat_unit", "TEXT DEFAULT NULL")]:
-            try:
-                cursor.execute(f"ALTER TABLE budgets ADD COLUMN {column} {col_type}")
-                conn.commit()
-            except sqlite3.OperationalError:
-                pass
+        # Determine if recurring
+        is_recurring = budget.recurring and budget.repeat_interval and budget.repeat_unit
+        recurring_int = 1 if is_recurring else 0
         
         # Check if budget already exists
         cursor.execute(
@@ -1693,105 +1686,79 @@ async def create_budget(
             conn.close()
             raise HTTPException(status_code=400, detail="Budget already exists for this category, month, and year")
         
-        # Determine if recurring based on repeat_interval and repeat_unit
-        is_recurring = budget.recurring or (budget.repeat_interval is not None and budget.repeat_unit is not None)
-        recurring_int = 1 if is_recurring else 0
-        
-        # Create budget
+        # Create budgets
         now = datetime.now().isoformat()
-        cursor.execute("""
-            INSERT INTO budgets (user_id, category, amount, month, year, recurring, repeat_interval, repeat_unit, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            current_user["id"], 
-            budget.category, 
-            budget.amount, 
-            budget.month, 
-            budget.year, 
-            recurring_int,
-            budget.repeat_interval,
-            budget.repeat_unit,
-            now, 
-            now
-        ))
+        created_budgets = []
+        current_date = datetime(budget.year, budget.month, 1)
         
-        budget_id = cursor.lastrowid
-        created_count = 1
-        
-        # If recurring, create budgets based on repeat frequency
-        if is_recurring and budget.repeat_interval and budget.repeat_unit:
-            current_date = datetime(budget.year, budget.month, 1)
-            
-            # Calculate how many periods to create
+        # Calculate how many periods to create
+        if is_recurring:
             if budget.repeat_unit == "weeks":
-                # For weeks, convert to approximate months (4 weeks ≈ 1 month)
-                # Create budgets for about 1 year worth
-                weeks_per_year = 52
-                total_periods = weeks_per_year // budget.repeat_interval if budget.repeat_interval > 0 else 12
+                total_periods = min(52 // budget.repeat_interval if budget.repeat_interval > 0 else 12, 60)
             elif budget.repeat_unit == "months":
-                total_periods = 12 // budget.repeat_interval if budget.repeat_interval > 0 else 12  # Create for 1 year
+                total_periods = min(12 // budget.repeat_interval if budget.repeat_interval > 0 else 12, 60)
             elif budget.repeat_unit == "years":
-                total_periods = 5 // budget.repeat_interval if budget.repeat_interval > 0 else 5  # Create for 5 years
+                total_periods = min(5 // budget.repeat_interval if budget.repeat_interval > 0 else 5, 60)
             else:
-                total_periods = 12  # Default to 12 months
-            
-            # Limit total_periods to reasonable amount
-            total_periods = min(total_periods, 60)  # Max 60 periods
-            
-            for i in range(1, total_periods + 1):
+                total_periods = 12
+        else:
+            total_periods = 1
+        
+        for i in range(total_periods):
+            if i > 0:
                 if budget.repeat_unit == "weeks":
-                    # Add weeks and convert to month/year
                     next_date = current_date + timedelta(weeks=budget.repeat_interval * i)
                     next_month = next_date.month
                     next_year = next_date.year
                 elif budget.repeat_unit == "months":
-                    # Add months
                     next_month = budget.month + (budget.repeat_interval * i)
                     next_year = budget.year
                     while next_month > 12:
                         next_month -= 12
                         next_year += 1
-                    while next_month < 1:
-                        next_month += 12
-                        next_year -= 1
                 elif budget.repeat_unit == "years":
                     next_month = budget.month
                     next_year = budget.year + (budget.repeat_interval * i)
                 else:
                     break
-                
-                # Check if budget already exists for this month/year
-                cursor.execute(
-                    "SELECT id FROM budgets WHERE user_id = ? AND category = ? AND month = ? AND year = ?",
-                    (current_user["id"], budget.category, next_month, next_year)
-                )
-                if not cursor.fetchone():
-                    cursor.execute("""
-                        INSERT INTO budgets (user_id, category, amount, month, year, recurring, repeat_interval, repeat_unit, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        current_user["id"], 
-                        budget.category, 
-                        budget.amount, 
-                        next_month, 
-                        next_year, 
-                        recurring_int,
-                        budget.repeat_interval,
-                        budget.repeat_unit,
-                        now, 
-                        now
-                    ))
-                    created_count += 1
+            else:
+                next_month = budget.month
+                next_year = budget.year
+            
+            # Check if already exists
+            cursor.execute(
+                "SELECT id FROM budgets WHERE user_id = ? AND category = ? AND month = ? AND year = ?",
+                (current_user["id"], budget.category, next_month, next_year)
+            )
+            if cursor.fetchone():
+                continue
+            
+            cursor.execute("""
+                INSERT INTO budgets (user_id, category, amount, month, year, recurring, repeat_interval, repeat_unit, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                current_user["id"], 
+                budget.category, 
+                budget.amount, 
+                next_month, 
+                next_year, 
+                recurring_int,
+                budget.repeat_interval,
+                budget.repeat_unit,
+                now, 
+                now
+            ))
+            created_budgets.append(cursor.lastrowid)
         
         conn.commit()
         conn.close()
         
-        message = "Budget created successfully"
-        if is_recurring and budget.repeat_interval and budget.repeat_unit:
-            message += f" (recurring every {budget.repeat_interval} {budget.repeat_unit} - {created_count} budget(s) created)"
+        message = f"{len(created_budgets)} budget(s) created successfully"
+        if is_recurring:
+            message += f" (recurring every {budget.repeat_interval} {budget.repeat_unit})"
         
         return {
-            "id": budget_id,
+            "id": created_budgets[0] if created_budgets else None,
             "category": budget.category,
             "amount": budget.amount,
             "month": budget.month,
@@ -1821,18 +1788,36 @@ async def update_budget(
 ):
     """Update a budget"""
     conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # Check if budget exists and belongs to user
+    # Ensure recurring columns exist (migration)
+    try:
+        cursor.execute("ALTER TABLE budgets ADD COLUMN recurring INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_interval INTEGER DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    try:
+        cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_unit TEXT DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    
+    # Check if budget exists
     cursor.execute("SELECT * FROM budgets WHERE id = ? AND user_id = ?", (budget_id, current_user["id"]))
-    existing_budget = cursor.fetchone()
-    if not existing_budget:
+    existing = cursor.fetchone()
+    if not existing:
         conn.close()
         raise HTTPException(status_code=404, detail="Budget not found")
     
-    existing_budget_dict = dict(existing_budget)
+    existing_dict = dict(existing)
     
-    # Build update query dynamically based on provided fields
+    # Build update query
     update_fields = []
     update_values = []
     
@@ -1852,40 +1837,57 @@ async def update_budget(
         update_fields.append("year = ?")
         update_values.append(budget_update.year)
     
+    # Handle recurring fields - if repeat_interval and repeat_unit are provided, auto-set recurring
+    if budget_update.repeat_interval is not None:
+        update_fields.append("repeat_interval = ?")
+        update_values.append(budget_update.repeat_interval)
+    
+    if budget_update.repeat_unit is not None:
+        update_fields.append("repeat_unit = ?")
+        update_values.append(budget_update.repeat_unit)
+    
+    # Set recurring flag based on whether repeat_interval and repeat_unit are provided
+    # If both are provided and not None/empty, set recurring to true
+    # If either is None/empty, set recurring to false
     if budget_update.recurring is not None:
+        # User explicitly set recurring flag
         update_fields.append("recurring = ?")
         update_values.append(1 if budget_update.recurring else 0)
+    elif budget_update.repeat_interval is not None or budget_update.repeat_unit is not None:
+        # User changed repeat fields, auto-determine recurring status
+        # Get final values (use updated values if provided, otherwise existing values)
+        final_repeat_interval = budget_update.repeat_interval if budget_update.repeat_interval is not None else existing_dict.get("repeat_interval")
+        final_repeat_unit = budget_update.repeat_unit if budget_update.repeat_unit is not None else existing_dict.get("repeat_unit")
+        
+        # Recurring is true only if both interval and unit are set and valid
+        is_recurring = (final_repeat_interval is not None and final_repeat_interval != 0) and (final_repeat_unit is not None and final_repeat_unit != "")
+        update_fields.append("recurring = ?")
+        update_values.append(1 if is_recurring else 0)
     
-    # If changing month/year/category, check for conflicts
-    new_month = budget_update.month if budget_update.month is not None else existing_budget_dict["month"]
-    new_year = budget_update.year if budget_update.year is not None else existing_budget_dict["year"]
-    new_category = budget_update.category if budget_update.category is not None else existing_budget_dict["category"]
+    if not update_fields:
+        conn.close()
+        raise HTTPException(status_code=400, detail="No fields provided to update")
     
-    # Check if new combination conflicts with existing budget
-    if (budget_update.month is not None or budget_update.year is not None or budget_update.category is not None):
+    # Check for conflicts if changing category/month/year
+    new_category = budget_update.category if budget_update.category is not None else existing_dict["category"]
+    new_month = budget_update.month if budget_update.month is not None else existing_dict["month"]
+    new_year = budget_update.year if budget_update.year is not None else existing_dict["year"]
+    
+    if (budget_update.category is not None or budget_update.month is not None or budget_update.year is not None):
         cursor.execute(
             "SELECT id FROM budgets WHERE user_id = ? AND category = ? AND month = ? AND year = ? AND id != ?",
             (current_user["id"], new_category, new_month, new_year, budget_id)
         )
         if cursor.fetchone():
             conn.close()
-            raise HTTPException(
-                status_code=400,
-                detail="Budget already exists for this category, month, and year"
-            )
+            raise HTTPException(status_code=400, detail="Budget already exists for this category, month, and year")
     
-    # Add updated_at timestamp
     update_fields.append("updated_at = ?")
     update_values.append(datetime.now().isoformat())
+    update_values.extend([budget_id, current_user["id"]])
     
-    # Add WHERE clause values
-    update_values.append(budget_id)
-    update_values.append(current_user["id"])
-    
-    if update_fields:
-        query = f"UPDATE budgets SET {', '.join(update_fields)} WHERE id = ? AND user_id = ?"
-        cursor.execute(query, update_values)
-    
+    query = f"UPDATE budgets SET {', '.join(update_fields)} WHERE id = ? AND user_id = ?"
+    cursor.execute(query, update_values)
     conn.commit()
     conn.close()
     
@@ -1916,33 +1918,23 @@ async def check_budgets(
     month: Optional[int] = None,
     year: Optional[int] = None
 ):
-    """Check budget status - returns budgets with actual spending and alerts"""
-    now = datetime.now()
-    check_month = month if month else now.month
-    check_year = year if year else now.year
-    
+    """Get budgets with actual spending"""
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
     
-    # Get budgets - filter by month/year if provided, otherwise get all
+    # Get budgets
     if month and year:
         cursor.execute(
-            "SELECT * FROM budgets WHERE user_id = ? AND month = ? AND year = ?",
-            (current_user["id"], check_month, check_year)
+            "SELECT * FROM budgets WHERE user_id = ? AND month = ? AND year = ? ORDER BY category",
+            (current_user["id"], month, year)
         )
     elif year:
         cursor.execute(
-            "SELECT * FROM budgets WHERE user_id = ? AND year = ?",
-            (current_user["id"], check_year)
-        )
-    elif month:
-        cursor.execute(
-            "SELECT * FROM budgets WHERE user_id = ? AND month = ?",
-            (current_user["id"], check_month)
+            "SELECT * FROM budgets WHERE user_id = ? AND year = ? ORDER BY month, category",
+            (current_user["id"], year)
         )
     else:
-        # Get all budgets for the user
         cursor.execute(
             "SELECT * FROM budgets WHERE user_id = ? ORDER BY year DESC, month DESC, category",
             (current_user["id"],)
@@ -1950,97 +1942,80 @@ async def check_budgets(
     
     budgets = [dict(row) for row in cursor.fetchall()]
     
-    # Get actual spending by category for each budget's month/year
-    spending_by_category = {}
-    
-    # Group budgets by month/year to calculate spending efficiently
-    budget_periods = {}
-    for budget in budgets:
-        key = (budget["year"], budget["month"])
-        if key not in budget_periods:
-            budget_periods[key] = []
-        budget_periods[key].append(budget)
-    
-    # Calculate spending for each unique month/year combination
-    for (budget_year, budget_month), period_budgets in budget_periods.items():
-        start_date = f"{budget_year}-{budget_month:02d}-01"
-        # Calculate last day of month
-        if budget_month == 12:
-            end_date = f"{budget_year}-12-31"
-        else:
-            next_month = datetime(budget_year, budget_month + 1, 1)
-            last_day = (next_month - timedelta(days=1)).day
-            end_date = f"{budget_year}-{budget_month:02d}-{last_day:02d}"
-        
-        # Debug: Print the date range being checked
-        print(f"DEBUG: Checking expenses for budget period {budget_year}-{budget_month:02d}: {start_date} to {end_date}")
-        
-        cursor.execute("""
-            SELECT category, SUM(amount) as total, COUNT(*) as count
-            FROM expenses
-            WHERE user_id = ? AND date >= ? AND date <= ?
-            GROUP BY category
-        """, (current_user["id"], start_date, end_date))
-        
-        expenses_found = cursor.fetchall()
-        print(f"DEBUG: Found {len(expenses_found)} expense groups for period {budget_year}-{budget_month:02d}")
-        for exp in expenses_found:
-            print(f"DEBUG:   - Category: '{exp['category']}', Total: {exp['total']}, Count: {exp['count']}")
-        
-        for row in cursor.fetchall():
-            if row["category"]:
-                # Handle comma-separated categories
-                categories = [c.strip() for c in row["category"].split(",")]
-                total = row["total"] or 0
-                # Store spending per category per period
-                period_key = f"{budget_year}-{budget_month}"
-                if period_key not in spending_by_category:
-                    spending_by_category[period_key] = {}
-                for cat in categories:
-                    # Case-insensitive matching for categories
-                    cat_key = cat.strip()
-                    spending_by_category[period_key][cat_key] = spending_by_category[period_key].get(cat_key, 0) + total
-    
-    conn.close()
-    
-    # Calculate budget status
+    # Calculate spending for each budget
     budget_status = []
     for budget in budgets:
-        category = budget["category"]
-        budget_amount = budget["amount"]
-        budget_year = budget["year"]
-        budget_month = budget["month"]
-        
-        # Get spending for this budget's period
-        period_key = f"{budget_year}-{budget_month}"
-        period_spending = spending_by_category.get(period_key, {})
-        
-        # Debug logging
-        print(f"DEBUG Budget Check: Category='{category}', Period={period_key}, Available spending={period_spending}")
-        
-        # Calculate actual spending - use case-insensitive matching
-        budget_category_clean = category.strip()
-        if "," in budget_category_clean:
-            # For multi-category budgets, sum spending from all matching categories
-            categories = [c.strip() for c in budget_category_clean.split(",")]
-            actual_spending = sum(
-                period_spending.get(cat, 0)
-                for cat in categories
-            )
+        start_date = f"{budget['year']}-{budget['month']:02d}-01"
+        if budget['month'] == 12:
+            end_date = f"{budget['year']}-12-31"
         else:
-            # Try exact match first, then case-insensitive match
-            actual_spending = period_spending.get(budget_category_clean, 0)
-            if actual_spending == 0:
-                # Try case-insensitive match
-                for cat_key, amount in period_spending.items():
-                    if cat_key.lower() == budget_category_clean.lower():
-                        actual_spending = amount
-                        break
+            next_month = datetime(budget['year'], budget['month'] + 1, 1)
+            last_day = (next_month - timedelta(days=1)).day
+            end_date = f"{budget['year']}-{budget['month']:02d}-{last_day:02d}"
         
-        percentage_used = (actual_spending / budget_amount * 100) if budget_amount > 0 else 0
-        remaining = budget_amount - actual_spending
+        # Get expenses for this period - use case-insensitive category matching
+        # Also handle comma-separated categories (e.g., "Home, Utilities")
+        budget_category = budget["category"].strip()
         
-        # Determine alert level
+        # Debug: Print what we're looking for
+        print(f"DEBUG: Looking for expenses - Category: '{budget_category}', Period: {start_date} to {end_date}")
+        
+        # First try exact match (case-insensitive)
+        cursor.execute("""
+            SELECT SUM(amount) as total, COUNT(*) as count
+            FROM expenses
+            WHERE user_id = ? AND LOWER(TRIM(category)) = LOWER(?) AND date >= ? AND date <= ?
+        """, (current_user["id"], budget_category, start_date, end_date))
+        
+        result = cursor.fetchone()
+        actual_spending = result["total"] if result["total"] else 0
+        expense_count = result["count"] if result else 0
+        print(f"DEBUG: Exact match found {expense_count} expenses, total: {actual_spending}")
+        
+        # If no exact match, try matching if budget category appears in expense category
+        # (handles comma-separated categories like "Home, Utilities")
+        if actual_spending == 0:
+            # Also check all expenses in this period to see what categories exist
+            cursor.execute("""
+                SELECT category, SUM(amount) as total, COUNT(*) as count
+                FROM expenses
+                WHERE user_id = ? AND date >= ? AND date <= ?
+                GROUP BY category
+            """, (current_user["id"], start_date, end_date))
+            
+            all_expenses = cursor.fetchall()
+            print(f"DEBUG: All expenses in period:")
+            for exp in all_expenses:
+                print(f"  - Category: '{exp['category']}', Total: {exp['total']}, Count: {exp['count']}")
+            
+            # Try pattern matching
+            cursor.execute("""
+                SELECT SUM(amount) as total, COUNT(*) as count
+                FROM expenses
+                WHERE user_id = ? 
+                AND date >= ? AND date <= ?
+                AND (
+                    LOWER(category) LIKE LOWER(?) OR
+                    LOWER(category) LIKE LOWER(?) OR
+                    LOWER(category) LIKE LOWER(?)
+                )
+            """, (
+                current_user["id"], 
+                start_date, 
+                end_date,
+                f"{budget_category},%",  # Budget category at start
+                f"%, {budget_category},%",  # Budget category in middle
+                f"%, {budget_category}"  # Budget category at end
+            ))
+            
+            result = cursor.fetchone()
+            if result and result["total"]:
+                actual_spending = result["total"]
+                print(f"DEBUG: Pattern match found {result['count']} expenses, total: {actual_spending}")
+        
+        percentage_used = (actual_spending / budget["amount"] * 100) if budget["amount"] > 0 else 0
+        remaining = budget["amount"] - actual_spending
+        
         alert_level = "ok"
         if percentage_used >= 100:
             alert_level = "exceeded"
@@ -2057,11 +2032,8 @@ async def check_budgets(
             "alert_level": alert_level
         })
     
-    return {
-        "budgets": budget_status,
-        "month": check_month,
-        "year": check_year
-    }
+    conn.close()
+    return {"budgets": budget_status}
 
 # ============================================================================
 # APPLICATION ENTRY POINT

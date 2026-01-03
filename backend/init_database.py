@@ -154,30 +154,14 @@ def init_database():
         )
     """)
     
-    # Add recurring column if it doesn't exist (migration for existing databases)
-    try:
-        cursor.execute("ALTER TABLE budgets ADD COLUMN recurring INTEGER DEFAULT 0")
-        conn.commit()
-        print("Added recurring column to budgets table")
-    except sqlite3.OperationalError:
-        # Column already exists, ignore
-        pass
-    
-    # Add repeat_interval column if it doesn't exist
-    try:
-        cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_interval INTEGER DEFAULT NULL")
-        conn.commit()
-        print("Added repeat_interval column to budgets table")
-    except sqlite3.OperationalError:
-        pass
-    
-    # Add repeat_unit column if it doesn't exist
-    try:
-        cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_unit TEXT DEFAULT NULL")
-        conn.commit()
-        print("Added repeat_unit column to budgets table")
-    except sqlite3.OperationalError:
-        pass
+    # Add recurring columns if they don't exist (migration)
+    for column, col_type in [("recurring", "INTEGER DEFAULT 0"), ("repeat_interval", "INTEGER DEFAULT NULL"), ("repeat_unit", "TEXT DEFAULT NULL")]:
+        try:
+            cursor.execute(f"ALTER TABLE budgets ADD COLUMN {column} {col_type}")
+            conn.commit()
+            print(f"Added {column} column to budgets table")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
 
     # Commit all changes
     conn.commit()

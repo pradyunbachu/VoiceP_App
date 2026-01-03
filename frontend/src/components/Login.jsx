@@ -2,7 +2,7 @@ import { useState } from "react";
 import { LogIn, UserPlus } from "lucide-react";
 import "./Login.css";
 
-const Login = ({ onLogin, showToast }) => {
+const Login = ({ onLogin }) => {
   const [isLogin, setIsLogin] = useState(true);
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
@@ -43,18 +43,8 @@ const Login = ({ onLogin, showToast }) => {
       localStorage.setItem("token", data.access_token);
       localStorage.setItem("user", JSON.stringify(data.user));
       onLogin(data.access_token, data.user);
-      if (showToast) {
-        showToast(
-          isLogin ? "Logged in successfully!" : "Account created successfully!",
-          "success"
-        );
-      }
     } catch (error) {
-      const errorMsg = error.message || "Authentication failed. Please try again.";
-      setError(errorMsg);
-      if (showToast) {
-        showToast(errorMsg, "error");
-      }
+      setError(error.message);
     } finally {
       setLoading(false);
     }
