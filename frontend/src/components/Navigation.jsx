@@ -1,4 +1,4 @@
-import { Mic, BarChart3, List, LogOut } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet } from "lucide-react";
 import "./Navigation.css";
 
 const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
@@ -29,6 +29,13 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
         >
           <List size={18} />
           <span>Expenses</span>
+        </button>
+        <button
+          className={`nav-tab ${currentView === "budgets" ? "active" : ""}`}
+          onClick={() => onViewChange("budgets")}
+        >
+          <Wallet size={18} />
+          <span>Budgets</span>
         </button>
       </div>
       <div className="nav-user">

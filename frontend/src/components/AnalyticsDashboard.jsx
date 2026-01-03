@@ -1,10 +1,40 @@
+import { useState, useEffect } from 'react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
-import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2 } from 'lucide-react'
+import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, AlertTriangle, Wallet } from 'lucide-react'
+import LoadingSkeleton from './LoadingSkeleton'
 import './AnalyticsDashboard.css'
 
 const COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
 
-const AnalyticsDashboard = ({ analytics, onClearAll }) => {
+const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
+  const [budgets, setBudgets] = useState([])
+  const [loadingBudgets, setLoadingBudgets] = useState(false)
+
+  useEffect(() => {
+    if (token) {
+      fetchBudgets()
+    }
+  }, [token])
+
+  const fetchBudgets = async () => {
+    setLoadingBudgets(true)
+    try {
+      const response = await fetch('http://localhost:8000/api/budgets/check', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      })
+      if (response.ok) {
+        const data = await response.json()
+        setBudgets(data.budgets || [])
+      }
+    } catch (error) {
+      console.error('Error fetching budgets:', error)
+    } finally {
+      setLoadingBudgets(false)
+    }
+  }
+
   if (!analytics) return null
 
   // Prepare data for charts
@@ -182,6 +212,71 @@ const AnalyticsDashboard = ({ analytics, onClearAll }) => {
           )}
         </div>
       </div>
+
+      {/* Budget vs Actual Spending Section */}
+      {budgets.length > 0 && (
+        <div className="budget-section">
+          <div className="section-header">
+            <Wallet size={24} />
+            <h3>Budget vs Actual Spending</h3>
+          </div>
+          {loadingBudgets ? (
+            <LoadingSkeleton type="card" count={3} />
+          ) : (
+            <div className="budget-comparison-grid">
+              {budgets.map((budget) => {
+                const percentage = budget.percentage_used || 0
+                const alertColor = 
+                  percentage >= 100 ? '#dc2626' :
+                  percentage >= 90 ? '#eab308' :
+                  percentage >= 75 ? '#f59e0b' :
+                  '#22c55e'
+                
+                return (
+                  <div key={budget.id} className="budget-comparison-card">
+                    <div className="budget-card-header">
+                      <span className="budget-category-name">{budget.category}</span>
+                      {percentage >= 75 && (
+                        <AlertTriangle size={18} style={{ color: alertColor }} />
+                      )}
+                    </div>
+                    <div className="budget-stats-row">
+                      <div className="budget-stat-item">
+                        <span className="budget-stat-label">Budget</span>
+                        <span className="budget-stat-value">${budget.amount.toFixed(2)}</span>
+                      </div>
+                      <div className="budget-stat-item">
+                        <span className="budget-stat-label">Spent</span>
+                        <span className="budget-stat-value spent">${budget.actual_spending.toFixed(2)}</span>
+                      </div>
+                      <div className="budget-stat-item">
+                        <span className="budget-stat-label">Remaining</span>
+                        <span className={`budget-stat-value ${budget.remaining < 0 ? 'negative' : ''}`}>
+                          ${budget.remaining.toFixed(2)}
+                        </span>
+                      </div>
+                    </div>
+                    <div className="budget-progress-container">
+                      <div className="budget-progress-bar">
+                        <div
+                          className="budget-progress-fill"
+                          style={{
+                            width: `${Math.min(percentage, 100)}%`,
+                            backgroundColor: alertColor
+                          }}
+                        />
+                      </div>
+                      <span className="budget-percentage" style={{ color: alertColor }}>
+                        {percentage.toFixed(1)}% used
+                      </span>
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 }

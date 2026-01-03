@@ -1,11 +1,38 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Navigation from './components/Navigation'
 import LandingPage from './components/LandingPage'
 import Login from './components/Login'
 import VoiceRecorder from './components/VoiceRecorder'
 import AnalyticsDashboard from './components/AnalyticsDashboard'
 import ExpenseList from './components/ExpenseList'
+import BudgetManagement from './components/BudgetManagement'
+import ToastContainer from './components/ToastContainer'
+import LoadingSkeleton from './components/LoadingSkeleton'
 import './App.css'
+
+// Utility function for API calls with retry
+const fetchWithRetry = async (url, options = {}, maxRetries = 3, delay = 1000) => {
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      const response = await fetch(url, options)
+      if (response.ok || response.status === 401) {
+        return response
+      }
+      // Retry on server errors (5xx) or network errors
+      if (i < maxRetries - 1 && (response.status >= 500 || !response.ok)) {
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
+        continue
+      }
+      return response
+    } catch (error) {
+      if (i < maxRetries - 1) {
+        await new Promise(resolve => setTimeout(resolve, delay * (i + 1)))
+        continue
+      }
+      throw error
+    }
+  }
+}
 
 function App() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)
@@ -15,6 +42,17 @@ function App() {
   const [expenses, setExpenses] = useState([])
   const [analytics, setAnalytics] = useState(null)
   const [loading, setLoading] = useState(false)
+  const [toasts, setToasts] = useState([])
+
+  // Toast notification helper
+  const showToast = useCallback((message, type = 'info', duration = 5000) => {
+    const id = Date.now() + Math.random()
+    setToasts(prev => [...prev, { id, message, type, duration }])
+  }, [])
+
+  const removeToast = useCallback((id) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id))
+  }, [])
 
   // Check for existing token on mount
   useEffect(() => {
@@ -28,41 +66,63 @@ function App() {
     }
   }, [])
 
-  const fetchExpenses = async () => {
+  const fetchExpenses = async (showLoading = true) => {
     if (!token) return
+    if (showLoading) setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/api/expenses', {
+      const response = await fetchWithRetry('http://localhost:8000/api/expenses', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
+      
       if (response.status === 401) {
         handleLogout()
+        showToast('Session expired. Please login again.', 'warning')
         return
       }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch expenses: ${response.status}`)
+      }
+      
       const data = await response.json()
       setExpenses(data.expenses || [])
     } catch (error) {
       console.error('Error fetching expenses:', error)
+      showToast('Failed to load expenses. Please try again.', 'error')
+    } finally {
+      if (showLoading) setLoading(false)
     }
   }
 
-  const fetchAnalytics = async () => {
+  const fetchAnalytics = async (showLoading = true) => {
     if (!token) return
+    if (showLoading) setLoading(true)
     try {
-      const response = await fetch('http://localhost:8000/api/analytics', {
+      const response = await fetchWithRetry('http://localhost:8000/api/analytics', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       })
+      
       if (response.status === 401) {
         handleLogout()
+        showToast('Session expired. Please login again.', 'warning')
         return
       }
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch analytics: ${response.status}`)
+      }
+      
       const data = await response.json()
       setAnalytics(data)
     } catch (error) {
       console.error('Error fetching analytics:', error)
+      showToast('Failed to load analytics. Please try again.', 'error')
+    } finally {
+      if (showLoading) setLoading(false)
     }
   }
 
@@ -75,18 +135,25 @@ function App() {
   }, [currentView, isAuthenticated, token])
 
   const handleExpenseAdded = () => {
-    fetchExpenses()
-    fetchAnalytics()
+    // Toast notification is already shown in VoiceRecorder component
+    fetchExpenses(false)
+    fetchAnalytics(false)
   }
 
   const handleExpenseDeleted = () => {
-    fetchExpenses()
-    fetchAnalytics()
+    // Toast notification is already shown in ExpenseList component
+    fetchExpenses(false)
+    fetchAnalytics(false)
   }
 
   const handleExpenseUpdated = () => {
-    fetchExpenses()
-    fetchAnalytics()
+    // Toast notification is already shown in ExpenseList component
+    fetchExpenses(false)
+    fetchAnalytics(false)
+  }
+
+  const handleExpensesChange = (newExpenses) => {
+    setExpenses(newExpenses)
   }
 
   const handleClearAll = async () => {
@@ -95,7 +162,7 @@ function App() {
     }
 
     try {
-      const response = await fetch('http://localhost:8000/api/expenses', {
+      const response = await fetchWithRetry('http://localhost:8000/api/expenses', {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -108,15 +175,21 @@ function App() {
       }
 
       if (response.ok) {
-        fetchExpenses()
-        fetchAnalytics()
+        showToast('All expenses deleted successfully', 'success')
+        fetchExpenses(false)
+        fetchAnalytics(false)
       } else {
-        alert("Failed to clear all expenses")
+        const error = await response.json()
+        throw new Error(error.detail || 'Failed to clear all expenses')
       }
     } catch (error) {
       console.error('Error clearing expenses:', error)
-      alert("Error clearing expenses")
+      showToast(error.message || 'Failed to clear expenses. Please try again.', 'error')
     }
+  }
+
+  const handleBudgetChange = () => {
+    fetchAnalytics(false)
   }
 
   const handleLogin = (newToken, userData) => {
@@ -124,6 +197,7 @@ function App() {
     setUser(userData)
     setIsAuthenticated(true)
     setCurrentView('dashboard')
+    showToast(`Welcome back, ${userData.username}!`, 'success')
   }
 
   const handleLogout = () => {
@@ -135,6 +209,7 @@ function App() {
     setCurrentView('login')
     setExpenses([])
     setAnalytics(null)
+    showToast('Logged out successfully', 'info')
   }
 
   const renderView = () => {
@@ -142,7 +217,7 @@ function App() {
       if (currentView === 'landing') {
         return <LandingPage onGetStarted={() => setCurrentView('login')} />
       }
-      return <Login onLogin={handleLogin} />
+      return <Login onLogin={handleLogin} showToast={showToast} />
     }
 
     switch (currentView) {
@@ -154,19 +229,30 @@ function App() {
               loading={loading}
               setLoading={setLoading}
               token={token}
+              showToast={showToast}
             />
           </div>
         )
       case 'dashboard':
         return (
           <div className="view-container">
-            {analytics ? (
+            {loading && !analytics ? (
+              <div className="loading-container">
+                <LoadingSkeleton type="chart" />
+                <LoadingSkeleton type="card" count={3} />
+              </div>
+            ) : analytics ? (
               <AnalyticsDashboard 
                 analytics={analytics} 
                 onClearAll={handleClearAll}
+                token={token}
+                showToast={showToast}
               />
             ) : (
-              <div className="loading-state">Loading analytics...</div>
+              <div className="empty-state-container">
+                <h3>No analytics data</h3>
+                <p>Record some expenses to see your spending analytics.</p>
+              </div>
             )}
           </div>
         )
@@ -177,7 +263,19 @@ function App() {
               expenses={expenses}
               onExpenseDeleted={handleExpenseDeleted}
               onExpenseUpdated={handleExpenseUpdated}
+              onExpensesChange={handleExpensesChange}
               token={token}
+              showToast={showToast}
+            />
+          </div>
+        )
+      case 'budgets':
+        return (
+          <div className="view-container">
+            <BudgetManagement 
+              token={token}
+              onBudgetChange={handleBudgetChange}
+              showToast={showToast}
             />
           </div>
         )
@@ -189,6 +287,7 @@ function App() {
               loading={loading}
               setLoading={setLoading}
               token={token}
+              showToast={showToast}
             />
           </div>
         )
@@ -197,6 +296,7 @@ function App() {
 
   return (
     <div className="app">
+      <ToastContainer toasts={toasts} removeToast={removeToast} />
       {isAuthenticated && (
         <Navigation 
           currentView={currentView} 
@@ -213,4 +313,3 @@ function App() {
 }
 
 export default App
-

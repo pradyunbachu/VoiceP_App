@@ -1,11 +1,14 @@
 import { useState, useRef } from "react";
 import { Mic, Square, Loader2, Type } from "lucide-react";
+import { CATEGORIES } from "../constants/categories";
 import "./VoiceRecorder.css";
 
-const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
+const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token, showToast }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [extractedExpense, setExtractedExpense] = useState(null);
+  const [editingExpenseIndex, setEditingExpenseIndex] = useState(null);
+  const [editedExpenses, setEditedExpenses] = useState([]);
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
   const [error, setError] = useState("");
@@ -107,11 +110,19 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
         const errorText = await extractResponse.text();
         console.error("Extract error:", errorText);
         if (extractResponse.status === 429) {
-          setError("API quota exceeded. Using simple extraction instead.");
+          const quotaMsg = "API quota exceeded. Using simple extraction instead.";
+          setError(quotaMsg);
+          if (showToast) {
+            showToast(quotaMsg, "warning");
+          }
           // Fallback to simple extraction
           await processExpenseSimple(transcriptText);
         } else {
-          setError(`Error: ${errorText}`);
+          const errorMsg = `Failed to extract expense: ${errorText}`;
+          setError(errorMsg);
+          if (showToast) {
+            showToast(errorMsg, "error");
+          }
           // Try simple extraction as fallback
           await processExpenseSimple(transcriptText);
         }
@@ -135,21 +146,26 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       onExpenseAdded();
     } catch (error) {
       console.error("Error processing transcript:", error);
+      let errorMsg = "";
       if (error.message === "Failed to fetch") {
-        setError(
-          "Cannot connect to backend server. Make sure the backend is running on http://localhost:8000"
-        );
+        errorMsg = "Cannot connect to backend server. Please make sure the backend is running.";
       } else {
-        setError(`Error: ${error.message}`);
+        errorMsg = `Failed to process expense: ${error.message}`;
+      }
+      setError(errorMsg);
+      if (showToast) {
+        showToast(errorMsg, "error");
       }
       // Try simple extraction as fallback
       try {
         await processExpenseSimple(transcriptText);
       } catch (simpleError) {
         console.error("Simple extraction also failed:", simpleError);
-        setError(
-          `Both extraction methods failed. Backend may be down. Error: ${error.message}`
-        );
+        const fallbackMsg = "Both extraction methods failed. Please try manual input.";
+        setError(fallbackMsg);
+        if (showToast) {
+          showToast(fallbackMsg, "error");
+        }
       }
     } finally {
       setLoading(false);
@@ -177,22 +193,29 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       if (response.ok) {
         const expenseData = await response.json();
         // Handle both old format (single expense) and new format (array of expenses)
+        let expensesArray = [];
         if (expenseData.expenses) {
+          expensesArray = expenseData.expenses;
           setExtractedExpense(expenseData);
         } else {
+          expensesArray = [expenseData];
           setExtractedExpense({
             expenses: [expenseData],
             count: 1,
             message: expenseData.message
           });
         }
-        onExpenseAdded();
+        // Initialize edited expenses with the extracted ones
+        setEditedExpenses(expensesArray.map(exp => ({ ...exp })));
+        setEditingExpenseIndex(null);
       }
     } catch (error) {
       console.error("Error with simple extraction:", error);
-      setError(
-        "Could not extract expense information. Please try the manual input."
-      );
+      const errorMsg = "Could not extract expense information. Please try the manual input.";
+      setError(errorMsg);
+      if (showToast) {
+        showToast(errorMsg, "error");
+      }
     }
   };
 
@@ -222,9 +245,11 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       if (!transcriptResponse.ok) {
         const errorText = await transcriptResponse.text();
-        throw new Error(
-          `Deepgram transcription failed: ${transcriptResponse.status} - ${errorText}`
-        );
+        const errorMsg = `Transcription failed: ${transcriptResponse.status === 503 ? "Deepgram API not configured. Please set DEEPGRAM_API_KEY." : errorText}`;
+        if (showToast) {
+          showToast(errorMsg, "error");
+        }
+        throw new Error(errorMsg);
       }
 
       const transcriptData = await transcriptResponse.json();
@@ -267,11 +292,17 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       // Check if it's a quota error
       if (errorMessage.includes("quota") || errorMessage.includes("429")) {
-        setError(
-          "Deepgram API quota exceeded. Please try again later or use manual text input."
-        );
+        const quotaMsg = "Deepgram API quota exceeded. Please try again later or use manual text input.";
+        setError(quotaMsg);
+        if (showToast) {
+          showToast(quotaMsg, "warning");
+        }
       } else {
-        setError(`Error: ${errorDetails}`);
+        const errorMsg = `Failed to process audio: ${errorDetails}`;
+        setError(errorMsg);
+        if (showToast) {
+          showToast(errorMsg, "error");
+        }
       }
     } finally {
       setLoading(false);
@@ -280,7 +311,11 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
   const handleManualSubmit = async () => {
     if (!manualInput.trim()) {
-      setError("Please enter a description of your purchase");
+      const errorMsg = "Please enter a description of your purchase";
+      setError(errorMsg);
+      if (showToast) {
+        showToast(errorMsg, "warning");
+      }
       return;
     }
 
@@ -307,12 +342,15 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       if (!extractResponse.ok) {
         const errorText = await extractResponse.text();
+        let errorMsg = "";
         if (extractResponse.status === 429) {
-          setError(
-            "OpenAI API quota exceeded. Please add payment method or wait for quota reset."
-          );
+          errorMsg = "API quota exceeded. Please try again later.";
         } else {
-          setError(`Error: ${errorText}`);
+          errorMsg = `Failed to extract expense: ${errorText}`;
+        }
+        setError(errorMsg);
+        if (showToast) {
+          showToast(errorMsg, "error");
         }
         return;
       }
@@ -324,7 +362,11 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       onExpenseAdded();
     } catch (error) {
       console.error("Error processing manual input:", error);
-      setError(`Error: ${error.message}`);
+      const errorMsg = `Failed to process expense: ${error.message}`;
+      setError(errorMsg);
+      if (showToast) {
+        showToast(errorMsg, "error");
+      }
     } finally {
       setLoading(false);
     }
@@ -419,32 +461,137 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       {extractedExpense && extractedExpense.expenses && (
         <div className="expense-result">
-          <h3>✅ {extractedExpense.count > 1 ? `${extractedExpense.count} Expenses Saved!` : 'Expense Saved!'}</h3>
-          {extractedExpense.expenses.map((expense, index) => (
-            <div key={expense.id || index} className="expense-details" style={{marginBottom: extractedExpense.count > 1 ? '15px' : '0', paddingBottom: extractedExpense.count > 1 ? '15px' : '0', borderBottom: index < extractedExpense.count - 1 ? '1px solid #eee' : 'none'}}>
-              {extractedExpense.count > 1 && <h4 style={{marginTop: '0', color: '#666'}}>Item {index + 1}</h4>}
-              <p>
-                <strong>Store:</strong> {expense.store}
-              </p>
-              <p>
-                <strong>Items:</strong> {expense.items}
-              </p>
-              {expense.category && (
-                <p>
-                  <strong>Category:</strong>{" "}
-                  {expense.category}
-                </p>
-              )}
-              {expense.amount && (
-                <p>
-                  <strong>Amount:</strong> ${expense.amount.toFixed(2)}
-                </p>
-              )}
-              <p>
-                <strong>Date:</strong> {expense.date}
-              </p>
+          <h3>Review and Edit Expenses</h3>
+          <p style={{color: '#a0a0a0', marginBottom: '1rem'}}>Make sure the categories match your budgets before saving.</p>
+          {editedExpenses.map((expense, index) => (
+            <div key={expense.id || index} className="expense-details" style={{marginBottom: extractedExpense.count > 1 ? '15px' : '0', paddingBottom: extractedExpense.count > 1 ? '15px' : '0', borderBottom: index < extractedExpense.count - 1 ? '1px solid rgba(255,255,255,0.1)' : 'none'}}>
+              {extractedExpense.count > 1 && <h4 style={{marginTop: '0', color: '#a0a0a0'}}>Expense {index + 1}</h4>}
+              <div className="expense-field">
+                <label><strong>Store:</strong></label>
+                <input
+                  type="text"
+                  value={expense.store || ''}
+                  onChange={(e) => {
+                    const updated = [...editedExpenses];
+                    updated[index].store = e.target.value;
+                    setEditedExpenses(updated);
+                  }}
+                  className="expense-edit-input"
+                />
+              </div>
+              <div className="expense-field">
+                <label><strong>Items:</strong></label>
+                <input
+                  type="text"
+                  value={expense.items || ''}
+                  onChange={(e) => {
+                    const updated = [...editedExpenses];
+                    updated[index].items = e.target.value;
+                    setEditedExpenses(updated);
+                  }}
+                  className="expense-edit-input"
+                />
+              </div>
+              <div className="expense-field">
+                <label><strong>Category:</strong></label>
+                <select
+                  value={expense.category || 'Other'}
+                  onChange={(e) => {
+                    const updated = [...editedExpenses];
+                    updated[index].category = e.target.value;
+                    setEditedExpenses(updated);
+                  }}
+                  className="expense-edit-select"
+                >
+                  {CATEGORIES.map(cat => (
+                    <option key={cat} value={cat}>{cat}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="expense-field">
+                <label><strong>Amount:</strong></label>
+                <input
+                  type="number"
+                  step="0.01"
+                  value={expense.amount || ''}
+                  onChange={(e) => {
+                    const updated = [...editedExpenses];
+                    updated[index].amount = parseFloat(e.target.value) || 0;
+                    setEditedExpenses(updated);
+                  }}
+                  className="expense-edit-input"
+                />
+              </div>
+              <div className="expense-field">
+                <label><strong>Date:</strong></label>
+                <input
+                  type="date"
+                  value={expense.date || ''}
+                  onChange={(e) => {
+                    const updated = [...editedExpenses];
+                    updated[index].date = e.target.value;
+                    setEditedExpenses(updated);
+                  }}
+                  className="expense-edit-input"
+                />
+              </div>
             </div>
           ))}
+          <div className="expense-actions" style={{marginTop: '1.5rem', display: 'flex', gap: '1rem'}}>
+            <button
+              onClick={async () => {
+                try {
+                  setLoading(true);
+                  const headers = {
+                    "Content-Type": "application/json",
+                  };
+                  if (token) {
+                    headers["Authorization"] = `Bearer ${token}`;
+                  }
+
+                  // Save each expense
+                  for (const expense of editedExpenses) {
+                    const response = await fetch("http://localhost:8000/api/expenses", {
+                      method: "POST",
+                      headers,
+                      body: JSON.stringify(expense),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error("Failed to save expense");
+                    }
+                  }
+
+                  setExtractedExpense(null);
+                  setEditedExpenses([]);
+                  onExpenseAdded();
+                  if (showToast) {
+                    showToast(`${editedExpenses.length} expense(s) saved successfully!`, "success");
+                  }
+                } catch (error) {
+                  console.error("Error saving expenses:", error);
+                  if (showToast) {
+                    showToast("Failed to save expenses", "error");
+                  }
+                } finally {
+                  setLoading(false);
+                }
+              }}
+              className="save-expenses-button"
+              disabled={loading}
+            >
+              Save {editedExpenses.length > 1 ? 'All Expenses' : 'Expense'}
+            </button>
+            <button
+              onClick={() => {
+                setExtractedExpense(null);
+                setEditedExpenses([]);
+              }}
+              className="cancel-expenses-button"
+            >
+              Cancel
+            </button>
+          </div>
         </div>
       )}
     </div>

@@ -1,3 +1,6 @@
+# ============================================================================
+# IMPORTS
+# ============================================================================
 from fastapi import FastAPI, File, UploadFile, HTTPException, Body, Depends, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -17,9 +20,13 @@ from dotenv import load_dotenv
 from jose import JWTError, jwt
 import bcrypt
 
+# ============================================================================
+# CONFIGURATION & SETUP
+# ============================================================================
 # Load environment variables
 load_dotenv()
 
+# Initialize FastAPI app
 app = FastAPI(title="Voxalyze Expense Tracker API")
 
 # JWT Configuration
@@ -30,7 +37,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7  # 7 days
 # Security
 security = HTTPBearer()
 
-
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -40,22 +46,27 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Initialize Groq client (primary - faster and free tier available)
+# API Client Initialization
+# Initialize Groq client (for expense extraction from transcripts)
 groq_api_key = os.getenv("GROQ_API_KEY", "")
 if not groq_api_key or groq_api_key == "your_groq_api_key_here":
     print("WARNING: GROQ_API_KEY not set. Please set your API key in .env file")
     print("Get a free API key at: https://console.groq.com/")
 groq_client = Groq(api_key=groq_api_key) if groq_api_key and groq_api_key != "your_groq_api_key_here" else None
 
-# Initialize Deepgram API key for voice transcription
+# Initialize Deepgram API key (for voice transcription)
 deepgram_api_key = os.getenv("DEEPGRAM_API_KEY", "")
 if not deepgram_api_key or deepgram_api_key == "your_deepgram_api_key_here":
     print("WARNING: DEEPGRAM_API_KEY not set. Please set your API key in .env file")
     print("Get a free API key at: https://console.deepgram.com/")
 deepgram_available = deepgram_api_key and deepgram_api_key != "your_deepgram_api_key_here"
 
-# Database setup
+# Database Configuration
 DB_PATH = "voxalyze.db"
+
+# ============================================================================
+# DATABASE FUNCTIONS
+# ============================================================================
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -151,12 +162,55 @@ def init_db():
         # Column already exists, ignore
         pass
     
+    # Create budgets table
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS budgets (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            user_id INTEGER NOT NULL,
+            category TEXT NOT NULL,
+            amount REAL NOT NULL,
+            month INTEGER NOT NULL,
+            year INTEGER NOT NULL,
+            recurring INTEGER DEFAULT 0,
+            repeat_interval INTEGER DEFAULT NULL,
+            repeat_unit TEXT DEFAULT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (user_id) REFERENCES users(id),
+            UNIQUE(user_id, category, month, year)
+        )
+    """)
+    
+    # Add recurring column if it doesn't exist (migration for existing databases)
+    try:
+        cursor.execute("ALTER TABLE budgets ADD COLUMN recurring INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        # Column already exists, ignore
+        pass
+    
+    # Add repeat_interval and repeat_unit columns if they don't exist
+    try:
+        cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_interval INTEGER DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    
+    try:
+        cursor.execute("ALTER TABLE budgets ADD COLUMN repeat_unit TEXT DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+    
     conn.commit()
     conn.close()
 
 init_db()
 
-# Authentication helper functions
+# ============================================================================
+# AUTHENTICATION HELPER FUNCTIONS
+# ============================================================================
+
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verify a password against a hash"""
     return bcrypt.checkpw(
@@ -209,6 +263,10 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
         raise credentials_exception
     
     return {"id": user[0], "username": user[1], "email": user[2] if len(user) > 2 else None}
+
+# ============================================================================
+# TEXT PROCESSING HELPER FUNCTIONS
+# ============================================================================
 
 def parse_relative_date(transcript: str) -> str:
     """Parse relative date terms from transcript and return YYYY-MM-DD format"""
@@ -284,8 +342,11 @@ def extract_store(transcript: str) -> str:
 
 def clean_item_name(item: str, store: str = "") -> str:
     """Clean up item name - remove common words and store names"""
-    # Remove common prefixes
-    item = re.sub(r'\b(i|I|got|bought|purchased|the|a|an|some)\b', '', item, flags=re.IGNORECASE)
+    # Remove common prefixes and articles (including "N" which is a common LLM mistake for "an")
+    item = re.sub(r'\b(i|I|got|bought|purchased|the|a|an|n|some)\b', '', item, flags=re.IGNORECASE)
+
+    # Also remove leading "N " specifically (common Groq mistake: "an iPad" -> "N iPad")
+    item = re.sub(r'^n\s+', '', item, flags=re.IGNORECASE)
     
     # Remove store name if it appears in the item
     if store and store != "Unknown Store":
@@ -334,8 +395,8 @@ def clean_item_name(item: str, store: str = "") -> str:
         word_lower = word.lower()
         if word_lower in special_cases:
             cleaned_words.append(special_cases[word_lower])
-        elif word_lower in ['a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'from']:
-            # Skip these words entirely if they're standalone
+        elif word_lower in ['a', 'an', 'the', 'and', 'or', 'of', 'in', 'on', 'at', 'to', 'for', 'from', 'n']:
+            # Skip these words entirely if they're standalone (including 'n' which is a common LLM mistake for 'an')
             continue
         else:
             cleaned_words.append(word.capitalize())
@@ -363,7 +424,7 @@ def categorize_item(item: str, store: str) -> str:
         "Dining": ["restaurant", "cafe", "coffee", "lunch", "dinner"],
         "Entertainment": ["movie", "game", "book"],
         "Health": ["pharmacy", "medicine"],
-        "Home": ["furniture", "bed", "chair"],
+        "Home": ["furniture", "bed", "chair", "rent", "rental", "apartment", "house", "mortgage", "housing"],
         "Utilities": ["electric", "water", "internet"],
     }
 
@@ -378,6 +439,10 @@ def categorize_item(item: str, store: str) -> str:
         return "Electronics"
 
     return "Other"
+
+# ============================================================================
+# EXPENSE EXTRACTION FUNCTIONS
+# ============================================================================
 
 def extract_expense_simple(transcript: str):
     """Simple regex-based expense extraction as fallback when Groq is unavailable
@@ -614,7 +679,7 @@ def extract_expense_simple(transcript: str):
         "Dining": ["restaurant", "cafe", "coffee", "lunch", "dinner", "breakfast", "pizza", "burger", "fast food", "takeout"],
         "Entertainment": ["movie", "cinema", "netflix", "spotify", "game", "games", "book", "books", "magazine", "subscription"],
         "Health": ["pharmacy", "medicine", "prescription", "vitamin", "supplement", "gym", "fitness", "doctor", "hospital"],
-        "Home": ["furniture", "bed", "chair", "table", "sofa", "couch", "lamp", "decor", "kitchen", "appliance", "refrigerator", "washer", "dryer"],
+        "Home": ["furniture", "bed", "chair", "table", "sofa", "couch", "lamp", "decor", "kitchen", "appliance", "refrigerator", "washer", "dryer", "rent", "rental", "apartment", "house", "mortgage", "housing"],
         "Utilities": ["electric", "electricity", "water", "internet", "phone bill", "cable", "utility"],
         "Other": []
     }
@@ -659,6 +724,10 @@ def extract_expense_simple(transcript: str):
         "date": date
     }
 
+# ============================================================================
+# PYDANTIC MODELS (Request/Response Schemas)
+# ============================================================================
+
 class ExpenseResponse(BaseModel):
     id: int
     store: str
@@ -676,9 +745,21 @@ class AnalyticsResponse(BaseModel):
     expenses_by_date: List[dict]
     recent_expenses: List[ExpenseResponse]
 
+# ============================================================================
+# API ENDPOINTS
+# ============================================================================
+
+# ----------------------------------------------------------------------------
+# Root & Health Check
+# ----------------------------------------------------------------------------
+
 @app.get("/")
 async def root():
     return {"message": "Voxalyze Expense Tracker API"}
+
+# ----------------------------------------------------------------------------
+# Voice Transcription
+# ----------------------------------------------------------------------------
 
 @app.post("/api/transcribe")
 async def transcribe_audio(audio: UploadFile = File(...)):
@@ -699,8 +780,7 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             "Authorization": f"Token {deepgram_api_key}",
         }
         params = {
-            "model": "nova-2",
-            "language": "en-US",
+            "model": "flux-general-en",
             "smart_format": "true",
             "punctuate": "true",
         }
@@ -741,6 +821,10 @@ async def transcribe_audio(audio: UploadFile = File(...)):
             detail=f"Transcription failed: {str(e)}"
         )
 
+# ----------------------------------------------------------------------------
+# Request Models
+# ----------------------------------------------------------------------------
+
 class TranscriptRequest(BaseModel):
     transcript: str
 
@@ -760,7 +844,28 @@ class ExpenseUpdate(BaseModel):
     amount: Optional[float] = None
     date: Optional[str] = None
 
-# Authentication endpoints
+class BudgetCreate(BaseModel):
+    category: str
+    amount: float
+    month: int
+    year: int
+    recurring: Optional[bool] = False
+    repeat_interval: Optional[int] = None
+    repeat_unit: Optional[str] = None  # "weeks", "months", "years"
+
+class BudgetUpdate(BaseModel):
+    category: Optional[str] = None
+    amount: Optional[float] = None
+    month: Optional[int] = None
+    year: Optional[int] = None
+    recurring: Optional[bool] = None
+    repeat_interval: Optional[int] = None
+    repeat_unit: Optional[str] = None
+
+# ----------------------------------------------------------------------------
+# Authentication Endpoints
+# ----------------------------------------------------------------------------
+
 @app.post("/api/register")
 async def register(user_data: UserRegister):
     """Register a new user"""
@@ -850,6 +955,10 @@ async def login(user_data: UserLogin):
 async def get_current_user_info(current_user: dict = Depends(get_current_user_dependency)):
     """Get current user information"""
     return current_user
+
+# ----------------------------------------------------------------------------
+# Expense Extraction Endpoints
+# ----------------------------------------------------------------------------
 
 @app.post("/api/extract-expense-simple")
 async def extract_expense_simple_endpoint(request: TranscriptRequest, current_user: dict = Depends(get_current_user_dependency)):
@@ -983,18 +1092,20 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
                 # This is a safety net in case the LLM doesn't properly remove articles
                 if items:
                     items_original = items
+                    print(f"DEBUG: Starting cleanup for items: '{items}'")
 
-                    # STEP 1: Remove ALL leading articles (a, an, the, N)
-                    # This is critical because sometimes "an iPad" gets extracted as "N iPad" or "n iPad"
-                    # We aggressively remove these patterns from ANY product, not just specific ones
-                    items = re.sub(r'^(n|N|a|an|A|An|the|The)\s+', '', items).strip()
+                    # STEP 1: Remove ALL leading articles (a, an, the, N, n)
+                    # Use case-insensitive matching and be very aggressive
+                    # This catches: "N iPad", "n ipad", "An iPad", "an ipad", "A laptop", "the milk", etc.
+                    items = re.sub(r'^(an|a|the|n)\s+', '', items, flags=re.IGNORECASE).strip()
+                    print(f"DEBUG: After first article removal: '{items}'")
 
-                    # STEP 2: Do a second pass to catch any articles that might remain
-                    # This ensures complete removal even if there were multiple articles
-                    items = re.sub(r'^(n|N|a|an|A|An|the|The)\s+', '', items).strip()
+                    # STEP 2: Do multiple passes to ensure complete removal
+                    for _ in range(3):
+                        items = re.sub(r'^(an|a|the|n)\s+', '', items, flags=re.IGNORECASE).strip()
+                    print(f"DEBUG: After multiple passes: '{items}'")
 
                     # STEP 3: Apply proper capitalization for Apple products
-                    # Check the lowercase version to catch all variations (ipad, Ipad, IPAD, etc.)
                     items_lower = items.lower()
 
                     # Define product capitalization fixes
@@ -1022,7 +1133,7 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
                             items = re.sub(r'\b' + product_key + r'\b', product_value, items, flags=re.IGNORECASE)
                             break
 
-                    print(f"Items cleaned: '{items_original}' -> '{items}'")
+                    print(f"DEBUG: Items cleaned: '{items_original}' -> '{items}'")
                 
                 category = expense_data.get("category")
                 amount = expense_data.get("amount")
@@ -1106,18 +1217,140 @@ async def extract_expense(request: TranscriptRequest, current_user: dict = Depen
         "message": f"{len(saved_expenses)} expense(s) saved successfully (using simple extraction - Groq unavailable)"
     }
 
+# ----------------------------------------------------------------------------
+# Expense Management Endpoints
+# ----------------------------------------------------------------------------
+
+@app.post("/api/expenses")
+async def create_expense(
+    expense: dict,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Create a new expense"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Validate required fields
+        if not expense.get("store") or not expense.get("date"):
+            raise HTTPException(status_code=400, detail="Store and date are required")
+        
+        cursor.execute("""
+            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (
+            current_user["id"],
+            expense.get("store"),
+            expense.get("items", "Various items"),
+            expense.get("category"),
+            expense.get("amount"),
+            expense.get("date"),
+            datetime.now().isoformat()
+        ))
+        
+        expense_id = cursor.lastrowid
+        conn.commit()
+        conn.close()
+        
+        return {
+            "id": expense_id,
+            "store": expense.get("store"),
+            "items": expense.get("items", "Various items"),
+            "category": expense.get("category"),
+            "amount": expense.get("amount"),
+            "date": expense.get("date"),
+            "message": "Expense created successfully"
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create expense: {str(e)}")
+
 @app.get("/api/expenses")
-async def get_expenses(current_user: dict = Depends(get_current_user_dependency)):
-    """Get all expenses for the current user"""
+async def get_expenses(
+    current_user: dict = Depends(get_current_user_dependency),
+    search: Optional[str] = None,
+    category: Optional[str] = None,
+    store: Optional[str] = None,
+    min_amount: Optional[float] = None,
+    max_amount: Optional[float] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    sort_by: Optional[str] = "date",
+    sort_order: Optional[str] = "desc"
+):
+    """
+    Get expenses for the current user with search, filtering, and sorting
+    
+    Query Parameters:
+    - search: Search in store, items, or category fields
+    - category: Filter by category (exact match)
+    - store: Filter by store name (exact match)
+    - min_amount: Minimum amount filter
+    - max_amount: Maximum amount filter
+    - start_date: Start date filter (YYYY-MM-DD)
+    - end_date: End date filter (YYYY-MM-DD)
+    - sort_by: Sort field (date, amount, store, created_at)
+    - sort_order: Sort direction (asc, desc)
+    """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
-    cursor.execute("SELECT * FROM expenses WHERE user_id = ? ORDER BY created_at DESC", (current_user["id"],))
+    
+    # Build query with filters
+    query = "SELECT * FROM expenses WHERE user_id = ?"
+    params = [current_user["id"]]
+    
+    # Search filter (searches in store, items, and category)
+    if search:
+        query += " AND (store LIKE ? OR items LIKE ? OR category LIKE ?)"
+        search_pattern = f"%{search}%"
+        params.extend([search_pattern, search_pattern, search_pattern])
+    
+    # Category filter
+    if category:
+        query += " AND category LIKE ?"
+        params.append(f"%{category}%")
+    
+    # Store filter
+    if store:
+        query += " AND store LIKE ?"
+        params.append(f"%{store}%")
+    
+    # Amount filters
+    if min_amount is not None:
+        query += " AND amount >= ?"
+        params.append(min_amount)
+    
+    if max_amount is not None:
+        query += " AND amount <= ?"
+        params.append(max_amount)
+    
+    # Date filters
+    if start_date:
+        query += " AND date >= ?"
+        params.append(start_date)
+    
+    if end_date:
+        query += " AND date <= ?"
+        params.append(end_date)
+    
+    # Sorting
+    valid_sort_fields = {"date", "amount", "store", "created_at"}
+    sort_field = sort_by if sort_by in valid_sort_fields else "date"
+    sort_direction = "DESC" if sort_order.lower() == "desc" else "ASC"
+    query += f" ORDER BY {sort_field} {sort_direction}"
+    
+    cursor.execute(query, params)
     rows = cursor.fetchall()
     conn.close()
     
     expenses = [dict(row) for row in rows]
-    return {"expenses": expenses}
+    return {"expenses": expenses, "count": len(expenses)}
+
+# ----------------------------------------------------------------------------
+# Database Viewer (Development Tool)
+# ----------------------------------------------------------------------------
 
 @app.get("/api/db-viewer")
 async def db_viewer():
@@ -1226,6 +1459,10 @@ async def db_viewer():
     from fastapi.responses import HTMLResponse
     return HTMLResponse(content=html)
 
+# ----------------------------------------------------------------------------
+# Analytics Endpoint
+# ----------------------------------------------------------------------------
+
 @app.get("/api/analytics")
 async def get_analytics(current_user: dict = Depends(get_current_user_dependency)):
     """Get analytics data for the current user"""
@@ -1285,6 +1522,10 @@ async def get_analytics(current_user: dict = Depends(get_current_user_dependency
         "expenses_by_date": expenses_by_date_list,
         "recent_expenses": recent_expenses
     }
+
+# ----------------------------------------------------------------------------
+# Expense Update & Delete Endpoints
+# ----------------------------------------------------------------------------
 
 @app.put("/api/expenses/{expense_id}")
 async def update_expense(
@@ -1366,6 +1607,465 @@ async def delete_all_expenses(current_user: dict = Depends(get_current_user_depe
     conn.close()
     
     return {"message": f"All expenses deleted successfully ({deleted} expenses removed)"}
+
+# ----------------------------------------------------------------------------
+# Budget Management Endpoints
+# ----------------------------------------------------------------------------
+
+@app.get("/api/budgets")
+async def get_budgets(
+    current_user: dict = Depends(get_current_user_dependency),
+    month: Optional[int] = None,
+    year: Optional[int] = None
+):
+    """Get budgets for the current user, optionally filtered by month/year"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    if month and year:
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? AND month = ? AND year = ? ORDER BY category",
+            (current_user["id"], month, year)
+        )
+    elif year:
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? AND year = ? ORDER BY month, category",
+            (current_user["id"], year)
+        )
+    else:
+        # Get current month/year by default
+        now = datetime.now()
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? AND month = ? AND year = ? ORDER BY category",
+            (current_user["id"], now.month, now.year)
+        )
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    budgets = [dict(row) for row in rows]
+    return {"budgets": budgets, "count": len(budgets)}
+
+@app.post("/api/budgets")
+async def create_budget(
+    budget: BudgetCreate,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Create a new budget for a category"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        
+        # Ensure budgets table exists (in case it wasn't created on startup)
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS budgets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL,
+                category TEXT NOT NULL,
+                amount REAL NOT NULL,
+                month INTEGER NOT NULL,
+                year INTEGER NOT NULL,
+                recurring INTEGER DEFAULT 0,
+                repeat_interval INTEGER DEFAULT NULL,
+                repeat_unit TEXT DEFAULT NULL,
+                created_at TEXT NOT NULL,
+                updated_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES users(id),
+                UNIQUE(user_id, category, month, year)
+            )
+        """)
+        
+        # Add columns if they don't exist
+        for column, col_type in [("recurring", "INTEGER DEFAULT 0"), ("repeat_interval", "INTEGER DEFAULT NULL"), ("repeat_unit", "TEXT DEFAULT NULL")]:
+            try:
+                cursor.execute(f"ALTER TABLE budgets ADD COLUMN {column} {col_type}")
+                conn.commit()
+            except sqlite3.OperationalError:
+                pass
+        
+        # Check if budget already exists
+        cursor.execute(
+            "SELECT id FROM budgets WHERE user_id = ? AND category = ? AND month = ? AND year = ?",
+            (current_user["id"], budget.category, budget.month, budget.year)
+        )
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(status_code=400, detail="Budget already exists for this category, month, and year")
+        
+        # Determine if recurring based on repeat_interval and repeat_unit
+        is_recurring = budget.recurring or (budget.repeat_interval is not None and budget.repeat_unit is not None)
+        recurring_int = 1 if is_recurring else 0
+        
+        # Create budget
+        now = datetime.now().isoformat()
+        cursor.execute("""
+            INSERT INTO budgets (user_id, category, amount, month, year, recurring, repeat_interval, repeat_unit, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            current_user["id"], 
+            budget.category, 
+            budget.amount, 
+            budget.month, 
+            budget.year, 
+            recurring_int,
+            budget.repeat_interval,
+            budget.repeat_unit,
+            now, 
+            now
+        ))
+        
+        budget_id = cursor.lastrowid
+        created_count = 1
+        
+        # If recurring, create budgets based on repeat frequency
+        if is_recurring and budget.repeat_interval and budget.repeat_unit:
+            current_date = datetime(budget.year, budget.month, 1)
+            
+            # Calculate how many periods to create
+            if budget.repeat_unit == "weeks":
+                # For weeks, convert to approximate months (4 weeks ≈ 1 month)
+                # Create budgets for about 1 year worth
+                weeks_per_year = 52
+                total_periods = weeks_per_year // budget.repeat_interval if budget.repeat_interval > 0 else 12
+            elif budget.repeat_unit == "months":
+                total_periods = 12 // budget.repeat_interval if budget.repeat_interval > 0 else 12  # Create for 1 year
+            elif budget.repeat_unit == "years":
+                total_periods = 5 // budget.repeat_interval if budget.repeat_interval > 0 else 5  # Create for 5 years
+            else:
+                total_periods = 12  # Default to 12 months
+            
+            # Limit total_periods to reasonable amount
+            total_periods = min(total_periods, 60)  # Max 60 periods
+            
+            for i in range(1, total_periods + 1):
+                if budget.repeat_unit == "weeks":
+                    # Add weeks and convert to month/year
+                    next_date = current_date + timedelta(weeks=budget.repeat_interval * i)
+                    next_month = next_date.month
+                    next_year = next_date.year
+                elif budget.repeat_unit == "months":
+                    # Add months
+                    next_month = budget.month + (budget.repeat_interval * i)
+                    next_year = budget.year
+                    while next_month > 12:
+                        next_month -= 12
+                        next_year += 1
+                    while next_month < 1:
+                        next_month += 12
+                        next_year -= 1
+                elif budget.repeat_unit == "years":
+                    next_month = budget.month
+                    next_year = budget.year + (budget.repeat_interval * i)
+                else:
+                    break
+                
+                # Check if budget already exists for this month/year
+                cursor.execute(
+                    "SELECT id FROM budgets WHERE user_id = ? AND category = ? AND month = ? AND year = ?",
+                    (current_user["id"], budget.category, next_month, next_year)
+                )
+                if not cursor.fetchone():
+                    cursor.execute("""
+                        INSERT INTO budgets (user_id, category, amount, month, year, recurring, repeat_interval, repeat_unit, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        current_user["id"], 
+                        budget.category, 
+                        budget.amount, 
+                        next_month, 
+                        next_year, 
+                        recurring_int,
+                        budget.repeat_interval,
+                        budget.repeat_unit,
+                        now, 
+                        now
+                    ))
+                    created_count += 1
+        
+        conn.commit()
+        conn.close()
+        
+        message = "Budget created successfully"
+        if is_recurring and budget.repeat_interval and budget.repeat_unit:
+            message += f" (recurring every {budget.repeat_interval} {budget.repeat_unit} - {created_count} budget(s) created)"
+        
+        return {
+            "id": budget_id,
+            "category": budget.category,
+            "amount": budget.amount,
+            "month": budget.month,
+            "year": budget.year,
+            "recurring": is_recurring,
+            "repeat_interval": budget.repeat_interval,
+            "repeat_unit": budget.repeat_unit,
+            "message": message
+        }
+    except sqlite3.OperationalError as e:
+        if "no such table" in str(e).lower():
+            raise HTTPException(
+                status_code=500,
+                detail="Database table not found. Please run 'python init_database.py' to initialize the database."
+            )
+        raise HTTPException(status_code=500, detail=f"Database error: {str(e)}")
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create budget: {str(e)}")
+
+@app.put("/api/budgets/{budget_id}")
+async def update_budget(
+    budget_id: int,
+    budget_update: BudgetUpdate,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Update a budget"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    # Check if budget exists and belongs to user
+    cursor.execute("SELECT * FROM budgets WHERE id = ? AND user_id = ?", (budget_id, current_user["id"]))
+    existing_budget = cursor.fetchone()
+    if not existing_budget:
+        conn.close()
+        raise HTTPException(status_code=404, detail="Budget not found")
+    
+    existing_budget_dict = dict(existing_budget)
+    
+    # Build update query dynamically based on provided fields
+    update_fields = []
+    update_values = []
+    
+    if budget_update.category is not None:
+        update_fields.append("category = ?")
+        update_values.append(budget_update.category)
+    
+    if budget_update.amount is not None:
+        update_fields.append("amount = ?")
+        update_values.append(budget_update.amount)
+    
+    if budget_update.month is not None:
+        update_fields.append("month = ?")
+        update_values.append(budget_update.month)
+    
+    if budget_update.year is not None:
+        update_fields.append("year = ?")
+        update_values.append(budget_update.year)
+    
+    if budget_update.recurring is not None:
+        update_fields.append("recurring = ?")
+        update_values.append(1 if budget_update.recurring else 0)
+    
+    # If changing month/year/category, check for conflicts
+    new_month = budget_update.month if budget_update.month is not None else existing_budget_dict["month"]
+    new_year = budget_update.year if budget_update.year is not None else existing_budget_dict["year"]
+    new_category = budget_update.category if budget_update.category is not None else existing_budget_dict["category"]
+    
+    # Check if new combination conflicts with existing budget
+    if (budget_update.month is not None or budget_update.year is not None or budget_update.category is not None):
+        cursor.execute(
+            "SELECT id FROM budgets WHERE user_id = ? AND category = ? AND month = ? AND year = ? AND id != ?",
+            (current_user["id"], new_category, new_month, new_year, budget_id)
+        )
+        if cursor.fetchone():
+            conn.close()
+            raise HTTPException(
+                status_code=400,
+                detail="Budget already exists for this category, month, and year"
+            )
+    
+    # Add updated_at timestamp
+    update_fields.append("updated_at = ?")
+    update_values.append(datetime.now().isoformat())
+    
+    # Add WHERE clause values
+    update_values.append(budget_id)
+    update_values.append(current_user["id"])
+    
+    if update_fields:
+        query = f"UPDATE budgets SET {', '.join(update_fields)} WHERE id = ? AND user_id = ?"
+        cursor.execute(query, update_values)
+    
+    conn.commit()
+    conn.close()
+    
+    return {"message": "Budget updated successfully"}
+
+@app.delete("/api/budgets/{budget_id}")
+async def delete_budget(
+    budget_id: int,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Delete a budget"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute("DELETE FROM budgets WHERE id = ? AND user_id = ?", (budget_id, current_user["id"]))
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+    
+    if deleted == 0:
+        raise HTTPException(status_code=404, detail="Budget not found")
+    
+    return {"message": "Budget deleted successfully"}
+
+@app.get("/api/budgets/check")
+async def check_budgets(
+    current_user: dict = Depends(get_current_user_dependency),
+    month: Optional[int] = None,
+    year: Optional[int] = None
+):
+    """Check budget status - returns budgets with actual spending and alerts"""
+    now = datetime.now()
+    check_month = month if month else now.month
+    check_year = year if year else now.year
+    
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Get budgets - filter by month/year if provided, otherwise get all
+    if month and year:
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? AND month = ? AND year = ?",
+            (current_user["id"], check_month, check_year)
+        )
+    elif year:
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? AND year = ?",
+            (current_user["id"], check_year)
+        )
+    elif month:
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? AND month = ?",
+            (current_user["id"], check_month)
+        )
+    else:
+        # Get all budgets for the user
+        cursor.execute(
+            "SELECT * FROM budgets WHERE user_id = ? ORDER BY year DESC, month DESC, category",
+            (current_user["id"],)
+        )
+    
+    budgets = [dict(row) for row in cursor.fetchall()]
+    
+    # Get actual spending by category for each budget's month/year
+    spending_by_category = {}
+    
+    # Group budgets by month/year to calculate spending efficiently
+    budget_periods = {}
+    for budget in budgets:
+        key = (budget["year"], budget["month"])
+        if key not in budget_periods:
+            budget_periods[key] = []
+        budget_periods[key].append(budget)
+    
+    # Calculate spending for each unique month/year combination
+    for (budget_year, budget_month), period_budgets in budget_periods.items():
+        start_date = f"{budget_year}-{budget_month:02d}-01"
+        # Calculate last day of month
+        if budget_month == 12:
+            end_date = f"{budget_year}-12-31"
+        else:
+            next_month = datetime(budget_year, budget_month + 1, 1)
+            last_day = (next_month - timedelta(days=1)).day
+            end_date = f"{budget_year}-{budget_month:02d}-{last_day:02d}"
+        
+        # Debug: Print the date range being checked
+        print(f"DEBUG: Checking expenses for budget period {budget_year}-{budget_month:02d}: {start_date} to {end_date}")
+        
+        cursor.execute("""
+            SELECT category, SUM(amount) as total, COUNT(*) as count
+            FROM expenses
+            WHERE user_id = ? AND date >= ? AND date <= ?
+            GROUP BY category
+        """, (current_user["id"], start_date, end_date))
+        
+        expenses_found = cursor.fetchall()
+        print(f"DEBUG: Found {len(expenses_found)} expense groups for period {budget_year}-{budget_month:02d}")
+        for exp in expenses_found:
+            print(f"DEBUG:   - Category: '{exp['category']}', Total: {exp['total']}, Count: {exp['count']}")
+        
+        for row in cursor.fetchall():
+            if row["category"]:
+                # Handle comma-separated categories
+                categories = [c.strip() for c in row["category"].split(",")]
+                total = row["total"] or 0
+                # Store spending per category per period
+                period_key = f"{budget_year}-{budget_month}"
+                if period_key not in spending_by_category:
+                    spending_by_category[period_key] = {}
+                for cat in categories:
+                    # Case-insensitive matching for categories
+                    cat_key = cat.strip()
+                    spending_by_category[period_key][cat_key] = spending_by_category[period_key].get(cat_key, 0) + total
+    
+    conn.close()
+    
+    # Calculate budget status
+    budget_status = []
+    for budget in budgets:
+        category = budget["category"]
+        budget_amount = budget["amount"]
+        budget_year = budget["year"]
+        budget_month = budget["month"]
+        
+        # Get spending for this budget's period
+        period_key = f"{budget_year}-{budget_month}"
+        period_spending = spending_by_category.get(period_key, {})
+        
+        # Debug logging
+        print(f"DEBUG Budget Check: Category='{category}', Period={period_key}, Available spending={period_spending}")
+        
+        # Calculate actual spending - use case-insensitive matching
+        budget_category_clean = category.strip()
+        if "," in budget_category_clean:
+            # For multi-category budgets, sum spending from all matching categories
+            categories = [c.strip() for c in budget_category_clean.split(",")]
+            actual_spending = sum(
+                period_spending.get(cat, 0)
+                for cat in categories
+            )
+        else:
+            # Try exact match first, then case-insensitive match
+            actual_spending = period_spending.get(budget_category_clean, 0)
+            if actual_spending == 0:
+                # Try case-insensitive match
+                for cat_key, amount in period_spending.items():
+                    if cat_key.lower() == budget_category_clean.lower():
+                        actual_spending = amount
+                        break
+        
+        percentage_used = (actual_spending / budget_amount * 100) if budget_amount > 0 else 0
+        remaining = budget_amount - actual_spending
+        
+        # Determine alert level
+        alert_level = "ok"
+        if percentage_used >= 100:
+            alert_level = "exceeded"
+        elif percentage_used >= 90:
+            alert_level = "warning"
+        elif percentage_used >= 75:
+            alert_level = "caution"
+        
+        budget_status.append({
+            **budget,
+            "actual_spending": actual_spending,
+            "remaining": remaining,
+            "percentage_used": round(percentage_used, 2),
+            "alert_level": alert_level
+        })
+    
+    return {
+        "budgets": budget_status,
+        "month": check_month,
+        "year": check_year
+    }
+
+# ============================================================================
+# APPLICATION ENTRY POINT
+# ============================================================================
 
 if __name__ == "__main__":
     import uvicorn

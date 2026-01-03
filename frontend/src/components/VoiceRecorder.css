@@ -201,7 +201,92 @@
 .expense-details {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  margin-bottom: 1rem;
+}
+
+.expense-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.expense-field label {
+  color: #22c55e;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.expense-edit-input,
+.expense-edit-select {
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 1rem;
+  font-family: 'Ubuntu', sans-serif;
+  transition: all 0.2s ease;
+}
+
+.expense-edit-input:focus,
+.expense-edit-select:focus {
+  outline: none;
+  border-color: #22c55e;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.expense-edit-select option {
+  background: #1a1a1a;
+  color: #ffffff;
+}
+
+.expense-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}
+
+.save-expenses-button,
+.cancel-expenses-button {
+  flex: 1;
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.save-expenses-button {
+  background: #22c55e;
+  color: #ffffff;
+}
+
+.save-expenses-button:hover:not(:disabled) {
+  background: #16a34a;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(34, 197, 94, 0.3);
+}
+
+.save-expenses-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancel-expenses-button {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cancel-expenses-button:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .expense-details p {
