@@ -4,7 +4,8 @@ A modern expense tracking application that lets you record expenses using your v
 
 ## Features
 
-- Voice Recording: Record expenses using your microphone with Web Speech API (free, browser-based)
+- Voice Recording: Record expenses using your microphone with MediaRecorder API (browser-based audio capture)
+- AI-Powered Transcription: Converts speech to text using Deepgram API (Flux model)
 - AI-Powered Extraction: Automatically extracts store, items, amount, date, and categories from voice transcripts using Groq LLM
 - Analytics Dashboard: Visualize spending with interactive charts including line, bar, and pie charts
 - Expense History: View and manage all recorded expenses with delete functionality
@@ -21,14 +22,14 @@ A modern expense tracking application that lets you record expenses using your v
 - FastAPI - Python web framework for building REST APIs
   - Handles CORS, request validation, and error handling
   - Provides endpoints for transcription, expense extraction, analytics, and CRUD operations
+- Deepgram API - Speech-to-text transcription service
+  - Uses flux-general-en model for conversational speech recognition
+  - High accuracy transcription of voice recordings
+  - REST API integration via httpx
 - Groq LLM - AI inference engine for expense extraction
   - Uses llama-3.1-70b-versatile model for JSON extraction
   - Free tier available with generous rate limits
   - Primary method for extracting structured expense data from voice transcripts
-- Web Speech API - Browser-based speech recognition (frontend)
-  - Free, no API key required
-  - Handles voice-to-text transcription in the browser
-  - Falls back to backend transcription if unavailable
 - Simple Regex Extraction - Fallback extraction method
   - Pattern-based extraction when Groq is unavailable
   - Handles common expense formats (dollars, cents, store names, items)
@@ -49,6 +50,10 @@ A modern expense tracking application that lets you record expenses using your v
   - Component-based architecture (VoiceRecorder, AnalyticsDashboard, ExpenseList, Navigation, LandingPage)
   - State management with hooks (useState, useEffect)
   - Efficient re-rendering and data flow
+- MediaRecorder API - Browser API for audio recording
+  - Captures audio from user's microphone
+  - Supports multiple audio formats (webm, mp4, ogg)
+  - Creates audio blobs for backend processing
 - Vite - Frontend build tool
   - Fast development server with HMR (Hot Module Replacement)
   - Optimized production builds
@@ -72,9 +77,9 @@ A modern expense tracking application that lets you record expenses using your v
 
 ### Application Flow
 
-1. Voice Input: User clicks "Start Recording" → Web Speech API captures audio
-2. Transcription: Browser converts speech to text (no backend needed)
-3. Expense Extraction: Transcript sent to backend → Groq LLM extracts structured data including categories
+1. Voice Input: User clicks "Start Recording" → MediaRecorder API captures audio
+2. Transcription: Audio blob sent to backend → Deepgram API converts speech to text
+3. Expense Extraction: Transcript sent to Groq LLM → Extracts structured data including categories
 4. Data Storage: Extracted expense saved to SQLite database
 5. Analytics: Real-time dashboard updates with charts and statistics
 6. View Management: Navigation tabs switch between Landing, Record, Dashboard, and Expenses views
@@ -125,7 +130,7 @@ VoiceP_App/
 
 ### Protected Files (in .gitignore)
 
-- `.env` - Contains API keys (Groq)
+- `.env` - Contains API keys (Groq, Deepgram)
 - `*.db`, `*.sqlite` - Database files with user data
 - `venv/`, `node_modules/` - Dependencies
 - `__pycache__/` - Python cache files
@@ -145,6 +150,7 @@ VoiceP_App/
 - Python 3.8+
 - Node.js 16+
 - Groq API key (free at https://console.groq.com/) - Optional but recommended
+- Deepgram API key (free at https://console.deepgram.com/) - Required for transcription
 
 ### Backend Setup
 
@@ -174,13 +180,16 @@ pip install -r requirements.txt
 touch .env
 ```
 
-5. Add your Groq API key to `.env`:
+5. Add your API keys to `.env`:
 
 ```
 GROQ_API_KEY=your_groq_api_key_here
+DEEPGRAM_API_KEY=your_deepgram_api_key_here
 ```
 
-Note: Get a free API key at https://console.groq.com/. The app will work without it using simple regex extraction, but Groq provides better accuracy.
+Note: 
+- Get a free Groq API key at https://console.groq.com/. The app will work without it using simple regex extraction, but Groq provides better accuracy.
+- Get a free Deepgram API key at https://console.deepgram.com/. This is required for voice transcription.
 
 6. Run the backend server:
 
@@ -246,7 +255,7 @@ The frontend will be available at `http://localhost:3000`
 ## API Endpoints
 
 - `GET /` - API health check
-- `POST /api/transcribe` - Transcribe audio to text (currently redirects to use Web Speech API)
+- `POST /api/transcribe` - Transcribe audio to text using Deepgram API
 - `POST /api/extract-expense` - Extract expense information from transcript (uses Groq or fallback)
 - `POST /api/extract-expense-simple` - Simple regex-based extraction (no API needed)
 - `GET /api/expenses` - Get all expenses
@@ -268,7 +277,7 @@ The frontend will be available at `http://localhost:3000`
 
 The app has multiple layers of fallbacks to ensure it always works:
 
-1. Transcription: Web Speech API (browser) → Backend transcription (if needed)
+1. Transcription: Deepgram API → Error message if unavailable
 2. Extraction: Groq LLM → Simple regex extraction
 3. Data: Always saves to database, even with minimal extraction
 
@@ -283,7 +292,7 @@ The app has multiple layers of fallbacks to ensure it always works:
 ## Troubleshooting
 
 - "Failed to fetch" error: Make sure backend is running on port 8000
-- No transcription: Check browser microphone permissions
+- No transcription: Check browser microphone permissions and Deepgram API key
 - Poor extraction: Add Groq API key for better accuracy
 - Database errors: Check file permissions on `voxalyze.db`
 
@@ -294,5 +303,5 @@ MIT
 ## Acknowledgments
 
 - Groq for fast, free AI inference
-- Web Speech API for free browser-based transcription
+- Deepgram for accurate speech-to-text transcription
 - FastAPI and React communities for excellent frameworks
