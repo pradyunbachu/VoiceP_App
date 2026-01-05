@@ -2,11 +2,55 @@
   width: 100%;
 }
 
+.expense-list-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
 .expense-list h2 {
   color: #ffffff;
-  margin-bottom: 1.5rem;
+  margin: 0;
   font-size: 1.8rem;
   font-weight: 700;
+}
+
+.sort-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ffffff;
+}
+
+.sort-select {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.5rem 1rem;
+  color: #ffffff;
+  font-size: 0.95rem;
+  font-family: 'Ubuntu', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.sort-select:hover {
+  border-color: #22c55e;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sort-select:focus {
+  outline: none;
+  border-color: #22c55e;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.sort-select option {
+  background: #1a1a1a;
+  color: #ffffff;
 }
 
 .empty-state {

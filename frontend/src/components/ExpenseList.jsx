@@ -1,10 +1,11 @@
-import { useState } from "react";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown } from "lucide-react";
 import "./ExpenseList.css";
 
 const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
+  const [sortBy, setSortBy] = useState("recent"); // "recent", "expensive", "name"
   const handleEdit = (expense) => {
     setEditingId(expense.id);
     setEditForm({
@@ -77,6 +78,40 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
     }
   };
 
+  // Sort expenses based on selected option
+  const sortedExpenses = useMemo(() => {
+    const expensesCopy = [...expenses];
+    
+    switch (sortBy) {
+      case "recent":
+        // Sort by date (newest first)
+        return expensesCopy.sort((a, b) => {
+          const dateA = new Date(a.date);
+          const dateB = new Date(b.date);
+          return dateB - dateA; // Newest first
+        });
+      
+      case "expensive":
+        // Sort by amount (highest first)
+        return expensesCopy.sort((a, b) => {
+          const amountA = parseFloat(a.amount) || 0;
+          const amountB = parseFloat(b.amount) || 0;
+          return amountB - amountA; // Highest first
+        });
+      
+      case "name":
+        // Sort by store name (alphabetical)
+        return expensesCopy.sort((a, b) => {
+          const nameA = (a.store || "").toLowerCase();
+          const nameB = (b.store || "").toLowerCase();
+          return nameA.localeCompare(nameB);
+        });
+      
+      default:
+        return expensesCopy;
+    }
+  }, [expenses, sortBy]);
+
   if (expenses.length === 0) {
     return (
       <div className="expense-list">
@@ -90,9 +125,23 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
 
   return (
     <div className="expense-list">
-      <h2>Recent Expenses</h2>
+      <div className="expense-list-header">
+        <h2>Recent Expenses</h2>
+        <div className="sort-controls">
+          <ArrowUpDown size={18} />
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="sort-select"
+          >
+            <option value="recent">Sort by Recent</option>
+            <option value="expensive">Sort by Expensive</option>
+            <option value="name">Sort by Name</option>
+          </select>
+        </div>
+      </div>
       <div className="expenses-container">
-        {expenses.map((expense) => (
+        {sortedExpenses.map((expense) => (
           <div key={expense.id} className="expense-card">
             {editingId === expense.id ? (
               <div className="edit-form">
