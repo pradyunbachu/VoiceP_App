@@ -68,12 +68,19 @@
 
 .expense-card {
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(10, 10, 10, 0.3);
+  margin-bottom: 0.5rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .expense-card:hover {
-  background: rgba(255, 255, 255, 0.02);
+  background: rgba(20, 20, 20, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .expense-header {
@@ -101,7 +108,7 @@
 .edit-button,
 .delete-button {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   cursor: pointer;
   padding: 0.5rem;
   border-radius: 8px;
@@ -117,7 +124,8 @@
 
 .edit-button:hover {
   background: rgba(34, 197, 94, 0.15);
-  transform: scale(1.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  transform: scale(1.05);
 }
 
 .delete-button {
@@ -126,7 +134,8 @@
 
 .delete-button:hover {
   background: rgba(255, 107, 107, 0.15);
-  transform: scale(1.1);
+  border-color: rgba(255, 107, 107, 0.3);
+  transform: scale(1.05);
 }
 
 .expense-items {
@@ -269,6 +278,140 @@
   transform: translateY(-2px);
 }
 
+/* Selection Mode Styles */
+.select-mode-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  color: #22c55e;
+  font-size: 0.95rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Ubuntu', sans-serif;
+}
+
+.select-mode-button:hover {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.5);
+  transform: translateY(-1px);
+}
+
+.bulk-actions {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.bulk-action-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  border-radius: 8px;
+  color: #22c55e;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Ubuntu', sans-serif;
+}
+
+.bulk-action-button:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.15);
+  border-color: rgba(34, 197, 94, 0.5);
+  transform: translateY(-1px);
+}
+
+.bulk-action-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.bulk-action-button.cancel {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+}
+
+.bulk-action-button.cancel:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.select-all-controls {
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: rgba(34, 197, 94, 0.05);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+}
+
+.select-all-button {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: transparent;
+  border: none;
+  color: #22c55e;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: 'Ubuntu', sans-serif;
+}
+
+.select-all-button:hover {
+  opacity: 0.8;
+}
+
+.selection-count {
+  color: #a0a0a0;
+  font-weight: 400;
+  margin-left: 0.5rem;
+}
+
+.expense-card.selected {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.expense-checkbox {
+  position: absolute;
+  top: 1rem;
+  left: 1rem;
+  z-index: 10;
+}
+
+.checkbox-button {
+  background: transparent;
+  border: none;
+  color: #22c55e;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.checkbox-button:hover {
+  background: rgba(34, 197, 94, 0.1);
+  transform: scale(1.1);
+}
+
+.expense-card.selected .checkbox-button {
+  color: #22c55e;
+}
+
 @media (max-width: 768px) {
   .expenses-container {
     grid-template-columns: 1fr;
@@ -280,5 +423,28 @@
   
   .edit-actions {
     flex-direction: column;
+  }
+
+  .expense-list-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .sort-controls {
+    width: 100%;
+  }
+
+  .sort-select {
+    width: 100%;
+  }
+
+  .bulk-actions {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .bulk-action-button {
+    width: 100%;
+    justify-content: center;
   }
 }

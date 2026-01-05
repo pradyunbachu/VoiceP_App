@@ -4,7 +4,7 @@ import "./Navigation.css";
 const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
   return (
     <nav className="navigation">
-      <div className="nav-logo" onClick={() => onViewChange("dashboard")}>
+      <div className="nav-logo" onClick={() => onViewChange("landing")}>
         <Mic size={20} />
         <span>Voxalyze</span>
       </div>

@@ -50,11 +50,17 @@
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  transition: all 0.3s ease;
+  background: rgba(10, 10, 10, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  transition: all 0.2s ease;
 }
 
 .stat-card:hover {
-  opacity: 0.8;
+  background: rgba(20, 20, 20, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .stat-icon {
@@ -95,16 +101,26 @@
 }
 
 .chart-container {
-  padding: 1.5rem 0;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
-  transition: all 0.3s ease;
+  padding: 1.5rem;
+  background: rgba(10, 10, 10, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 16px;
+  margin-bottom: 2rem;
+  transition: all 0.2s ease;
+}
+
+.chart-container:hover {
+  background: rgba(20, 20, 20, 0.5);
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .chart-container h3 {
   color: #ffffff;
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
+  margin-bottom: 1.5rem;
+  font-size: 1.3rem;
   font-weight: 600;
+  letter-spacing: -0.3px;
 }
 
 .empty-chart {

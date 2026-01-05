@@ -246,6 +246,15 @@ function App() {
     }
 
     switch (currentView) {
+      case "landing":
+        return (
+          <div className="view-container">
+            <LandingPage
+              onGetStarted={() => setCurrentView("dashboard")}
+              isAuthenticated={true}
+            />
+          </div>
+        );
       case "record":
         return (
           <div className="view-container">

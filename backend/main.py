@@ -161,6 +161,31 @@ def init_db():
     except sqlite3.OperationalError:
         # Column already exists, ignore
         pass
+
+    # Add recurring expense columns if they don't exist
+    try:
+        cursor.execute("ALTER TABLE expenses ADD COLUMN is_recurring INTEGER DEFAULT 0")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE expenses ADD COLUMN recurring_interval INTEGER DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE expenses ADD COLUMN recurring_unit TEXT DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
+
+    try:
+        cursor.execute("ALTER TABLE expenses ADD COLUMN parent_recurring_id INTEGER DEFAULT NULL")
+        conn.commit()
+    except sqlite3.OperationalError:
+        pass
     
     # Create budgets table
     cursor.execute("""
@@ -206,6 +231,7 @@ def init_db():
     conn.close()
 
 init_db()
+
 
 # ============================================================================
 # AUTHENTICATION HELPER FUNCTIONS
@@ -411,6 +437,178 @@ def clean_item_name(item: str, store: str = "") -> str:
     
     return item
 
+def process_due_recurring_expenses():
+    """Check for recurring expenses that are due and create new entries.
+
+    This function should be called periodically (e.g., on app startup, daily cron job).
+    It looks at all recurring expenses and creates new entries for any that are due.
+    """
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    today = datetime.now().date()
+    today_str = today.strftime("%Y-%m-%d")
+
+    # Get all recurring expenses (parent expenses only - no parent_recurring_id)
+    cursor.execute("""
+        SELECT * FROM expenses
+        WHERE is_recurring = 1
+        AND (parent_recurring_id IS NULL OR parent_recurring_id = 0)
+    """)
+    recurring_expenses = cursor.fetchall()
+
+    created_count = 0
+
+    for expense in recurring_expenses:
+        expense_dict = dict(expense)
+        user_id = expense_dict["user_id"]
+        recurring_interval = expense_dict.get("recurring_interval", 1)
+        recurring_unit = expense_dict.get("recurring_unit", "months")
+
+        # Parse the original expense date
+        try:
+            original_date = datetime.strptime(expense_dict["date"], "%Y-%m-%d").date()
+        except:
+            continue
+
+        # Find the most recent occurrence for this recurring expense
+        cursor.execute("""
+            SELECT MAX(date) as last_date FROM expenses
+            WHERE (id = ? OR parent_recurring_id = ?)
+        """, (expense_dict["id"], expense_dict["id"]))
+        result = cursor.fetchone()
+
+        if result and result["last_date"]:
+            try:
+                last_date = datetime.strptime(result["last_date"], "%Y-%m-%d").date()
+            except:
+                last_date = original_date
+        else:
+            last_date = original_date
+
+        # Calculate next due date
+        if recurring_unit == "days":
+            next_due = last_date + timedelta(days=recurring_interval)
+        elif recurring_unit == "weeks":
+            next_due = last_date + timedelta(weeks=recurring_interval)
+        elif recurring_unit == "months":
+            month = last_date.month + recurring_interval
+            year = last_date.year
+            while month > 12:
+                month -= 12
+                year += 1
+            day = min(last_date.day, 28)
+            next_due = last_date.replace(year=year, month=month, day=day)
+        elif recurring_unit == "years":
+            next_due = last_date.replace(year=last_date.year + recurring_interval)
+        else:
+            continue
+
+        # Create new expense if due date has arrived (today or past)
+        while next_due <= today:
+            next_due_str = next_due.strftime("%Y-%m-%d")
+
+            # Check if this expense already exists for this date
+            cursor.execute("""
+                SELECT id FROM expenses
+                WHERE user_id = ? AND store = ? AND items = ? AND date = ?
+                AND (id = ? OR parent_recurring_id = ?)
+            """, (user_id, expense_dict["store"], expense_dict["items"],
+                  next_due_str, expense_dict["id"], expense_dict["id"]))
+
+            if not cursor.fetchone():
+                # Create the new recurring expense entry
+                cursor.execute("""
+                    INSERT INTO expenses (user_id, store, items, category, amount, date, created_at,
+                                          is_recurring, recurring_interval, recurring_unit, parent_recurring_id)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    user_id,
+                    expense_dict["store"],
+                    expense_dict["items"],
+                    expense_dict.get("category"),
+                    expense_dict["amount"],
+                    next_due_str,
+                    datetime.now().isoformat(),
+                    1,
+                    recurring_interval,
+                    recurring_unit,
+                    expense_dict["id"]
+                ))
+                created_count += 1
+
+            # Calculate next due date for the loop
+            if recurring_unit == "days":
+                next_due = next_due + timedelta(days=recurring_interval)
+            elif recurring_unit == "weeks":
+                next_due = next_due + timedelta(weeks=recurring_interval)
+            elif recurring_unit == "months":
+                month = next_due.month + recurring_interval
+                year = next_due.year
+                while month > 12:
+                    month -= 12
+                    year += 1
+                day = min(next_due.day, 28)
+                next_due = next_due.replace(year=year, month=month, day=day)
+            elif recurring_unit == "years":
+                next_due = next_due.replace(year=next_due.year + recurring_interval)
+            else:
+                break
+
+    conn.commit()
+    conn.close()
+
+    return created_count
+
+def detect_recurring(transcript: str) -> dict:
+    """Detect if expense is recurring and extract interval/unit"""
+    transcript_lower = transcript.lower()
+
+    # Default: not recurring
+    result = {
+        "is_recurring": False,
+        "recurring_interval": None,
+        "recurring_unit": None
+    }
+
+    # Check for recurring patterns
+    recurring_patterns = [
+        # "every X weeks/months/days/years"
+        (r'every\s+(\d+)\s+(day|week|month|year)s?', lambda m: (int(m.group(1)), m.group(2) + "s")),
+        # "biweekly" or "bi-weekly"
+        (r'bi[-\s]?weekly', lambda m: (2, "weeks")),
+        # "bimonthly" or "bi-monthly"
+        (r'bi[-\s]?monthly', lambda m: (2, "months")),
+        # "quarterly"
+        (r'quarterly', lambda m: (3, "months")),
+        # "weekly"
+        (r'\bweekly\b', lambda m: (1, "weeks")),
+        # "monthly"
+        (r'\bmonthly\b', lambda m: (1, "months")),
+        # "yearly" or "annually"
+        (r'\b(yearly|annually)\b', lambda m: (1, "years")),
+        # "daily"
+        (r'\bdaily\b', lambda m: (1, "days")),
+        # "every week/month/year/day"
+        (r'every\s+(week|month|year|day)\b', lambda m: (1, m.group(1) + "s")),
+        # "recurring" keyword (default to monthly if no other info)
+        (r'\brecurring\b', lambda m: (1, "months")),
+        # "subscription" keyword (default to monthly)
+        (r'\bsubscription\b', lambda m: (1, "months")),
+    ]
+
+    for pattern, extractor in recurring_patterns:
+        match = re.search(pattern, transcript_lower)
+        if match:
+            interval, unit = extractor(match)
+            result["is_recurring"] = True
+            result["recurring_interval"] = interval
+            result["recurring_unit"] = unit
+            break
+
+    return result
+
 def categorize_item(item: str, store: str) -> str:
     """Categorize a single item"""
     item_lower = item.lower()
@@ -496,12 +694,20 @@ def validate_expense(expense: dict, today_str: str) -> dict:
         items = items[0].upper() + items[1:] if len(items) > 1 else items.upper()
     
     # Validate category
-    valid_categories = ["Electronics", "Groceries", "Clothing", "Transportation", 
+    valid_categories = ["Electronics", "Groceries", "Clothing", "Transportation",
                        "Dining", "Entertainment", "Health", "Home", "Utilities", "Other"]
     category = expense.get("category", "Other")
     if category not in valid_categories:
         category = "Other"
-    
+
+    # Handle recurring expenses - add "Recurring" tag to category
+    is_recurring = expense.get("is_recurring", False)
+    recurring_interval = expense.get("recurring_interval")
+    recurring_unit = expense.get("recurring_unit")
+
+    if is_recurring and "Recurring" not in category:
+        category = f"{category}, Recurring"
+
     # Validate amount
     try:
         amount = float(expense["amount"])
@@ -509,18 +715,21 @@ def validate_expense(expense: dict, today_str: str) -> dict:
             raise ValueError("Amount must be positive")
     except (ValueError, TypeError):
         raise ValueError(f"Invalid amount: {expense.get('amount')}")
-    
+
     # Validate date format
     date = expense.get("date", today_str)
     if not re.match(r'\d{4}-\d{2}-\d{2}', str(date)):
         date = today_str
-    
+
     return {
         "store": str(expense["store"]).strip(),
         "items": items,
         "category": category,
         "amount": amount,
-        "date": date
+        "date": date,
+        "is_recurring": is_recurring,
+        "recurring_interval": recurring_interval,
+        "recurring_unit": recurring_unit
     }
 
 def post_process_extraction(expenses: list, transcript: str) -> list:
@@ -550,6 +759,9 @@ def extract_expense_simple(transcript: str):
     # Extract store first (needed for all patterns)
     store = extract_store(transcript)
     date = parse_relative_date(transcript)
+
+    # Detect if expense is recurring
+    recurring_info = detect_recurring(transcript)
 
     # First, try to detect "$X worth of item" pattern (handles any number of items)
     # Pattern: "$17 worth of ice cream, $4 worth of strawberries, and $32 worth of chocolate"
@@ -586,7 +798,8 @@ def extract_expense_simple(transcript: str):
                 "items": combined_items,
                 "category": category,
                 "amount": total_amount,
-                "date": date
+                "date": date,
+                **recurring_info
             }
 
     # Try pattern: "item1 for $X and item2 for $Y" or "bought item1 for $X and item2 for $Y"
@@ -618,7 +831,8 @@ def extract_expense_simple(transcript: str):
             "items": combined_items,
             "category": category,
             "amount": total_amount,
-            "date": date
+            "date": date,
+            **recurring_info
         }
 
     # If no multi-item pattern, extract as single expense
@@ -841,13 +1055,14 @@ def extract_expense_simple(transcript: str):
     
     # Parse relative date from transcript (yesterday, tomorrow, etc.)
     date = parse_relative_date(transcript)
-    
+
     return {
         "store": store,
         "items": items if items else "Various items",
         "category": category,
         "amount": amount,
-        "date": date
+        "date": date,
+        **recurring_info
     }
 
 # ============================================================================
@@ -971,6 +1186,9 @@ class ExpenseUpdate(BaseModel):
     category: Optional[str] = None
     amount: Optional[float] = None
     date: Optional[str] = None
+
+class BulkDeleteRequest(BaseModel):
+    expense_ids: List[int]
 
 class BudgetCreate(BaseModel):
     category: str
@@ -1148,7 +1366,10 @@ EXPENSE OBJECT STRUCTURE:
   "items": "Product name ONLY (no articles, no action words)",
   "category": "One category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other",
   "amount": <number>,
-  "date": "YYYY-MM-DD"
+  "date": "YYYY-MM-DD",
+  "is_recurring": true/false,
+  "recurring_interval": <number or null>,
+  "recurring_unit": "days" | "weeks" | "months" | "years" | null
 }}
 
 CRITICAL RULES:
@@ -1188,6 +1409,20 @@ CRITICAL RULES:
    - "tomorrow" = {tomorrow_str}
    - If not mentioned, use {today_str}
 
+5. RECURRING EXPENSES - IMPORTANT:
+   - Detect if user mentions the expense is recurring/repeating
+   - Keywords: "monthly", "weekly", "every week", "every month", "every 2 weeks", "biweekly", "annually", "yearly", "recurring", "subscription"
+   - Set is_recurring: true when recurring is mentioned
+   - Set recurring_interval: the number (default 1 if not specified)
+   - Set recurring_unit: "days", "weeks", "months", or "years"
+   - Examples:
+     - "monthly" or "every month" → is_recurring: true, recurring_interval: 1, recurring_unit: "months"
+     - "weekly" or "every week" → is_recurring: true, recurring_interval: 1, recurring_unit: "weeks"
+     - "every 2 weeks" or "biweekly" → is_recurring: true, recurring_interval: 2, recurring_unit: "weeks"
+     - "every 3 months" or "quarterly" → is_recurring: true, recurring_interval: 3, recurring_unit: "months"
+     - "yearly" or "annually" → is_recurring: true, recurring_interval: 1, recurring_unit: "years"
+   - If NOT recurring, set: is_recurring: false, recurring_interval: null, recurring_unit: null
+
 EXAMPLES:
 Input: "I bought an iPad from Target for $700"
 Output: [{{"store": "Target", "items": "iPad", "category": "Electronics", "amount": 700, "date": "{today_str}"}}]
@@ -1208,7 +1443,19 @@ Input: "bought candy for $5 and an iPad for $700 at Target"
 Output: [{{"store": "Target", "items": "candy, iPad", "category": "Other", "amount": 705, "date": "{today_str}"}}]
 
 Input: "purchased a MacBook from Apple Store yesterday for $2000"
-Output: [{{"store": "Apple Store", "items": "MacBook", "category": "Electronics", "amount": 2000, "date": "{yesterday_str}"}}]
+Output: [{{"store": "Apple Store", "items": "MacBook", "category": "Electronics", "amount": 2000, "date": "{yesterday_str}", "is_recurring": false, "recurring_interval": null, "recurring_unit": null}}]
+
+Input: "I pay $15 monthly for Netflix"
+Output: [{{"store": "Netflix", "items": "subscription", "category": "Entertainment", "amount": 15, "date": "{today_str}", "is_recurring": true, "recurring_interval": 1, "recurring_unit": "months"}}]
+
+Input: "my rent is $1500 every month"
+Output: [{{"store": "Landlord", "items": "rent", "category": "Home", "amount": 1500, "date": "{today_str}", "is_recurring": true, "recurring_interval": 1, "recurring_unit": "months"}}]
+
+Input: "I pay $50 every 2 weeks for gym membership"
+Output: [{{"store": "Gym", "items": "membership", "category": "Health", "amount": 50, "date": "{today_str}", "is_recurring": true, "recurring_interval": 2, "recurring_unit": "weeks"}}]
+
+Input: "spotify subscription is $10 monthly"
+Output: [{{"store": "Spotify", "items": "subscription", "category": "Entertainment", "amount": 10, "date": "{today_str}", "is_recurring": true, "recurring_interval": 1, "recurring_unit": "months"}}]
 
 Today is {today_str}."""
 
@@ -1272,11 +1519,18 @@ Return JSON array only, no other text."""
                 else:
                     date = parse_relative_date(transcript)
 
+                # Extract recurring info
+                is_recurring = expense.get("is_recurring", False)
+                recurring_interval = expense.get("recurring_interval")
+                recurring_unit = expense.get("recurring_unit")
+
                 cursor.execute("""
-                    INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (current_user["id"], expense["store"], expense["items"], expense["category"], 
-                      expense["amount"], date, datetime.now().isoformat()))
+                    INSERT INTO expenses (user_id, store, items, category, amount, date, created_at,
+                                          is_recurring, recurring_interval, recurring_unit)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (current_user["id"], expense["store"], expense["items"], expense["category"],
+                      expense["amount"], date, datetime.now().isoformat(),
+                      1 if is_recurring else 0, recurring_interval, recurring_unit))
                 expense_id = cursor.lastrowid
 
                 saved_expenses.append({
@@ -1285,7 +1539,10 @@ Return JSON array only, no other text."""
                     "items": expense["items"],
                     "category": expense["category"],
                     "amount": expense["amount"],
-                    "date": date
+                    "date": date,
+                    "is_recurring": is_recurring,
+                    "recurring_interval": recurring_interval,
+                    "recurring_unit": recurring_unit
                 })
 
             conn.commit()
@@ -1345,24 +1602,35 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
                         date = expense.get("date", today_str)
                         if not re.match(r'\d{4}-\d{2}-\d{2}', str(date)):
                             date = parse_relative_date(transcript)
-                        
+
+                        # Extract recurring info
+                        is_recurring = expense.get("is_recurring", False)
+                        recurring_interval = expense.get("recurring_interval")
+                        recurring_unit = expense.get("recurring_unit")
+
                         cursor.execute("""
-                            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
-                            VALUES (?, ?, ?, ?, ?, ?, ?)
-                        """, (current_user["id"], expense["store"], expense["items"], expense["category"], 
-                              expense["amount"], date, datetime.now().isoformat()))
+                            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at,
+                                                  is_recurring, recurring_interval, recurring_unit)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """, (current_user["id"], expense["store"], expense["items"], expense["category"],
+                              expense["amount"], date, datetime.now().isoformat(),
+                              1 if is_recurring else 0, recurring_interval, recurring_unit))
                         expense_id = cursor.lastrowid
+
                         saved_expenses.append({
                             "id": expense_id,
                             "store": expense["store"],
                             "items": expense["items"],
                             "category": expense["category"],
                             "amount": expense["amount"],
-                            "date": date
+                            "date": date,
+                            "is_recurring": is_recurring,
+                            "recurring_interval": recurring_interval,
+                            "recurring_unit": recurring_unit
                         })
                     conn.commit()
                     conn.close()
-                    
+
                     return {
                         "expenses": saved_expenses,
                         "count": len(saved_expenses),
@@ -1392,11 +1660,18 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
     cursor = conn.cursor()
 
     for expense_data in expenses_data:
+        # Extract recurring info
+        is_recurring = expense_data.get("is_recurring", False)
+        recurring_interval = expense_data.get("recurring_interval")
+        recurring_unit = expense_data.get("recurring_unit")
+
         cursor.execute("""
-            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        """, (current_user["id"], expense_data["store"], expense_data["items"], expense_data.get("category"), expense_data["amount"],
-              expense_data["date"], datetime.now().isoformat()))
+            INSERT INTO expenses (user_id, store, items, category, amount, date, created_at,
+                                  is_recurring, recurring_interval, recurring_unit)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (current_user["id"], expense_data["store"], expense_data["items"], expense_data.get("category"),
+              expense_data["amount"], expense_data["date"], datetime.now().isoformat(),
+              1 if is_recurring else 0, recurring_interval, recurring_unit))
         expense_id = cursor.lastrowid
 
         saved_expenses.append({
@@ -1405,7 +1680,10 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
             "items": expense_data["items"],
             "category": expense_data.get("category"),
             "amount": expense_data["amount"],
-            "date": expense_data["date"]
+            "date": expense_data["date"],
+            "is_recurring": is_recurring,
+            "recurring_interval": recurring_interval,
+            "recurring_unit": recurring_unit
         })
 
     conn.commit()
@@ -1477,11 +1755,12 @@ async def get_expenses(
     start_date: Optional[str] = None,
     end_date: Optional[str] = None,
     sort_by: Optional[str] = "date",
-    sort_order: Optional[str] = "desc"
+    sort_order: Optional[str] = "desc",
+    recurring: Optional[bool] = None
 ):
     """
     Get expenses for the current user with search, filtering, and sorting
-    
+
     Query Parameters:
     - search: Search in store, items, or category fields
     - category: Filter by category (exact match)
@@ -1492,6 +1771,7 @@ async def get_expenses(
     - end_date: End date filter (YYYY-MM-DD)
     - sort_by: Sort field (date, amount, store, created_at)
     - sort_order: Sort direction (asc, desc)
+    - recurring: Filter by recurring status (true/false)
     """
     conn = sqlite3.connect(DB_PATH)
     conn.row_factory = sqlite3.Row
@@ -1530,11 +1810,16 @@ async def get_expenses(
     if start_date:
         query += " AND date >= ?"
         params.append(start_date)
-    
+
     if end_date:
         query += " AND date <= ?"
         params.append(end_date)
-    
+
+    # Recurring filter
+    if recurring is not None:
+        query += " AND is_recurring = ?"
+        params.append(1 if recurring else 0)
+
     # Sorting
     valid_sort_fields = {"date", "amount", "store", "created_at"}
     sort_field = sort_by if sort_by in valid_sort_fields else "date"
@@ -1781,6 +2066,30 @@ async def update_expense(
     
     return {"message": "Expense updated successfully"}
 
+@app.delete("/api/expenses/bulk")
+async def delete_expenses_bulk(
+    request: BulkDeleteRequest,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Delete multiple expenses by their IDs"""
+    if not request.expense_ids:
+        raise HTTPException(status_code=400, detail="No expense IDs provided")
+
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Create placeholders for the IN clause
+    placeholders = ','.join('?' * len(request.expense_ids))
+    query = f"DELETE FROM expenses WHERE id IN ({placeholders}) AND user_id = ?"
+    params = request.expense_ids + [current_user["id"]]
+
+    cursor.execute(query, params)
+    deleted = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    return {"message": f"{deleted} expense(s) deleted successfully", "deleted_count": deleted}
+
 @app.delete("/api/expenses/{expense_id}")
 async def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
     """Delete an expense (only if it belongs to the current user)"""
@@ -1790,10 +2099,10 @@ async def delete_expense(expense_id: int, current_user: dict = Depends(get_curre
     conn.commit()
     deleted = cursor.rowcount
     conn.close()
-    
+
     if deleted == 0:
         raise HTTPException(status_code=404, detail="Expense not found")
-    
+
     return {"message": "Expense deleted successfully"}
 
 @app.delete("/api/expenses")
@@ -1805,7 +2114,7 @@ async def delete_all_expenses(current_user: dict = Depends(get_current_user_depe
     conn.commit()
     deleted = cursor.rowcount
     conn.close()
-    
+
     return {"message": f"All expenses deleted successfully ({deleted} expenses removed)"}
 
 # ----------------------------------------------------------------------------
@@ -2234,6 +2543,73 @@ async def check_budgets(
     
     conn.close()
     return {"budgets": budget_status}
+
+# ----------------------------------------------------------------------------
+# Recurring Expenses Endpoints
+# ----------------------------------------------------------------------------
+
+@app.on_event("startup")
+async def startup_event():
+    """Process due recurring expenses on app startup"""
+    try:
+        created = process_due_recurring_expenses()
+        if created > 0:
+            print(f"Startup: Created {created} recurring expense(s)")
+    except Exception as e:
+        print(f"Startup recurring check error: {e}")
+
+@app.post("/api/recurring/process")
+async def process_recurring(current_user: dict = Depends(get_current_user_dependency)):
+    """Manually trigger processing of due recurring expenses"""
+    try:
+        created = process_due_recurring_expenses()
+        return {
+            "message": f"Processed recurring expenses",
+            "created_count": created
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing recurring expenses: {str(e)}")
+
+@app.get("/api/recurring")
+async def get_recurring_expenses(current_user: dict = Depends(get_current_user_dependency)):
+    """Get all recurring expense templates (parent recurring expenses)"""
+    conn = sqlite3.connect(DB_PATH)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    cursor.execute("""
+        SELECT * FROM expenses
+        WHERE user_id = ? AND is_recurring = 1
+        AND (parent_recurring_id IS NULL OR parent_recurring_id = 0)
+        ORDER BY date DESC
+    """, (current_user["id"],))
+
+    rows = cursor.fetchall()
+    conn.close()
+
+    recurring = [dict(row) for row in rows]
+    return {"recurring_expenses": recurring, "count": len(recurring)}
+
+@app.delete("/api/recurring/{expense_id}")
+async def stop_recurring(expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
+    """Stop a recurring expense (sets is_recurring to 0)"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+
+    # Update the parent expense to stop recurring
+    cursor.execute("""
+        UPDATE expenses SET is_recurring = 0
+        WHERE id = ? AND user_id = ?
+    """, (expense_id, current_user["id"]))
+
+    updated = cursor.rowcount
+    conn.commit()
+    conn.close()
+
+    if updated == 0:
+        raise HTTPException(status_code=404, detail="Recurring expense not found")
+
+    return {"message": "Recurring expense stopped successfully"}
 
 # ============================================================================
 # APPLICATION ENTRY POINT

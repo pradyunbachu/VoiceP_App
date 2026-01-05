@@ -1,11 +1,13 @@
 import { useState, useMemo } from "react";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown } from "lucide-react";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square } from "lucide-react";
 import "./ExpenseList.css";
 
-const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) => {
+const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, showToast }) => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [sortBy, setSortBy] = useState("recent"); // "recent", "expensive", "name"
+  const [selectedExpenses, setSelectedExpenses] = useState(new Set());
+  const [isSelectMode, setIsSelectMode] = useState(false);
   const handleEdit = (expense) => {
     setEditingId(expense.id);
     setEditForm({
@@ -37,13 +39,20 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
         if (onExpenseUpdated) {
           onExpenseUpdated();
         }
+        if (showToast) {
+          showToast("Expense updated successfully", "success");
+        }
       } else {
         const error = await response.json();
-        alert(`Failed to update expense: ${error.detail || "Unknown error"}`);
+        if (showToast) {
+          showToast(`Failed to update expense: ${error.detail || "Unknown error"}`, "error");
+        }
       }
     } catch (error) {
       console.error("Error updating expense:", error);
-      alert("Error updating expense");
+      if (showToast) {
+        showToast("Error updating expense", "error");
+      }
     }
   };
 
@@ -68,13 +77,22 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
       });
 
       if (response.ok) {
-        onExpenseDeleted();
+        if (onExpenseDeleted) {
+          onExpenseDeleted();
+        }
+        if (showToast) {
+          showToast("Expense deleted successfully", "success");
+        }
       } else {
-        alert("Failed to delete expense");
+        if (showToast) {
+          showToast("Failed to delete expense", "error");
+        }
       }
     } catch (error) {
       console.error("Error deleting expense:", error);
-      alert("Error deleting expense");
+      if (showToast) {
+        showToast("Error deleting expense", "error");
+      }
     }
   };
 
@@ -112,6 +130,110 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
     }
   }, [expenses, sortBy]);
 
+  // Toggle select mode
+  const toggleSelectMode = () => {
+    setIsSelectMode(!isSelectMode);
+    setSelectedExpenses(new Set());
+  };
+
+  // Toggle individual expense selection
+  const toggleExpenseSelection = (expenseId) => {
+    const newSelected = new Set(selectedExpenses);
+    if (newSelected.has(expenseId)) {
+      newSelected.delete(expenseId);
+    } else {
+      newSelected.add(expenseId);
+    }
+    setSelectedExpenses(newSelected);
+  };
+
+  // Select/deselect all
+  const toggleSelectAll = () => {
+    if (selectedExpenses.size === sortedExpenses.length) {
+      setSelectedExpenses(new Set());
+    } else {
+      setSelectedExpenses(new Set(sortedExpenses.map(e => e.id)));
+    }
+  };
+
+  // Bulk delete
+  const handleBulkDelete = async () => {
+    if (selectedExpenses.size === 0) {
+      if (showToast) {
+        showToast("Please select expenses to delete", "warning");
+      }
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete ${selectedExpenses.size} expense(s)?`)) {
+      return;
+    }
+
+    try {
+      const headers = {
+        "Content-Type": "application/json"
+      };
+      if (token) {
+        headers["Authorization"] = `Bearer ${token}`;
+      }
+
+      const response = await fetch(`http://localhost:8000/api/expenses/bulk`, {
+        method: "DELETE",
+        headers,
+        body: JSON.stringify({ expense_ids: Array.from(selectedExpenses) })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setSelectedExpenses(new Set());
+        setIsSelectMode(false);
+        if (onExpenseDeleted) {
+          onExpenseDeleted();
+        }
+        if (showToast) {
+          showToast(`${data.deleted_count || selectedExpenses.size} expense(s) deleted successfully`, "success");
+        }
+      } else {
+        const error = await response.json();
+        if (showToast) {
+          showToast(`Failed to delete expenses: ${error.detail || "Unknown error"}`, "error");
+        }
+      }
+    } catch (error) {
+      console.error("Error deleting expenses:", error);
+      if (showToast) {
+        showToast("Error deleting expenses", "error");
+      }
+    }
+  };
+
+  // Bulk edit (opens edit form for first selected expense)
+  const handleBulkEdit = () => {
+    if (selectedExpenses.size === 0) {
+      if (showToast) {
+        showToast("Please select expenses to edit", "warning");
+      }
+      return;
+    }
+
+    if (selectedExpenses.size === 1) {
+      const expenseId = Array.from(selectedExpenses)[0];
+      const expense = sortedExpenses.find(e => e.id === expenseId);
+      if (expense) {
+        handleEdit(expense);
+        setIsSelectMode(false);
+        setSelectedExpenses(new Set());
+      }
+    } else {
+      if (showToast) {
+        showToast("Please select only one expense to edit at a time", "warning");
+      }
+    }
+  };
+
+  const allSelected = sortedExpenses.length > 0 && selectedExpenses.size === sortedExpenses.length;
+  const someSelected = selectedExpenses.size > 0 && selectedExpenses.size < sortedExpenses.length;
+
   if (expenses.length === 0) {
     return (
       <div className="expense-list">
@@ -127,22 +249,82 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
     <div className="expense-list">
       <div className="expense-list-header">
         <h2>Recent Expenses</h2>
-        <div className="sort-controls">
-          <ArrowUpDown size={18} />
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value)}
-            className="sort-select"
-          >
-            <option value="recent">Sort by Recent</option>
-            <option value="expensive">Sort by Expensive</option>
-            <option value="name">Sort by Name</option>
-          </select>
+        <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
+          {isSelectMode && (
+            <div className="bulk-actions">
+              <button
+                className="bulk-action-button"
+                onClick={handleBulkDelete}
+                disabled={selectedExpenses.size === 0}
+              >
+                <Trash2 size={16} />
+                <span>Delete Selected ({selectedExpenses.size})</span>
+              </button>
+              <button
+                className="bulk-action-button"
+                onClick={handleBulkEdit}
+                disabled={selectedExpenses.size === 0}
+              >
+                <Edit2 size={16} />
+                <span>Edit Selected</span>
+              </button>
+              <button
+                className="bulk-action-button cancel"
+                onClick={toggleSelectMode}
+              >
+                <X size={16} />
+                <span>Cancel</span>
+              </button>
+            </div>
+          )}
+          {!isSelectMode && (
+            <button
+              className="select-mode-button"
+              onClick={toggleSelectMode}
+            >
+              <CheckSquare size={18} />
+              <span>Select</span>
+            </button>
+          )}
+          <div className="sort-controls">
+            <ArrowUpDown size={18} />
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="sort-select"
+            >
+              <option value="recent">Sort by Recent</option>
+              <option value="expensive">Sort by Expensive</option>
+              <option value="name">Sort by Name</option>
+            </select>
+          </div>
         </div>
       </div>
+      {isSelectMode && (
+        <div className="select-all-controls">
+          <button
+            className="select-all-button"
+            onClick={toggleSelectAll}
+          >
+            {allSelected ? <CheckSquare size={18} /> : <Square size={18} />}
+            <span>{allSelected ? "Deselect All" : "Select All"}</span>
+            {someSelected && <span className="selection-count">({selectedExpenses.size} selected)</span>}
+          </button>
+        </div>
+      )}
       <div className="expenses-container">
         {sortedExpenses.map((expense) => (
-          <div key={expense.id} className="expense-card">
+          <div key={expense.id} className={`expense-card ${selectedExpenses.has(expense.id) ? 'selected' : ''}`}>
+            {isSelectMode && (
+              <div className="expense-checkbox">
+                <button
+                  className="checkbox-button"
+                  onClick={() => toggleExpenseSelection(expense.id)}
+                >
+                  {selectedExpenses.has(expense.id) ? <CheckSquare size={20} /> : <Square size={20} />}
+                </button>
+              </div>
+            )}
             {editingId === expense.id ? (
               <div className="edit-form">
                 <div className="edit-form-group">
@@ -203,29 +385,31 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token }) =>
               </div>
             ) : (
               <>
-                <div className="expense-header">
+                <div className="expense-header" style={{ paddingLeft: isSelectMode ? '3rem' : '0' }}>
                   <div className="expense-store">
                     <Store size={18} />
                     <span>{expense.store}</span>
                   </div>
-                  <div className="expense-actions">
-                    <button
-                      className="edit-button"
-                      onClick={() => handleEdit(expense)}
-                      aria-label="Edit expense"
-                      title="Edit expense"
-                    >
-                      <Edit2 size={16} />
-                    </button>
-                    <button
-                      className="delete-button"
-                      onClick={() => handleDelete(expense.id)}
-                      aria-label="Delete expense"
-                      title="Delete expense"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
+                  {!isSelectMode && (
+                    <div className="expense-actions">
+                      <button
+                        className="edit-button"
+                        onClick={() => handleEdit(expense)}
+                        aria-label="Edit expense"
+                        title="Edit expense"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button
+                        className="delete-button"
+                        onClick={() => handleDelete(expense.id)}
+                        aria-label="Delete expense"
+                        title="Delete expense"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div className="expense-items">
