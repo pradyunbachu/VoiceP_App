@@ -9,17 +9,19 @@ const COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'
 const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
   const [budgets, setBudgets] = useState([])
   const [loadingBudgets, setLoadingBudgets] = useState(false)
+  const [budgetMonth, setBudgetMonth] = useState(new Date().getMonth() + 1)
+  const [budgetYear, setBudgetYear] = useState(new Date().getFullYear())
 
   useEffect(() => {
     if (token) {
       fetchBudgets()
     }
-  }, [token])
+  }, [token, budgetMonth, budgetYear])
 
   const fetchBudgets = async () => {
     setLoadingBudgets(true)
     try {
-      const response = await fetch('http://localhost:8000/api/budgets/check', {
+      const response = await fetch(`http://localhost:8000/api/budgets/check?month=${budgetMonth}&year=${budgetYear}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -33,6 +35,10 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
     } finally {
       setLoadingBudgets(false)
     }
+  }
+
+  const getMonthName = (month) => {
+    return new Date(2000, month - 1).toLocaleString('default', { month: 'long' })
   }
 
   if (!analytics) return null
@@ -151,10 +157,11 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
                 <XAxis dataKey="name" stroke="#a0a0a0" />
                 <YAxis stroke="#a0a0a0" />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => `$${value.toFixed(2)}`}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(26, 26, 26, 0.95)', 
+                  cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
+                  contentStyle={{
+                    backgroundColor: 'rgba(26, 26, 26, 0.95)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '8px',
                     color: '#e0e0e0'
@@ -214,72 +221,98 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
       </div>
 
       {/* Budget vs Actual Spending Section */}
-      {budgets.length > 0 && (
-        <div className="budget-section">
-          <div className="section-header">
-            <Wallet size={24} />
-            <h3>Budget vs Actual Spending</h3>
-          </div>
-          {loadingBudgets ? (
-            <LoadingSkeleton type="card" count={3} />
-          ) : (
-            <div className="budget-comparison-grid">
-              {budgets.map((budget) => {
-                const percentage = budget.percentage_used || 0
-                const alertColor = 
-                  percentage >= 100 ? '#dc2626' :
-                  percentage >= 90 ? '#eab308' :
-                  percentage >= 75 ? '#f59e0b' :
-                  '#22c55e'
-                
-                return (
-                  <div key={budget.id} className="budget-comparison-card">
-                    <div className="budget-card-header">
-                      <span className="budget-category-name">{budget.category?.trim() || 'Uncategorized'}</span>
-                      {percentage >= 75 && (
-                        <AlertTriangle size={18} style={{ color: alertColor }} />
-                      )}
+      <div className="budget-section">
+        <div className="section-header">
+          <Wallet size={24} />
+          <h3>Budget vs Actual Spending for {getMonthName(budgetMonth)} {budgetYear}</h3>
+        </div>
+        <div className="budget-filters">
+          <select
+            value={budgetMonth}
+            onChange={(e) => setBudgetMonth(parseInt(e.target.value))}
+            className="budget-filter-select"
+          >
+            {Array.from({ length: 12 }, (_, i) => (
+              <option key={i + 1} value={i + 1}>
+                {new Date(2000, i).toLocaleString('default', { month: 'long' })}
+              </option>
+            ))}
+          </select>
+          <select
+            value={budgetYear}
+            onChange={(e) => setBudgetYear(parseInt(e.target.value))}
+            className="budget-filter-select"
+          >
+            {Array.from({ length: 5 }, (_, i) => {
+              const year = new Date().getFullYear() - 2 + i
+              return (
+                <option key={year} value={year}>
+                  {year}
+                </option>
+              )
+            })}
+          </select>
+        </div>
+        {loadingBudgets ? (
+          <LoadingSkeleton type="card" count={3} />
+        ) : budgets.length > 0 ? (
+          <div className="budget-comparison-grid">
+            {budgets.map((budget) => {
+              const percentage = budget.percentage_used || 0
+              const alertColor =
+                percentage >= 100 ? '#dc2626' :
+                percentage >= 90 ? '#eab308' :
+                percentage >= 75 ? '#f59e0b' :
+                '#22c55e'
+
+              return (
+                <div key={budget.id} className="budget-comparison-card">
+                  <div className="budget-card-header">
+                    <span className="budget-category-name">{budget.category?.trim() || 'Uncategorized'}</span>
+                    {percentage >= 75 && (
+                      <AlertTriangle size={18} style={{ color: alertColor }} />
+                    )}
+                  </div>
+                  <div className="budget-stats-row">
+                    <div className="budget-stat-item">
+                      <span className="budget-stat-label">Budget</span>
+                      <span className="budget-stat-value">${budget.amount.toFixed(2)}</span>
                     </div>
-                    <div className="budget-stats-row">
-                      <div className="budget-stat-item">
-                        <span className="budget-stat-label">Budget</span>
-                        <span className="budget-stat-value">${budget.amount.toFixed(2)}</span>
-                      </div>
-                      <div className="budget-stat-item">
-                        <span className="budget-stat-label">Spent</span>
-                        <span className="budget-stat-value spent">${budget.actual_spending.toFixed(2)}</span>
-                      </div>
-                      <div className="budget-stat-item">
-                        <span className="budget-stat-label">Remaining</span>
-                        <span className={`budget-stat-value ${budget.remaining < 0 ? 'negative' : ''}`}>
-                          ${budget.remaining.toFixed(2)}
-                        </span>
-                      </div>
+                    <div className="budget-stat-item">
+                      <span className="budget-stat-label">Spent</span>
+                      <span className="budget-stat-value spent">${budget.actual_spending.toFixed(2)}</span>
                     </div>
-                    <div className="budget-progress-container">
-                      <div className="budget-progress-bar">
-                        <div
-                          className="budget-progress-fill"
-                          style={{
-                            width: `${Math.min(percentage, 100)}%`,
-                            backgroundColor: alertColor
-                          }}
-                        />
-                      </div>
-                      <span className="budget-percentage" style={{ color: alertColor }}>
-                        {percentage.toFixed(1)}% used
+                    <div className="budget-stat-item">
+                      <span className="budget-stat-label">Remaining</span>
+                      <span className={`budget-stat-value ${budget.remaining < 0 ? 'negative' : ''}`}>
+                        ${budget.remaining.toFixed(2)}
                       </span>
                     </div>
-                    <div className="budget-period">
-                      {new Date(budget.year, budget.month - 1).toLocaleString("default", { month: "long", year: "numeric" })}
-                    </div>
                   </div>
-                )
-              })}
-            </div>
-          )}
-        </div>
-      )}
+                  <div className="budget-progress-container">
+                    <div className="budget-progress-bar">
+                      <div
+                        className="budget-progress-fill"
+                        style={{
+                          width: `${Math.min(percentage, 100)}%`,
+                          backgroundColor: alertColor
+                        }}
+                      />
+                    </div>
+                    <span className="budget-percentage" style={{ color: alertColor }}>
+                      {percentage.toFixed(1)}% used
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        ) : (
+          <div className="empty-budget-message">
+            <p>No budgets set for {getMonthName(budgetMonth)} {budgetYear}. Go to the Budgets tab to create one.</p>
+          </div>
+        )}
+      </div>
 
     </div>
   )

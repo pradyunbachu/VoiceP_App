@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd:*)",
+      "Bash(cat:*)",
+      "Bash(git -C \"/Users/pradyunbachu/Documents/Computer Science/Side_Projects/VoiceP_App\" log --oneline)",
+      "Bash(git -C \"/Users/pradyunbachu/Documents/Computer Science/Side_Projects/VoiceP_App\" diff HEAD -- backend/.env frontend/.env)"
+    ]
+  }
+}

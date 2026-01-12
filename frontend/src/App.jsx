@@ -8,6 +8,7 @@ import ExpenseList from "./components/ExpenseList";
 import BudgetManagement from "./components/BudgetManagement";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import "./App.css";
 
 // Utility function for API calls with retry
@@ -39,7 +40,9 @@ const fetchWithRetry = async (
   }
 };
 
-function App() {
+function AppContent() {
+  const { session, user: authUser, loading: authLoading, signOut, getToken } = useAuth();
+
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
@@ -59,27 +62,37 @@ function App() {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  // Check for existing token on mount
+  // Sync auth state with Supabase session
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    const storedUser = localStorage.getItem("user");
-    if (storedToken && storedUser) {
-      setToken(storedToken);
-      setUser(JSON.parse(storedUser));
+    if (session && authUser) {
+      const currentToken = getToken();
+      setToken(currentToken);
+      setUser({
+        id: authUser.id,
+        email: authUser.email,
+        username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "User",
+      });
       setIsAuthenticated(true);
-      setCurrentView("dashboard");
+      if (currentView === "landing" || currentView === "login") {
+        setCurrentView("dashboard");
+      }
+    } else if (!authLoading && !session) {
+      setToken(null);
+      setUser(null);
+      setIsAuthenticated(false);
     }
-  }, []);
+  }, [session, authUser, authLoading, getToken, currentView]);
 
   const fetchExpenses = async (showLoading = true) => {
-    if (!token) return;
+    const currentToken = getToken();
+    if (!currentToken) return;
     if (showLoading) setLoading(true);
     try {
       const response = await fetchWithRetry(
         "http://localhost:8000/api/expenses",
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
           },
         }
       );
@@ -105,14 +118,15 @@ function App() {
   };
 
   const fetchAnalytics = async (showLoading = true) => {
-    if (!token) return;
+    const currentToken = getToken();
+    if (!currentToken) return;
     if (showLoading) setLoading(true);
     try {
       const response = await fetchWithRetry(
         "http://localhost:8000/api/analytics",
         {
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
           },
         }
       );
@@ -150,19 +164,16 @@ function App() {
   }, [currentView, isAuthenticated, token]);
 
   const handleExpenseAdded = () => {
-    // Toast notification is already shown in VoiceRecorder component
     fetchExpenses(false);
     fetchAnalytics(false);
   };
 
   const handleExpenseDeleted = () => {
-    // Toast notification is already shown in ExpenseList component
     fetchExpenses(false);
     fetchAnalytics(false);
   };
 
   const handleExpenseUpdated = () => {
-    // Toast notification is already shown in ExpenseList component
     fetchExpenses(false);
     fetchAnalytics(false);
   };
@@ -180,13 +191,14 @@ function App() {
       return;
     }
 
+    const currentToken = getToken();
     try {
       const response = await fetchWithRetry(
         "http://localhost:8000/api/expenses",
         {
           method: "DELETE",
           headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: `Bearer ${currentToken}`,
           },
         }
       );
@@ -218,16 +230,15 @@ function App() {
     setUser(userData);
     setIsAuthenticated(true);
     setCurrentView("dashboard");
-    showToast(`Welcome back, ${userData.username}!`, "success");
+    showToast(`Welcome, ${userData.username}!`, "success");
   };
 
   const handleBudgetChange = () => {
     fetchAnalytics(false);
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
+  const handleLogout = async () => {
+    await signOut();
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
@@ -236,6 +247,19 @@ function App() {
     setAnalytics(null);
     showToast("Logged out successfully", "info");
   };
+
+  // Show loading while checking auth state
+  if (authLoading) {
+    return (
+      <div className="app">
+        <main className="app-main">
+          <div className="loading-container">
+            <LoadingSkeleton type="card" count={1} />
+          </div>
+        </main>
+      </div>
+    );
+  }
 
   const renderView = () => {
     if (!isAuthenticated) {
@@ -341,6 +365,14 @@ function App() {
       )}
       <main className="app-main">{renderView()}</main>
     </div>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 

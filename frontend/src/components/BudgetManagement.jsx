@@ -9,8 +9,8 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
-  const [filterMonth, setFilterMonth] = useState(null);
-  const [filterYear, setFilterYear] = useState(null);
+  const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
+  const [filterYear, setFilterYear] = useState(new Date().getFullYear());
   const [formData, setFormData] = useState({
     category: "",
     amount: "",
@@ -78,18 +78,20 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
         headers["Authorization"] = `Bearer ${token}`;
       }
 
+      const payload = {
+        category: formData.category,
+        amount: parseFloat(formData.amount),
+        month: parseInt(formData.month),
+        year: parseInt(formData.year),
+        recurring: Boolean(formData.recurring && formData.repeatInterval && formData.repeatUnit),
+        repeat_interval: formData.repeatInterval ? parseInt(formData.repeatInterval) : null,
+        repeat_unit: formData.repeatUnit || null,
+      };
+
       const response = await fetch("http://localhost:8000/api/budgets", {
         method: "POST",
         headers,
-        body: JSON.stringify({
-          category: formData.category,
-          amount: parseFloat(formData.amount),
-          month: parseInt(formData.month),
-          year: parseInt(formData.year),
-          recurring: formData.recurring && formData.repeatInterval && formData.repeatUnit,
-          repeat_interval: formData.repeatInterval ? parseInt(formData.repeatInterval) : null,
-          repeat_unit: formData.repeatUnit || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (response.ok) {
