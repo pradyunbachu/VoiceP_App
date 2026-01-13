@@ -6,6 +6,7 @@ import VoiceRecorder from "./components/VoiceRecorder";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import ExpenseList from "./components/ExpenseList";
 import BudgetManagement from "./components/BudgetManagement";
+import Pantry from "./components/Pantry";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -334,6 +335,15 @@ function AppContent() {
             <BudgetManagement
               token={token}
               onBudgetChange={handleBudgetChange}
+              showToast={showToast}
+            />
+          </div>
+        );
+      case "pantry":
+        return (
+          <div className="view-container" key="pantry">
+            <Pantry
+              token={token}
               showToast={showToast}
             />
           </div>

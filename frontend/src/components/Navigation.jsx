@@ -1,4 +1,4 @@
-import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import "./Navigation.css";
 
@@ -51,6 +51,14 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
           <Wallet size={18} />
           <span className="nav-label-full">Budgets</span>
           <span className="nav-label-short">Budget</span>
+        </button>
+        <button
+          className={`nav-tab ${currentView === "pantry" ? "active" : ""}`}
+          onClick={() => onViewChange("pantry")}
+        >
+          <Package size={18} />
+          <span className="nav-label-full">Pantry</span>
+          <span className="nav-label-short">Pantry</span>
         </button>
       </div>
       <div className="nav-user">

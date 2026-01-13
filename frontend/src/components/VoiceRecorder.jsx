@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Loader2, Type } from "lucide-react";
+import { Mic, Square, Loader2, Type, Package } from "lucide-react";
+import AddToPantryModal from "./AddToPantryModal";
 import "./VoiceRecorder.css";
 
 const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
@@ -10,6 +11,8 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
   const [showManualInput, setShowManualInput] = useState(false);
   const [error, setError] = useState("");
   const [recordingTime, setRecordingTime] = useState(0);
+  const [showPantryModal, setShowPantryModal] = useState(false);
+  const [pendingPantryExpense, setPendingPantryExpense] = useState(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -41,6 +44,28 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Check if expense is a grocery expense and enable pantry button
+  const checkForPantryItems = (expenseData) => {
+    // Handle both single expense and array of expenses
+    let expenses = [];
+    if (expenseData.expenses) {
+      expenses = expenseData.expenses;
+    } else if (expenseData.id) {
+      expenses = [expenseData];
+    }
+
+    // Find the first grocery expense to add to pantry
+    const groceryExpense = expenses.find(exp => {
+      const category = (exp.category || "").toLowerCase();
+      return category.includes("groceries") || category.includes("grocery");
+    });
+
+    if (groceryExpense) {
+      setPendingPantryExpense(groceryExpense);
+      // Don't auto-show modal - let user click button instead
+    }
   };
 
   const startRecording = async () => {
@@ -154,6 +179,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       if (expenseData.expenses) {
         // New format with expenses array
         setExtractedExpense(expenseData);
+        checkForPantryItems(expenseData);
       } else {
         // Old format (single expense) - convert to new format for compatibility
         setExtractedExpense({
@@ -161,6 +187,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
           count: 1,
           message: expenseData.message
         });
+        checkForPantryItems(expenseData);
       }
       onExpenseAdded();
     } catch (error) {
@@ -209,12 +236,14 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
         // Handle both old format (single expense) and new format (array of expenses)
         if (expenseData.expenses) {
           setExtractedExpense(expenseData);
+          checkForPantryItems(expenseData);
         } else {
           setExtractedExpense({
             expenses: [expenseData],
             count: 1,
             message: expenseData.message
           });
+          checkForPantryItems(expenseData);
         }
         onExpenseAdded();
       }
@@ -242,10 +271,16 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       formData.append("audio", audioBlob, `recording.${extension}`);
 
+      const transcribeHeaders = {};
+      if (token) {
+        transcribeHeaders["Authorization"] = `Bearer ${token}`;
+      }
+
       const transcriptResponse = await fetch(
         "http://localhost:8000/api/transcribe",
         {
           method: "POST",
+          headers: transcribeHeaders,
           body: formData,
         }
       );
@@ -285,6 +320,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       const expenseData = await extractResponse.json();
       setExtractedExpense(expenseData);
+      checkForPantryItems(expenseData);
       onExpenseAdded();
     } catch (error) {
       console.error("Error processing audio:", error);
@@ -349,6 +385,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       const expenseData = await extractResponse.json();
       setExtractedExpense(expenseData);
+      checkForPantryItems(expenseData);
       setManualInput("");
       setShowManualInput(false);
       onExpenseAdded();
@@ -450,7 +487,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       {extractedExpense && extractedExpense.expenses && (
         <div className="expense-result">
-          <h3>✅ {extractedExpense.count > 1 ? `${extractedExpense.count} Expenses Saved!` : 'Expense Saved!'}</h3>
+          <h3>{extractedExpense.count > 1 ? `${extractedExpense.count} Expenses Saved` : 'Expense Saved'}</h3>
           {extractedExpense.expenses.map((expense, index) => (
             <div key={expense.id || index} className="expense-details" style={{marginBottom: extractedExpense.count > 1 ? '15px' : '0', paddingBottom: extractedExpense.count > 1 ? '15px' : '0', borderBottom: index < extractedExpense.count - 1 ? '1px solid #eee' : 'none'}}>
               {extractedExpense.count > 1 && <h4 style={{marginTop: '0', color: '#666'}}>Item {index + 1}</h4>}
@@ -476,7 +513,34 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
               </p>
             </div>
           ))}
+
+          {/* Add to Pantry button for grocery expenses */}
+          {pendingPantryExpense && !showPantryModal && (
+            <button
+              className="add-to-pantry-button"
+              onClick={() => setShowPantryModal(true)}
+            >
+              <Package size={18} />
+              <span>Add to Pantry</span>
+            </button>
+          )}
         </div>
+      )}
+
+      {/* Add to Pantry Modal for grocery expenses */}
+      {showPantryModal && pendingPantryExpense && (
+        <AddToPantryModal
+          expense={pendingPantryExpense}
+          token={token}
+          onClose={() => {
+            setShowPantryModal(false);
+            setPendingPantryExpense(null);
+          }}
+          onSuccess={() => {
+            setShowPantryModal(false);
+            setPendingPantryExpense(null);
+          }}
+        />
       )}
     </div>
   );
