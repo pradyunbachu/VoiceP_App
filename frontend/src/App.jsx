@@ -9,6 +9,7 @@ import BudgetManagement from "./components/BudgetManagement";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { ThemeProvider } from "./context/ThemeContext";
 import "./App.css";
 
 // Utility function for API calls with retry
@@ -272,7 +273,7 @@ function AppContent() {
     switch (currentView) {
       case "landing":
         return (
-          <div className="view-container">
+          <div className="view-container" key="landing">
             <LandingPage
               onGetStarted={() => setCurrentView("dashboard")}
               isAuthenticated={true}
@@ -281,7 +282,7 @@ function AppContent() {
         );
       case "record":
         return (
-          <div className="view-container">
+          <div className="view-container" key="record">
             <VoiceRecorder
               onExpenseAdded={handleExpenseAdded}
               loading={loading}
@@ -293,7 +294,7 @@ function AppContent() {
         );
       case "dashboard":
         return (
-          <div className="view-container">
+          <div className="view-container" key="dashboard">
             {loading && !analytics ? (
               <div className="loading-container">
                 <LoadingSkeleton type="chart" />
@@ -316,7 +317,7 @@ function AppContent() {
         );
       case "expenses":
         return (
-          <div className="view-container">
+          <div className="view-container" key="expenses">
             <ExpenseList
               expenses={expenses}
               onExpenseDeleted={handleExpenseDeleted}
@@ -329,7 +330,7 @@ function AppContent() {
         );
       case "budgets":
         return (
-          <div className="view-container">
+          <div className="view-container" key="budgets">
             <BudgetManagement
               token={token}
               onBudgetChange={handleBudgetChange}
@@ -339,7 +340,7 @@ function AppContent() {
         );
       default:
         return (
-          <div className="view-container">
+          <div className="view-container" key="default">
             <VoiceRecorder
               onExpenseAdded={handleExpenseAdded}
               loading={loading}
@@ -370,9 +371,11 @@ function AppContent() {
 
 function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 

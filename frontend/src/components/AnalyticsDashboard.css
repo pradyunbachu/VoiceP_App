@@ -10,7 +10,7 @@
 }
 
 .analytics-dashboard h2 {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.8rem;
   font-weight: 700;
   margin: 0;
@@ -21,10 +21,10 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: rgba(255, 107, 107, 0.15);
-  border: 1px solid rgba(255, 107, 107, 0.4);
+  background: var(--accent-danger-bg);
+  border: 1px solid var(--accent-danger-border);
   border-radius: 8px;
-  color: #ff6b6b;
+  color: var(--accent-danger);
   font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
@@ -33,7 +33,7 @@
 
 .clear-all-button:hover {
   background: rgba(255, 107, 107, 0.25);
-  border-color: rgba(255, 107, 107, 0.6);
+  border-color: var(--accent-danger);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
 }
@@ -50,17 +50,17 @@
   align-items: center;
   gap: 1rem;
   padding: 1.5rem;
-  background: rgba(10, 10, 10, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
   border-radius: 16px;
   transition: all 0.2s ease;
 }
 
 .stat-card:hover {
-  background: rgba(20, 20, 20, 0.6);
-  border-color: rgba(255, 255, 255, 0.1);
+  background: var(--bg-card-hover);
+  border-color: var(--border-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -72,7 +72,7 @@
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-content {
@@ -80,14 +80,14 @@
 }
 
 .stat-label {
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   font-size: 0.9rem;
   margin-bottom: 0.25rem;
   font-weight: 400;
 }
 
 .stat-value {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.5rem;
   font-weight: 700;
   margin: 0;
@@ -102,21 +102,21 @@
 
 .chart-container {
   padding: 1.5rem;
-  background: rgba(10, 10, 10, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
   border-radius: 16px;
   margin-bottom: 2rem;
   transition: all 0.2s ease;
 }
 
 .chart-container:hover {
-  background: rgba(20, 20, 20, 0.5);
-  border-color: rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  background: var(--bg-card-hover);
+  border-color: var(--border-primary);
+  box-shadow: var(--shadow-md);
 }
 
 .chart-container h3 {
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 1.5rem;
   font-size: 1.3rem;
   font-weight: 600;
@@ -128,7 +128,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #707070;
+  color: var(--text-muted);
   font-style: italic;
   text-align: center;
   padding: 2rem;
@@ -142,7 +142,7 @@
 .budget-section {
   margin-top: 3rem;
   padding-top: 2rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-primary);
 }
 
 .section-header {
@@ -153,7 +153,7 @@
 }
 
 .section-header h3 {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.2rem;
   font-weight: 600;
   margin: 0;
@@ -167,31 +167,36 @@
 
 .budget-filter-select {
   padding: 0.5rem 1rem;
-  background: rgba(10, 10, 10, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #e0e0e0;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.3s ease;
 }
 
 .budget-filter-select:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
 }
 
 .budget-filter-select:focus {
   outline: none;
-  border-color: #22c55e;
+  border-color: var(--accent-primary);
+}
+
+.budget-filter-select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .empty-budget-message {
   padding: 2rem;
   text-align: center;
-  color: #a0a0a0;
-  background: rgba(10, 10, 10, 0.4);
+  color: var(--text-tertiary);
+  background: var(--bg-card);
   border-radius: 12px;
-  border: 1px dashed rgba(255, 255, 255, 0.1);
+  border: 1px dashed var(--border-primary);
 }
 
 .budget-comparison-grid {
@@ -201,17 +206,17 @@
 }
 
 .budget-comparison-card {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
   padding: 1.5rem;
   transition: all 0.3s ease;
 }
 
 .budget-comparison-card:hover {
-  border-color: rgba(255, 255, 255, 0.2);
+  border-color: var(--border-hover);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-md);
 }
 
 .budget-card-header {
@@ -222,7 +227,7 @@
 }
 
 .budget-category-name {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 1.1rem;
 }
@@ -241,23 +246,23 @@
 }
 
 .budget-stat-label {
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   font-size: 0.875rem;
   margin-bottom: 0.25rem;
 }
 
 .budget-stat-value {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 1rem;
 }
 
 .budget-stat-value.spent {
-  color: #f59e0b;
+  color: var(--accent-warning);
 }
 
 .budget-stat-value.negative {
-  color: #ef4444;
+  color: var(--accent-danger);
 }
 
 .budget-progress-container {
@@ -267,7 +272,7 @@
 .budget-progress-bar {
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-primary);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -285,7 +290,7 @@
 
 .budget-period {
   font-size: 0.75rem;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   text-align: center;
   margin-top: 0.5rem;
 }

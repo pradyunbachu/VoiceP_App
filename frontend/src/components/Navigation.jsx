@@ -1,12 +1,23 @@
-import { Mic, BarChart3, List, LogOut, Wallet } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
 import "./Navigation.css";
 
 const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
+  const { theme, toggleTheme } = useTheme();
   return (
     <nav className="navigation">
-      <div className="nav-logo" onClick={() => onViewChange("landing")}>
-        <Mic size={20} />
-        <span>Voxalyze</span>
+      <div className="nav-left">
+        <div className="nav-logo" onClick={() => onViewChange("landing")}>
+          <Mic size={20} />
+          <span>Voxalyze</span>
+        </div>
+        <button
+          className="nav-theme-toggle"
+          onClick={toggleTheme}
+          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+        >
+          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
+        </button>
       </div>
       <div className="nav-tabs">
         <button
@@ -14,28 +25,32 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
           onClick={() => onViewChange("record")}
         >
           <Mic size={18} />
-          <span>Record Expense</span>
+          <span className="nav-label-full">Record Expense</span>
+          <span className="nav-label-short">Record</span>
         </button>
         <button
           className={`nav-tab ${currentView === "dashboard" ? "active" : ""}`}
           onClick={() => onViewChange("dashboard")}
         >
           <BarChart3 size={18} />
-          <span>Dashboard</span>
+          <span className="nav-label-full">Dashboard</span>
+          <span className="nav-label-short">Stats</span>
         </button>
         <button
           className={`nav-tab ${currentView === "expenses" ? "active" : ""}`}
           onClick={() => onViewChange("expenses")}
         >
           <List size={18} />
-          <span>Expenses</span>
+          <span className="nav-label-full">Expenses</span>
+          <span className="nav-label-short">List</span>
         </button>
         <button
           className={`nav-tab ${currentView === "budgets" ? "active" : ""}`}
           onClick={() => onViewChange("budgets")}
         >
           <Wallet size={18} />
-          <span>Budgets</span>
+          <span className="nav-label-full">Budgets</span>
+          <span className="nav-label-short">Budget</span>
         </button>
       </div>
       <div className="nav-user">

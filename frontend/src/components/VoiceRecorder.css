@@ -6,7 +6,7 @@
 }
 
 .voice-recorder h2 {
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   font-size: 1.8rem;
   font-weight: 700;
@@ -14,7 +14,7 @@
 }
 
 .recorder-description {
-  color: #b0b0b0;
+  color: var(--text-tertiary);
   margin-bottom: 2.5rem;
   font-size: 1rem;
   line-height: 1.7;
@@ -43,20 +43,20 @@
   border-radius: 50px;
   cursor: pointer;
   transition: all 0.2s ease;
-  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+  box-shadow: var(--shadow-accent);
   position: relative;
   overflow: hidden;
 }
 
 .record-button {
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+  background: linear-gradient(135deg, var(--accent-primary) 0%, var(--accent-primary-hover) 100%);
   color: white;
 }
 
 .record-button:hover:not(:disabled) {
   transform: translateY(-3px);
-  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
-  background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+  box-shadow: var(--shadow-lg);
+  background: linear-gradient(135deg, var(--accent-primary-hover) 0%, var(--accent-primary-dark) 100%);
 }
 
 .record-button:disabled {
@@ -65,7 +65,7 @@
 }
 
 .stop-button {
-  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  background: linear-gradient(135deg, var(--accent-danger-dark) 0%, #b91c1c 100%);
   color: white;
   animation: pulse 2s infinite;
 }
@@ -93,12 +93,12 @@
   flex-direction: column;
   align-items: center;
   gap: 0.5rem;
-  color: #22c55e;
+  color: var(--accent-primary);
 }
 
 .spinner {
   animation: spin 1s linear infinite;
-  filter: drop-shadow(0 0 8px rgba(34, 197, 94, 0.6));
+  filter: drop-shadow(0 0 8px var(--accent-primary));
 }
 
 @keyframes spin {
@@ -115,19 +115,19 @@
   margin-top: 2rem;
   padding: 1.5rem 0;
   text-align: left;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-primary);
 }
 
 .transcript-section h3,
 .expense-result h3 {
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   font-size: 1.2rem;
   font-weight: 600;
 }
 
 .transcript-text {
-  color: #c0c0c0;
+  color: var(--text-tertiary);
   line-height: 1.6;
   font-style: italic;
 }
@@ -141,6 +141,25 @@
   padding: 2rem;
 }
 
+.recording-timer {
+  font-size: 3rem;
+  font-weight: 700;
+  color: var(--accent-danger-dark);
+  font-family: 'Ubuntu', monospace;
+  letter-spacing: 2px;
+  text-shadow: 0 0 20px rgba(220, 38, 38, 0.5);
+  animation: timerPulse 2s ease-in-out infinite;
+}
+
+@keyframes timerPulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
 .recording-dots {
   display: flex;
   gap: 0.5rem;
@@ -151,7 +170,7 @@
   width: 12px;
   height: 12px;
   border-radius: 50%;
-  background: #dc2626;
+  background: var(--accent-danger-dark);
   animation: recordingPulse 1.4s ease-in-out infinite;
 }
 
@@ -179,7 +198,7 @@
 }
 
 .recording-text {
-  color: #dc2626;
+  color: var(--accent-danger-dark);
   font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
@@ -202,12 +221,12 @@
 }
 
 .expense-details p {
-  color: #e0e0e0;
+  color: var(--text-secondary);
   margin: 0;
 }
 
 .expense-details strong {
-  color: #22c55e;
+  color: var(--accent-primary);
   margin-right: 0.5rem;
   font-weight: 600;
 }
@@ -219,19 +238,19 @@
   padding: 1.1rem 2.5rem;
   font-size: 1rem;
   font-weight: 600;
-  border: 2px solid rgba(34, 197, 94, 0.5);
+  border: 2px solid var(--accent-primary-border);
   border-radius: 50px;
-  background: rgba(34, 197, 94, 0.05);
-  color: #22c55e;
+  background: var(--accent-primary-bg);
+  color: var(--accent-primary);
   cursor: pointer;
   transition: all 0.2s ease;
 }
 
 .manual-button:hover:not(:disabled) {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: #22c55e;
+  background: var(--accent-primary-bg-hover);
+  border-color: var(--accent-primary);
   transform: translateY(-3px);
-  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+  box-shadow: var(--shadow-accent);
 }
 
 .manual-button:disabled {
@@ -242,9 +261,9 @@
 .error-message {
   margin: 1.5rem 0;
   padding: 1rem;
-  background: rgba(220, 53, 69, 0.1);
-  border-left: 3px solid rgba(220, 53, 69, 0.5);
-  color: #ff6b6b;
+  background: var(--accent-danger-bg);
+  border-left: 3px solid var(--accent-danger);
+  color: var(--accent-danger);
 }
 
 .error-message p {
@@ -256,11 +275,11 @@
   margin-top: 2rem;
   padding: 1.5rem 0;
   text-align: left;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid var(--border-primary);
 }
 
 .manual-input-section h3 {
-  color: #ffffff;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   font-size: 1.2rem;
   text-align: center;
@@ -270,23 +289,27 @@
 .manual-textarea {
   width: 100%;
   padding: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
+  border: 2px solid var(--border-primary);
   border-radius: 12px;
   font-size: 1rem;
   font-family: inherit;
   resize: vertical;
   min-height: 100px;
   margin-bottom: 1rem;
-  background: rgba(10, 10, 10, 0.6);
-  color: #e0e0e0;
+  background: var(--bg-input);
+  color: var(--text-secondary);
   transition: all 0.3s ease;
 }
 
 .manual-textarea:focus {
   outline: none;
-  border-color: #22c55e;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
-  background: rgba(15, 15, 15, 0.8);
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px var(--accent-primary-bg);
+  background: var(--bg-input-focus);
+}
+
+.manual-textarea::placeholder {
+  color: var(--text-muted);
 }
 
 .manual-textarea:disabled {
@@ -301,17 +324,17 @@
   font-weight: 600;
   border: none;
   border-radius: 12px;
-  background: #22c55e;
+  background: var(--accent-primary);
   color: white;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 20px rgba(34, 197, 94, 0.3);
+  box-shadow: var(--shadow-accent);
 }
 
 .submit-manual-button:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 30px rgba(34, 197, 94, 0.5);
-  background: #16a34a;
+  box-shadow: var(--shadow-lg);
+  background: var(--accent-primary-hover);
 }
 
 .submit-manual-button:disabled {

@@ -13,11 +13,11 @@
 
 .budget-header h2 {
   margin: 0;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .budget-subtitle {
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   margin: 0.5rem 0 0 0;
 }
 
@@ -26,18 +26,19 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  background: #22c55e;
+  background: var(--accent-primary);
   color: white;
   border: none;
   border-radius: 8px;
   cursor: pointer;
   font-size: 1rem;
   font-weight: 500;
+  font-family: 'Ubuntu', sans-serif;
   transition: background 0.2s;
 }
 
 .add-budget-button:hover {
-  background: #16a34a;
+  background: var(--accent-primary-hover);
 }
 
 .budget-filters {
@@ -49,16 +50,21 @@
 .budget-filters select,
 .budget-filters input {
   padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1rem;
 }
 
+.budget-filters select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
 .budget-form {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
   padding: 2rem;
   margin-bottom: 2rem;
@@ -66,7 +72,7 @@
 
 .budget-form h3 {
   margin: 0 0 1.5rem 0;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .form-row {
@@ -83,18 +89,29 @@
 
 .form-group label {
   margin-bottom: 0.5rem;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 500;
 }
 
 .form-group select,
 .form-group input {
   padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1rem;
+}
+
+.form-group select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+}
+
+.form-group select:focus,
+.form-group input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
 }
 
 .form-actions {
@@ -118,27 +135,28 @@
 }
 
 .save-button {
-  background: #22c55e;
+  background: var(--accent-primary);
   color: white;
 }
 
 .save-button:hover {
-  background: #16a34a;
+  background: var(--accent-primary-hover);
 }
 
 .cancel-button {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
 }
 
 .cancel-button:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--border-primary);
 }
 
 .empty-state {
   text-align: center;
   padding: 4rem 2rem;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
 }
 
 .empty-state svg {
@@ -148,7 +166,7 @@
 
 .empty-state h3 {
   margin: 0.5rem 0;
-  color: #ffffff;
+  color: var(--text-primary);
 }
 
 .budget-list {
@@ -158,11 +176,17 @@
 }
 
 .budget-card {
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: 12px;
   padding: 1.5rem;
   width: 100%;
+  transition: all 0.2s ease;
+}
+
+.budget-card:hover {
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-sm);
 }
 
 .budget-card-header {
@@ -176,20 +200,20 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
   font-size: 1.1rem;
   flex-wrap: wrap;
 }
 
 .recurring-badge {
-  background: rgba(34, 197, 94, 0.2);
-  color: #22c55e;
+  background: var(--accent-primary-bg);
+  color: var(--accent-primary);
   padding: 0.25rem 0.75rem;
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
-  border: 1px solid rgba(34, 197, 94, 0.3);
+  border: 1px solid var(--accent-primary-border);
 }
 
 .budget-actions {
@@ -200,8 +224,8 @@
 .edit-budget-button,
 .delete-budget-button {
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  color: #ffffff;
+  border: 1px solid var(--border-primary);
+  color: var(--text-primary);
   padding: 0.5rem;
   border-radius: 6px;
   cursor: pointer;
@@ -209,13 +233,15 @@
 }
 
 .edit-budget-button:hover {
-  background: rgba(59, 130, 246, 0.2);
-  border-color: #3b82f6;
+  background: var(--accent-info-bg);
+  border-color: var(--accent-info);
+  color: var(--accent-info);
 }
 
 .delete-budget-button:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: #ef4444;
+  background: var(--accent-danger-bg);
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
 }
 
 .budget-stats {
@@ -232,20 +258,20 @@
 }
 
 .budget-label {
-  color: #a0a0a0;
+  color: var(--text-tertiary);
 }
 
 .budget-value {
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 600;
 }
 
 .budget-value.spent {
-  color: #f59e0b;
+  color: var(--accent-warning);
 }
 
 .budget-value.negative {
-  color: #ef4444;
+  color: var(--accent-danger);
 }
 
 .budget-progress {
@@ -255,7 +281,7 @@
 .budget-progress-bar {
   width: 100%;
   height: 8px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-primary);
   border-radius: 4px;
   overflow: hidden;
   margin-bottom: 0.5rem;
@@ -268,12 +294,12 @@
 
 .budget-percentage {
   font-size: 0.875rem;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
 }
 
 .budget-date {
   font-size: 0.875rem;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   text-align: center;
 }
 
@@ -295,7 +321,7 @@
 
 .edit-form-group label {
   margin-bottom: 0.5rem;
-  color: #ffffff;
+  color: var(--text-primary);
   font-weight: 500;
   font-size: 0.875rem;
 }
@@ -303,11 +329,16 @@
 .edit-form-group select,
 .edit-form-group input {
   padding: 0.75rem;
-  background: rgba(0, 0, 0, 0.3);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
   border-radius: 8px;
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1rem;
+}
+
+.edit-form-group select option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
 }
 
 .edit-actions {
@@ -316,3 +347,19 @@
   margin-top: 1rem;
 }
 
+@media (max-width: 768px) {
+  .budget-management {
+    padding: 1rem;
+  }
+
+  .form-row,
+  .edit-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+}

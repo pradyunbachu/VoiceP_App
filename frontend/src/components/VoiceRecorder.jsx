@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Loader2, Type } from "lucide-react";
 import "./VoiceRecorder.css";
 
@@ -9,9 +9,39 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
   const [error, setError] = useState("");
+  const [recordingTime, setRecordingTime] = useState(0);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
+  const timerRef = useRef(null);
+
+  // Recording timer effect
+  useEffect(() => {
+    if (isRecording) {
+      setRecordingTime(0);
+      timerRef.current = setInterval(() => {
+        setRecordingTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+        timerRef.current = null;
+      }
+    }
+
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
+  }, [isRecording]);
+
+  // Format seconds to MM:SS
+  const formatTime = (seconds) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
 
   const startRecording = async () => {
     try {
@@ -401,6 +431,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       {isRecording && (
         <div className="recording-indicator">
+          <div className="recording-timer">{formatTime(recordingTime)}</div>
           <div className="recording-dots">
             <span></span>
             <span></span>

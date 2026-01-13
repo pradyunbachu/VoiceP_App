@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square } from "lucide-react";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search } from "lucide-react";
 import "./ExpenseList.css";
 
 const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, showToast }) => {
@@ -8,6 +8,8 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
   const [sortBy, setSortBy] = useState("recent"); // "recent", "expensive", "name"
   const [selectedExpenses, setSelectedExpenses] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState(null);
   const handleEdit = (expense) => {
     setEditingId(expense.id);
     setEditForm({
@@ -96,39 +98,71 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     }
   };
 
-  // Sort expenses based on selected option
+  // Filter and sort expenses based on search, category, and sort option
   const sortedExpenses = useMemo(() => {
-    const expensesCopy = [...expenses];
-    
+    let filtered = [...expenses];
+
+    // Filter by search query
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      filtered = filtered.filter(expense =>
+        (expense.store || "").toLowerCase().includes(query) ||
+        (expense.items || "").toLowerCase().includes(query) ||
+        (expense.category || "").toLowerCase().includes(query)
+      );
+    }
+
+    // Filter by category
+    if (categoryFilter) {
+      filtered = filtered.filter(expense =>
+        (expense.category || "").toLowerCase().includes(categoryFilter.toLowerCase())
+      );
+    }
+
     switch (sortBy) {
       case "recent":
         // Sort by date (newest first)
-        return expensesCopy.sort((a, b) => {
+        return filtered.sort((a, b) => {
           const dateA = new Date(a.date);
           const dateB = new Date(b.date);
           return dateB - dateA; // Newest first
         });
-      
+
       case "expensive":
         // Sort by amount (highest first)
-        return expensesCopy.sort((a, b) => {
+        return filtered.sort((a, b) => {
           const amountA = parseFloat(a.amount) || 0;
           const amountB = parseFloat(b.amount) || 0;
           return amountB - amountA; // Highest first
         });
-      
+
       case "name":
         // Sort by store name (alphabetical)
-        return expensesCopy.sort((a, b) => {
+        return filtered.sort((a, b) => {
           const nameA = (a.store || "").toLowerCase();
           const nameB = (b.store || "").toLowerCase();
           return nameA.localeCompare(nameB);
         });
-      
+
       default:
-        return expensesCopy;
+        return filtered;
     }
-  }, [expenses, sortBy]);
+  }, [expenses, sortBy, searchQuery, categoryFilter]);
+
+  // Handle category tag click
+  const handleCategoryClick = (category) => {
+    if (categoryFilter === category) {
+      setCategoryFilter(null); // Toggle off if same category
+    } else {
+      setCategoryFilter(category);
+    }
+  };
+
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchQuery("");
+    setCategoryFilter(null);
+  };
 
   // Toggle select mode
   const toggleSelectMode = () => {
@@ -249,6 +283,31 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     <div className="expense-list">
       <div className="expense-list-header">
         <h2>Recent Expenses</h2>
+        <div className="search-container">
+          <Search size={18} className="search-icon" />
+          <input
+            type="text"
+            className="search-input"
+            placeholder="Search expenses..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+          {(searchQuery || categoryFilter) && (
+            <button className="clear-filters-button" onClick={clearFilters}>
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+      {categoryFilter && (
+        <div className="active-filter">
+          <span>Filtering by: <strong>{categoryFilter}</strong></span>
+          <button onClick={() => setCategoryFilter(null)}>
+            <X size={14} />
+          </button>
+        </div>
+      )}
+      <div className="expense-controls">
         <div style={{ display: "flex", gap: "1rem", alignItems: "center", flexWrap: "wrap" }}>
           {isSelectMode && (
             <div className="bulk-actions">
@@ -419,10 +478,15 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
                 {expense.category && (
                   <div className="expense-categories">
                     {expense.category.split(",").map((cat, index) => (
-                      <div key={index} className="expense-category">
+                      <button
+                        key={index}
+                        className={`expense-category ${categoryFilter === cat.trim() ? 'active' : ''}`}
+                        onClick={() => handleCategoryClick(cat.trim())}
+                        title={`Filter by ${cat.trim()}`}
+                      >
                         <Tag size={14} />
                         <span>{cat.trim()}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 )}

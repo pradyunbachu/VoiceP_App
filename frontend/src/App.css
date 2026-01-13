@@ -3,7 +3,8 @@
   padding: 0;
   max-width: 100%;
   margin: 0;
-  background: linear-gradient(135deg, #000000 0%, #0a0a0a 50%, #000000 100%);
+  background: var(--bg-primary);
+  transition: background-color 0.3s ease;
 }
 
 .app-main {
@@ -15,6 +16,18 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 2.5rem 1.5rem;
+  animation: fadeSlideIn 0.3s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 @media (min-width: 768px) {
@@ -25,7 +38,7 @@
 
 .loading-state {
   text-align: center;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
   padding: 3rem;
   font-size: 1.1rem;
 }
@@ -33,19 +46,17 @@
 .empty-state-container {
   text-align: center;
   padding: 4rem 2rem;
-  color: #a0a0a0;
+  color: var(--text-tertiary);
 }
 
 .empty-state-container h3 {
-  color: #ffffff;
+  color: var(--text-primary);
   font-size: 1.5rem;
   margin-bottom: 0.5rem;
   font-weight: 600;
 }
 
 .empty-state-container p {
-  color: #707070;
+  color: var(--text-muted);
   font-size: 1rem;
 }
-
-
