@@ -173,7 +173,7 @@ const VoiceRecorder = ({ showToast }) => {
         await processExpenseSimple(transcriptText);
       } else if (error.message === "Failed to fetch") {
         setError(
-          "Cannot connect to backend server. Make sure the backend is running on http://localhost:8000"
+          "Cannot connect to backend server. Make sure the backend is running."
         );
       } else {
         setError(`Error: ${error.message}`);
