@@ -1,11 +1,11 @@
 {
   "permissions": {
     "allow": [
+      "Bash(find:*)",
+      "Bash(ls:*)",
       "Bash(cd:*)",
-      "Bash(cat:*)",
-      "Bash(git -C \"/Users/pradyunbachu/Documents/Computer Science/Side_Projects/VoiceP_App\" log --oneline)",
-      "Bash(git -C \"/Users/pradyunbachu/Documents/Computer Science/Side_Projects/VoiceP_App\" diff HEAD -- backend/.env frontend/.env)",
-      "Bash(find:*)"
+      "Bash(npm install:*)",
+      "Bash(npm run build:*)"
     ]
   }
 }
