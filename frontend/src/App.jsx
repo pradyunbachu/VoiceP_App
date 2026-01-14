@@ -9,6 +9,7 @@ import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
+import QuickRecordPopup from "./components/QuickRecordPopup";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import "./App.css";
@@ -367,12 +368,19 @@ function AppContent() {
     <div className="app">
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       {isAuthenticated && (
-        <Navigation
-          currentView={currentView}
-          onViewChange={setCurrentView}
-          onLogout={handleLogout}
-          user={user}
-        />
+        <>
+          <Navigation
+            currentView={currentView}
+            onViewChange={setCurrentView}
+            onLogout={handleLogout}
+            user={user}
+          />
+          <QuickRecordPopup
+            token={token}
+            onExpenseAdded={handleExpenseAdded}
+            showToast={showToast}
+          />
+        </>
       )}
       <main className="app-main">{renderView()}</main>
     </div>

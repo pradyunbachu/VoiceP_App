@@ -1,0 +1,279 @@
+.quick-record-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 9999;
+  animation: fadeIn 0.15s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.quick-record-popup {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  padding: 2rem;
+  min-width: 320px;
+  max-width: 400px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: scaleIn 0.2s ease-out;
+}
+
+@keyframes scaleIn {
+  from {
+    transform: scale(0.9);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* Recording State */
+.quick-record-recording {
+  text-align: center;
+  padding: 1rem 0;
+}
+
+.recording-pulse {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  animation: pulse 1.5s ease-in-out infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.4);
+  }
+  50% {
+    transform: scale(1.05);
+    box-shadow: 0 0 0 20px rgba(239, 68, 68, 0);
+  }
+}
+
+.recording-time {
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: 'SF Mono', 'Monaco', monospace;
+  margin-bottom: 0.5rem;
+}
+
+.recording-hint {
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+/* Processing State */
+.quick-record-processing {
+  text-align: center;
+  padding: 2rem 0;
+}
+
+.quick-record-processing .spinner {
+  color: var(--accent-primary);
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.quick-record-processing p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+/* Error State */
+.quick-record-error {
+  text-align: center;
+  padding: 1.5rem 0;
+}
+
+.quick-record-error svg {
+  color: var(--accent-danger);
+  margin-bottom: 1rem;
+}
+
+.quick-record-error p {
+  color: var(--text-secondary);
+  margin: 0 0 1.5rem 0;
+}
+
+/* Result State */
+.quick-record-result h3 {
+  margin: 0 0 1.5rem 0;
+  color: var(--text-primary);
+  font-size: 1.25rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quick-record-result h3::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+}
+
+.expense-item {
+  background: var(--bg-input);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.expense-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.4rem 0;
+}
+
+.expense-row:not(:last-child) {
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.expense-label {
+  color: var(--text-tertiary);
+  font-size: 0.85rem;
+}
+
+.expense-value {
+  color: var(--text-primary);
+  font-weight: 500;
+  text-align: right;
+  max-width: 60%;
+}
+
+.expense-amount {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+/* Action Buttons */
+.quick-record-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 1rem;
+}
+
+.quick-record-actions button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.75rem 1rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s;
+  font-family: 'Ubuntu', sans-serif;
+}
+
+.confirm-btn {
+  flex: 1;
+  background: var(--accent-primary);
+  color: white;
+}
+
+.confirm-btn:hover {
+  background: var(--accent-primary-hover);
+  transform: translateY(-1px);
+}
+
+.pantry-btn {
+  flex: 1;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary) !important;
+}
+
+.pantry-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--accent-primary) !important;
+}
+
+.dismiss-btn {
+  background: var(--bg-input);
+  color: var(--text-tertiary);
+  padding: 0.75rem !important;
+}
+
+.dismiss-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+/* Spacebar hint in corner */
+.quick-record-popup::after {
+  content: 'Hold SPACE to record';
+  position: absolute;
+  bottom: -2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.5);
+  white-space: nowrap;
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .quick-record-popup {
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+/* Mobile responsive */
+@media (max-width: 480px) {
+  .quick-record-popup {
+    min-width: calc(100vw - 2rem);
+    margin: 1rem;
+  }
+
+  .quick-record-actions {
+    flex-direction: column;
+  }
+
+  .quick-record-actions button {
+    width: 100%;
+  }
+
+  .dismiss-btn {
+    order: 3;
+  }
+}
