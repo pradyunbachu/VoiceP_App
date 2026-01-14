@@ -245,7 +245,7 @@ function AppContent() {
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
-    setCurrentView("login");
+    setCurrentView("landing");
     setExpenses([]);
     setAnalytics(null);
     showToast("Logged out successfully", "info");
@@ -267,7 +267,12 @@ function AppContent() {
   const renderView = () => {
     if (!isAuthenticated) {
       if (currentView === "landing") {
-        return <LandingPage onGetStarted={() => setCurrentView("login")} />;
+        return (
+          <LandingPage
+            onGetStarted={() => setCurrentView("login")}
+            onLogin={() => setCurrentView("login")}
+          />
+        );
       }
       return <Login onLogin={handleLogin} showToast={showToast} />;
     }

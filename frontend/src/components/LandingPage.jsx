@@ -1,7 +1,7 @@
-import { Mic, BarChart3, List, Wallet, Sparkles } from "lucide-react";
+import { Mic, BarChart3, List, Wallet, Sparkles, LogIn } from "lucide-react";
 import "./LandingPage.css";
 
-const LandingPage = ({ onGetStarted, isAuthenticated = false }) => {
+const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
   const features = [
     {
       icon: <Mic size={32} />,
@@ -27,6 +27,12 @@ const LandingPage = ({ onGetStarted, isAuthenticated = false }) => {
 
   return (
     <div className="landing-page">
+      {!isAuthenticated && onLogin && (
+        <button className="landing-login-button" onClick={onLogin}>
+          <LogIn size={18} />
+          <span>Login</span>
+        </button>
+      )}
       <div className="landing-content">
         <div className="landing-logo">
           <Mic size={80} className="logo-icon" />
