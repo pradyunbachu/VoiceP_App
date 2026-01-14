@@ -1,4 +1,4 @@
-import { Mic, BarChart3, List, Wallet, Sparkles, LogIn } from "lucide-react";
+import { Mic, BarChart3, List, Wallet, Sparkles, LogIn, Keyboard, Package, RefreshCw } from "lucide-react";
 import "./LandingPage.css";
 
 const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
@@ -6,22 +6,32 @@ const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
     {
       icon: <Mic size={32} />,
       title: "Voice Recording",
-      description: "Record expenses using your microphone. Just speak naturally about your purchase."
+      description: "Record expenses naturally with your voice. AI automatically extracts store, items, amount, and category."
+    },
+    {
+      icon: <Keyboard size={32} />,
+      title: "Quick Record Anywhere",
+      description: "Hold spacebar from any screen to instantly record an expense. Release to process and save."
+    },
+    {
+      icon: <Package size={32} />,
+      title: "Smart Pantry",
+      description: "Track groceries with visual shelves. Drag and drop items between categories, monitor expiration dates and stock levels."
     },
     {
       icon: <BarChart3 size={32} />,
       title: "Analytics Dashboard",
-      description: "Visualize your spending with interactive charts and detailed analytics."
-    },
-    {
-      icon: <List size={32} />,
-      title: "Expense Management",
-      description: "View, edit, and organize all your expenses with powerful filtering and sorting."
+      description: "Visualize spending with interactive charts. See trends over time, top stores, and category breakdowns."
     },
     {
       icon: <Wallet size={32} />,
       title: "Budget Tracking",
-      description: "Set monthly budgets by category and track your spending against them."
+      description: "Set monthly budgets by category with alerts when approaching limits. Supports recurring budgets."
+    },
+    {
+      icon: <RefreshCw size={32} />,
+      title: "Recurring Expenses",
+      description: "Automatically detect and track subscriptions and recurring payments like rent, gym, and streaming services."
     }
   ];
 
