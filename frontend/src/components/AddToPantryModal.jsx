@@ -15,7 +15,9 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
       let rest = leadingNumMatch[2].trim();
 
       // Check for unit words: "2 lbs chicken", "3 bags of rice"
-      const unitMatch = rest.match(/^(lbs?|oz|kg|g|gallons?|liters?|bags?|boxes?|cans?|bottles?|packs?|dozen)\s+(?:of\s+)?(.+)$/i);
+      const unitMatch = rest.match(
+        /^(lbs?|oz|kg|g|gallons?|liters?|bags?|boxes?|cans?|bottles?|packs?|dozen)\s+(?:of\s+)?(.+)$/i
+      );
       if (unitMatch) {
         return { quantity: qty, unit: unitMatch[1], name: unitMatch[2] };
       }
@@ -25,13 +27,21 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
     // Pattern 2: "chocolates x6", "eggs x12"
     const trailingXMatch = trimmed.match(/^(.+?)\s*x\s*(\d+(?:\.\d+)?)$/i);
     if (trailingXMatch) {
-      return { quantity: parseFloat(trailingXMatch[2]), unit: "", name: trailingXMatch[1].trim() };
+      return {
+        quantity: parseFloat(trailingXMatch[2]),
+        unit: "",
+        name: trailingXMatch[1].trim(),
+      };
     }
 
     // Pattern 3: "chocolates (6)", "eggs (12)"
     const parenMatch = trimmed.match(/^(.+?)\s*\((\d+(?:\.\d+)?)\)$/);
     if (parenMatch) {
-      return { quantity: parseFloat(parenMatch[2]), unit: "", name: parenMatch[1].trim() };
+      return {
+        quantity: parseFloat(parenMatch[2]),
+        unit: "",
+        name: parenMatch[1].trim(),
+      };
     }
 
     // No quantity found
@@ -40,55 +50,104 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
 
   // Auto-detect category based on item name
   const detectCategory = (itemName) => {
-    const name = itemName.toLowerCase();
+    let name = itemName.toLowerCase().trim();
+
+    // Normalize plural forms: remove trailing 's' or 'es' for better matching
+    // "bagels" -> "bagel", "muffins" -> "muffin", "cookies" -> "cookie"
+    const normalizedName = name.replace(/(es|s)$/, "");
+
+    // Helper to check if name matches (tries both original and normalized)
+    const matches = (pattern) => {
+      return pattern.test(name) || pattern.test(normalizedName);
+    };
 
     // Dairy
-    if (/\b(milk|cheese|yogurt|butter|cream|eggs?|cottage|sour cream|whipping cream|half and half|creamer)\b/.test(name)) {
+    if (
+      matches(
+        /\b(milk|cheese|yogurt|butter|cream|egg|cottage|sour cream|whipping cream|half and half|creamer)\b/
+      )
+    ) {
       return "Dairy";
     }
 
     // Produce (fruits and vegetables)
-    if (/\b(apple|banana|orange|grape|strawberr|blueberr|raspberr|lemon|lime|mango|pineapple|watermelon|cantaloupe|peach|pear|plum|cherry|kiwi|avocado|tomato|potato|onion|garlic|carrot|celery|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|corn|beans?|peas?|mushroom|cabbage|asparagus|artichoke|beet|radish|turnip|eggplant|ginger|cilantro|parsley|basil|mint|fruit|vegetable|veggie|salad|greens)\b/.test(name)) {
+    if (
+      matches(
+        /\b(apple|banana|orange|grape|strawberr|blueberr|raspberr|lemon|lime|mango|pineapple|watermelon|cantaloupe|peach|pear|plum|cherry|kiwi|avocado|tomato|potato|onion|garlic|carrot|celery|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|corn|bean|pea|mushroom|cabbage|asparagus|artichoke|beet|radish|turnip|eggplant|ginger|cilantro|parsley|basil|mint|fruit|vegetable|veggie|salad|greens)\b/
+      )
+    ) {
       return "Produce";
     }
 
     // Meat & Seafood
-    if (/\b(chicken|beef|pork|steak|ground|turkey|lamb|bacon|sausage|ham|meat|fish|salmon|tuna|shrimp|crab|lobster|scallop|clam|mussel|oyster|seafood|tilapia|cod|halibut)\b/.test(name)) {
+    if (
+      matches(
+        /\b(chicken|beef|pork|steak|ground|turkey|lamb|bacon|sausage|ham|meat|fish|salmon|tuna|shrimp|crab|lobster|scallop|clam|mussel|oyster|seafood|tilapia|cod|halibut)\b/
+      )
+    ) {
       return "Meat & Seafood";
     }
 
-    // Bakery
-    if (/\b(bread|bagel|muffin|croissant|donut|doughnut|roll|bun|cake|pie|pastry|cookie|brownie|cupcake|baguette|tortilla|pita|naan|wrap)\b/.test(name)) {
+    // Bakery - this is where "bagels" should match "bagel"
+    if (
+      matches(
+        /\b(bread|bagel|muffin|croissant|donut|doughnut|roll|bun|cake|pie|pastry|cookie|brownie|cupcake|baguette|tortilla|pita|naan|wrap)\b/
+      )
+    ) {
       return "Bakery";
     }
 
     // Frozen
-    if (/\b(frozen|ice cream|popsicle|pizza|waffle|fries|nugget|burrito|dinner|meal)\b/.test(name)) {
+    if (
+      matches(
+        /\b(frozen|ice cream|popsicle|pizza|waffle|fries|nugget|burrito|dinner|meal)\b/
+      )
+    ) {
       return "Frozen";
     }
 
     // Canned Goods
-    if (/\b(canned|can of|soup|broth|stock|beans|tomatoes|corn|tuna|sardine|spam|chili)\b/.test(name)) {
+    if (
+      matches(
+        /\b(canned|can of|soup|broth|stock|bean|tomato|corn|tuna|sardine|spam|chili)\b/
+      )
+    ) {
       return "Canned Goods";
     }
 
     // Snacks
-    if (/\b(chip|crisp|pretzel|popcorn|cracker|cookie|candy|chocolate|gummy|snack|nuts?|almond|cashew|peanut|walnut|pistachio|trail mix|granola bar|protein bar|jerky)\b/.test(name)) {
+    if (
+      matches(
+        /\b(chip|crisp|pretzel|popcorn|cracker|cookie|candy|chocolate|gummy|snack|nut|almond|cashew|peanut|walnut|pistachio|trail mix|granola bar|protein bar|jerky)\b/
+      )
+    ) {
       return "Snacks";
     }
 
     // Beverages
-    if (/\b(water|juice|soda|pop|cola|coffee|tea|beer|wine|alcohol|drink|beverage|smoothie|shake|lemonade|energy drink|sports drink|kombucha)\b/.test(name)) {
+    if (
+      matches(
+        /\b(water|juice|soda|pop|cola|coffee|tea|beer|wine|alcohol|drink|beverage|smoothie|shake|lemonade|energy drink|sports drink|kombucha)\b/
+      )
+    ) {
       return "Beverages";
     }
 
     // Condiments
-    if (/\b(ketchup|mustard|mayo|mayonnaise|sauce|dressing|vinegar|oil|olive oil|soy sauce|hot sauce|salsa|relish|pickle|jam|jelly|honey|syrup|peanut butter|nutella|spread)\b/.test(name)) {
+    if (
+      matches(
+        /\b(ketchup|mustard|mayo|mayonnaise|sauce|dressing|vinegar|oil|olive oil|soy sauce|hot sauce|salsa|relish|pickle|jam|jelly|honey|syrup|peanut butter|nutella|spread)\b/
+      )
+    ) {
       return "Condiments";
     }
 
     // Grains & Pasta
-    if (/\b(pasta|spaghetti|noodle|rice|quinoa|oat|oatmeal|cereal|flour|bread crumb|couscous|barley|grain|macaroni|penne|fettuccine|linguine|ramen)\b/.test(name)) {
+    if (
+      matches(
+        /\b(pasta|spaghetti|noodle|rice|quinoa|oat|oatmeal|cereal|flour|bread crumb|couscous|barley|grain|macaroni|penne|fettuccine|linguine|ramen)\b/
+      )
+    ) {
       return "Grains & Pasta";
     }
 
@@ -107,7 +166,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
         unit: parsed.unit,
         category: detectCategory(parsed.name),
         expiration_date: "",
-        selected: true
+        selected: true,
       };
     });
   };
@@ -141,13 +200,13 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
         unit: "",
         category: "Other",
         expiration_date: "",
-        selected: true
-      }
+        selected: true,
+      },
     ]);
   };
 
   const handleSubmit = async () => {
-    const selectedItems = items.filter(i => i.selected && i.name.trim());
+    const selectedItems = items.filter((i) => i.selected && i.name.trim());
 
     if (selectedItems.length === 0) {
       onClose();
@@ -156,23 +215,26 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
 
     setSubmitting(true);
     try {
-      const response = await fetch("http://localhost:8000/api/pantry/from-expense", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          expense_id: expense.id,
-          items: selectedItems.map(item => ({
-            name: item.name.trim(),
-            quantity: item.quantity,
-            unit: item.unit || null,
-            category: item.category,
-            expiration_date: item.expiration_date || null
-          }))
-        })
-      });
+      const response = await fetch(
+        "http://localhost:8000/api/pantry/from-expense",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            expense_id: expense.id,
+            items: selectedItems.map((item) => ({
+              name: item.name.trim(),
+              quantity: item.quantity,
+              unit: item.unit || null,
+              category: item.category,
+              expiration_date: item.expiration_date || null,
+            })),
+          }),
+        }
+      );
 
       if (response.ok) {
         const data = await response.json();
@@ -188,7 +250,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
     }
   };
 
-  const selectedCount = items.filter(i => i.selected).length;
+  const selectedCount = items.filter((i) => i.selected).length;
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -215,7 +277,11 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
 
           <div className="pantry-items-list">
             {items.map((item, index) => (
-              <div key={item.id} className={`pantry-item-row ${item.selected ? 'selected' : ''}`}>
+              <div
+                key={item.id}
+                className={`pantry-item-row ${
+                  item.selected ? "selected" : ""
+                }`}>
                 <input
                   type="checkbox"
                   checked={item.selected}
@@ -226,7 +292,9 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
                   <input
                     type="text"
                     value={item.name}
-                    onChange={(e) => handleItemChange(index, 'name', e.target.value)}
+                    onChange={(e) =>
+                      handleItemChange(index, "name", e.target.value)
+                    }
                     placeholder="Item name"
                     className="item-name-input"
                   />
@@ -236,7 +304,13 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
                       <input
                         type="number"
                         value={item.quantity}
-                        onChange={(e) => handleItemChange(index, 'quantity', parseFloat(e.target.value) || 1)}
+                        onChange={(e) =>
+                          handleItemChange(
+                            index,
+                            "quantity",
+                            parseFloat(e.target.value) || 1
+                          )
+                        }
                         min="0"
                         step="0.1"
                         className="item-quantity-input"
@@ -247,7 +321,9 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
                       <input
                         type="text"
                         value={item.unit}
-                        onChange={(e) => handleItemChange(index, 'unit', e.target.value)}
+                        onChange={(e) =>
+                          handleItemChange(index, "unit", e.target.value)
+                        }
                         placeholder="lbs, oz..."
                         className="item-unit-input"
                       />
@@ -256,11 +332,14 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
                       <label>Category</label>
                       <select
                         value={item.category}
-                        onChange={(e) => handleItemChange(index, 'category', e.target.value)}
-                        className="item-category-select"
-                      >
-                        {PANTRY_CATEGORIES.map(cat => (
-                          <option key={cat} value={cat}>{cat}</option>
+                        onChange={(e) =>
+                          handleItemChange(index, "category", e.target.value)
+                        }
+                        className="item-category-select">
+                        {PANTRY_CATEGORIES.map((cat) => (
+                          <option key={cat} value={cat}>
+                            {cat}
+                          </option>
                         ))}
                       </select>
                     </div>
@@ -269,7 +348,13 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
                       <input
                         type="date"
                         value={item.expiration_date}
-                        onChange={(e) => handleItemChange(index, 'expiration_date', e.target.value)}
+                        onChange={(e) =>
+                          handleItemChange(
+                            index,
+                            "expiration_date",
+                            e.target.value
+                          )
+                        }
                         className="item-expiry-input"
                       />
                     </div>
@@ -278,8 +363,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
                 <button
                   className="remove-item-btn"
                   onClick={() => removeItem(index)}
-                  title="Remove item"
-                >
+                  title="Remove item">
                   <Trash2 size={16} />
                 </button>
               </div>
@@ -299,14 +383,16 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
           <button
             className="confirm-btn"
             onClick={handleSubmit}
-            disabled={submitting || selectedCount === 0}
-          >
+            disabled={submitting || selectedCount === 0}>
             {submitting ? (
               "Adding..."
             ) : (
               <>
                 <Check size={16} />
-                <span>Add {selectedCount} Item{selectedCount !== 1 ? 's' : ''} to Pantry</span>
+                <span>
+                  Add {selectedCount} Item{selectedCount !== 1 ? "s" : ""} to
+                  Pantry
+                </span>
               </>
             )}
           </button>

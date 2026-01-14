@@ -17,10 +17,98 @@ import {
   Square,
   ShoppingCart,
   LayoutGrid,
-  List
+  List,
+  GripVertical
 } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  useDraggable,
+  useDroppable,
+} from "@dnd-kit/core";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
 import "./Pantry.css";
+
+// Draggable shelf item component
+const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, onEdit, onRemove }) => {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    isDragging,
+  } = useDraggable({ id: item.id });
+
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    zIndex: isDragging ? 1000 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={`shelf-item ${item.stock_status} ${isExpired ? 'expired' : ''} ${isExpiringSoon && !isExpired ? 'expiring-soon' : ''} ${isDragging ? 'dragging' : ''}`}
+      title={`${item.name}${item.quantity ? ` (${item.quantity}${item.unit ? ' ' + item.unit : ''})` : ''}${item.expiration_date ? `\nExpires: ${new Date(item.expiration_date).toLocaleDateString()}` : ''}${item.notes ? `\n${item.notes}` : ''}`}
+      {...attributes}
+      {...listeners}
+    >
+      <button
+        className="shelf-item-remove"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRemove(item.id);
+        }}
+        title="Remove from pantry"
+      >
+        <X size={10} />
+      </button>
+      <div className="shelf-item-content" onClick={(e) => {
+        e.stopPropagation();
+        onEdit(item);
+      }}>
+        <div className="shelf-item-icon">
+          {getStatusIcon(item.stock_status)}
+        </div>
+        <div className="shelf-item-name">{item.name}</div>
+        {item.quantity && (
+          <div className="shelf-item-qty">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</div>
+        )}
+        {isExpiringSoon && !isExpired && (
+          <div className="shelf-item-badge expiring">Exp Soon</div>
+        )}
+        {isExpired && (
+          <div className="shelf-item-badge expired">Expired</div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Droppable shelf component
+const DroppableShelf = ({ category, children, isEmpty }) => {
+  const { setNodeRef, isOver } = useDroppable({ id: category });
+
+  return (
+    <div className={`shelf ${isOver ? 'drag-over' : ''}`}>
+      <div className="shelf-label">{category}</div>
+      <div ref={setNodeRef} className="shelf-surface">
+        <div className="shelf-items">
+          {children}
+          {isEmpty && (
+            <div className="shelf-empty-hint">Drop items here</div>
+          )}
+        </div>
+      </div>
+      <div className="shelf-bracket left"></div>
+      <div className="shelf-bracket right"></div>
+    </div>
+  );
+};
 
 const Pantry = ({ token, showToast }) => {
   // State management
@@ -115,7 +203,7 @@ const Pantry = ({ token, showToast }) => {
     );
   }, [items, searchQuery]);
 
-  // Group items by category for shelf view
+  // Group items by category for shelf view - show ALL categories
   const itemsByCategory = useMemo(() => {
     const grouped = {};
     PANTRY_CATEGORIES.forEach(cat => {
@@ -129,9 +217,65 @@ const Pantry = ({ token, showToast }) => {
         grouped["Other"].push(item);
       }
     });
-    // Only return categories that have items
-    return Object.entries(grouped).filter(([_, items]) => items.length > 0);
+    // Return ALL categories (including empty ones)
+    return Object.entries(grouped);
   }, [filteredItems]);
+
+  // Drag and drop sensors
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor)
+  );
+
+  // Handle drag end - update category when dropped on different shelf
+  const handleDragEnd = async (event) => {
+    const { active, over } = event;
+
+    if (!over) return;
+
+    const draggedItemId = active.id;
+    const targetCategory = over.id;
+
+    // Find the dragged item
+    const draggedItem = items.find((item) => item.id === draggedItemId);
+    if (!draggedItem) return;
+
+    // If dropped on the same category, do nothing
+    if (draggedItem.category === targetCategory) return;
+
+    // Update the category
+    try {
+      const headers = {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      };
+
+      const response = await fetch(`http://localhost:8000/api/pantry/${draggedItemId}`, {
+        method: "PUT",
+        headers,
+        body: JSON.stringify({ ...draggedItem, category: targetCategory }),
+      });
+
+      if (response.ok) {
+        // Update local state immediately for smooth UX
+        setItems((prevItems) =>
+          prevItems.map((item) =>
+            item.id === draggedItemId ? { ...item, category: targetCategory } : item
+          )
+        );
+        if (showToast) showToast(`Moved "${draggedItem.name}" to ${targetCategory}`, "success");
+      } else {
+        if (showToast) showToast("Failed to update item category", "error");
+      }
+    } catch (error) {
+      console.error("Error updating category:", error);
+      if (showToast) showToast("Error updating item category", "error");
+    }
+  };
 
   // CRUD handlers
   const handleCreate = async (e) => {
@@ -222,6 +366,29 @@ const Pantry = ({ token, showToast }) => {
     } catch (error) {
       console.error("Error deleting item:", error);
       if (showToast) showToast("Error deleting item", "error");
+    }
+  };
+
+  // Remove item from pantry (keeps the expense)
+  const handleRemoveFromPantry = async (id) => {
+    try {
+      const headers = { Authorization: `Bearer ${token}` };
+      const response = await fetch(`http://localhost:8000/api/pantry/${id}`, {
+        method: "DELETE",
+        headers
+      });
+
+      if (response.ok) {
+        // Update local state immediately for smooth UX
+        setItems((prevItems) => prevItems.filter((item) => item.id !== id));
+        fetchStats();
+        if (showToast) showToast("Item removed from pantry", "success");
+      } else {
+        if (showToast) showToast("Failed to remove item", "error");
+      }
+    } catch (error) {
+      console.error("Error removing item:", error);
+      if (showToast) showToast("Error removing item", "error");
     }
   };
 
@@ -583,49 +750,41 @@ const Pantry = ({ token, showToast }) => {
           <div className="loading-spinner"></div>
           <p>Loading pantry...</p>
         </div>
-      ) : filteredItems.length === 0 ? (
+      ) : items.length === 0 ? (
         <div className="empty-state">
           <Package size={48} />
           <h3>No items in your pantry</h3>
           <p>Add items manually or they will appear here when you log grocery expenses</p>
         </div>
       ) : viewMode === 'shelf' ? (
-        /* SHELF VIEW */
-        <div className="pantry-shelves">
-          {itemsByCategory.map(([category, categoryItems]) => (
-            <div key={category} className="shelf">
-              <div className="shelf-label">{category}</div>
-              <div className="shelf-surface">
-                <div className="shelf-items">
-                  {categoryItems.map((item) => (
-                    <div
-                      key={item.id}
-                      className={`shelf-item ${item.stock_status} ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring-soon' : ''}`}
-                      onClick={() => startEdit(item)}
-                      title={`${item.name}${item.quantity ? ` (${item.quantity}${item.unit ? ' ' + item.unit : ''})` : ''}${item.expiration_date ? `\nExpires: ${new Date(item.expiration_date).toLocaleDateString()}` : ''}${item.notes ? `\n${item.notes}` : ''}`}
-                    >
-                      <div className="shelf-item-icon">
-                        {getStatusIcon(item.stock_status)}
-                      </div>
-                      <div className="shelf-item-name">{item.name}</div>
-                      {item.quantity && (
-                        <div className="shelf-item-qty">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</div>
-                      )}
-                      {isExpiringSoon(item.expiration_date) && !isExpired(item.expiration_date) && (
-                        <div className="shelf-item-badge expiring">Exp Soon</div>
-                      )}
-                      {isExpired(item.expiration_date) && (
-                        <div className="shelf-item-badge expired">Expired</div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </div>
-              <div className="shelf-bracket left"></div>
-              <div className="shelf-bracket right"></div>
-            </div>
-          ))}
-        </div>
+        /* SHELF VIEW with drag and drop */
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragEnd={handleDragEnd}
+        >
+          <div className="pantry-shelves">
+            {itemsByCategory.map(([category, categoryItems]) => (
+              <DroppableShelf
+                key={category}
+                category={category}
+                isEmpty={categoryItems.length === 0}
+              >
+                {categoryItems.map((item) => (
+                  <DraggableShelfItem
+                    key={item.id}
+                    item={item}
+                    isExpiringSoon={isExpiringSoon(item.expiration_date)}
+                    isExpired={isExpired(item.expiration_date)}
+                    getStatusIcon={getStatusIcon}
+                    onEdit={startEdit}
+                    onRemove={handleRemoveFromPantry}
+                  />
+                ))}
+              </DroppableShelf>
+            ))}
+          </div>
+        </DndContext>
       ) : (
         /* LIST VIEW */
         <div className="pantry-items">
