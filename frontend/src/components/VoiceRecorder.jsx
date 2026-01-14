@@ -1,9 +1,13 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Loader2, Type, Package } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
+import { useAuth } from "../context/AuthContext";
+import { useCreateExpense, useCreateExpenseSimple } from "../hooks";
+import { API_BASE_URL } from "../config/api";
 import "./VoiceRecorder.css";
 
-const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
+const VoiceRecorder = ({ showToast }) => {
+  const { getToken } = useAuth();
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [extractedExpense, setExtractedExpense] = useState(null);
@@ -13,10 +17,18 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
   const [recordingTime, setRecordingTime] = useState(0);
   const [showPantryModal, setShowPantryModal] = useState(false);
   const [pendingPantryExpense, setPendingPantryExpense] = useState(null);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
+
+  // React Query mutations
+  const createExpenseMutation = useCreateExpense();
+  const createExpenseSimpleMutation = useCreateExpenseSimple();
+
+  // Combined loading state
+  const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || isTranscribing;
 
   // Recording timer effect
   useEffect(() => {
@@ -64,7 +76,6 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
     if (groceryExpense) {
       setPendingPantryExpense(groceryExpense);
-      // Don't auto-show modal - let user click button instead
     }
   };
 
@@ -140,48 +151,14 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
     try {
       console.log("Processing transcript:", transcriptText);
-      // Extract expense information directly (skip transcription step)
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const extractResponse = await fetch(
-        "http://localhost:8000/api/extract-expense",
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ transcript: transcriptText }),
-        }
-      );
-
-      console.log("Extract response status:", extractResponse.status);
-
-      if (!extractResponse.ok) {
-        const errorText = await extractResponse.text();
-        console.error("Extract error:", errorText);
-        if (extractResponse.status === 429) {
-          setError("API quota exceeded. Using simple extraction instead.");
-          // Fallback to simple extraction
-          await processExpenseSimple(transcriptText);
-        } else {
-          setError(`Error: ${errorText}`);
-          // Try simple extraction as fallback
-          await processExpenseSimple(transcriptText);
-        }
-        return;
-      }
-
-      const expenseData = await extractResponse.json();
+      const expenseData = await createExpenseMutation.mutateAsync(transcriptText);
       console.log("Expense data received:", expenseData);
+
       // Handle both old format (single expense) and new format (array of expenses)
       if (expenseData.expenses) {
-        // New format with expenses array
         setExtractedExpense(expenseData);
         checkForPantryItems(expenseData);
       } else {
-        // Old format (single expense) - convert to new format for compatibility
         setExtractedExpense({
           expenses: [expenseData],
           count: 1,
@@ -189,63 +166,45 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
         });
         checkForPantryItems(expenseData);
       }
-      onExpenseAdded();
     } catch (error) {
       console.error("Error processing transcript:", error);
-      if (error.message === "Failed to fetch") {
+      if (error.message?.includes("429") || error.message?.includes("quota")) {
+        setError("API quota exceeded. Using simple extraction instead.");
+        await processExpenseSimple(transcriptText);
+      } else if (error.message === "Failed to fetch") {
         setError(
           "Cannot connect to backend server. Make sure the backend is running on http://localhost:8000"
         );
       } else {
         setError(`Error: ${error.message}`);
+        // Try simple extraction as fallback
+        try {
+          await processExpenseSimple(transcriptText);
+        } catch (simpleError) {
+          console.error("Simple extraction also failed:", simpleError);
+          setError(
+            `Both extraction methods failed. Backend may be down. Error: ${error.message}`
+          );
+        }
       }
-      // Try simple extraction as fallback
-      try {
-        await processExpenseSimple(transcriptText);
-      } catch (simpleError) {
-        console.error("Simple extraction also failed:", simpleError);
-        setError(
-          `Both extraction methods failed. Backend may be down. Error: ${error.message}`
-        );
-      }
-    } finally {
-      setLoading(false);
     }
   };
 
   const processExpenseSimple = async (transcriptText) => {
-    // Use simple regex-based extraction as fallback
     try {
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const response = await fetch(
-        "http://localhost:8000/api/extract-expense-simple",
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ transcript: transcriptText }),
-        }
-      );
+      const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptText);
 
-      if (response.ok) {
-        const expenseData = await response.json();
-        // Handle both old format (single expense) and new format (array of expenses)
-        if (expenseData.expenses) {
-          setExtractedExpense(expenseData);
-          checkForPantryItems(expenseData);
-        } else {
-          setExtractedExpense({
-            expenses: [expenseData],
-            count: 1,
-            message: expenseData.message
-          });
-          checkForPantryItems(expenseData);
-        }
-        onExpenseAdded();
+      // Handle both old format (single expense) and new format (array of expenses)
+      if (expenseData.expenses) {
+        setExtractedExpense(expenseData);
+        checkForPantryItems(expenseData);
+      } else {
+        setExtractedExpense({
+          expenses: [expenseData],
+          count: 1,
+          message: expenseData.message
+        });
+        checkForPantryItems(expenseData);
       }
     } catch (error) {
       console.error("Error with simple extraction:", error);
@@ -256,11 +215,13 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
   };
 
   const processAudio = async (audioBlob, mimeType = "audio/webm") => {
-    setLoading(true);
+    setIsTranscribing(true);
     setTranscript("");
     setExtractedExpense(null);
 
     try {
+      const token = getToken();
+
       // Step 1: Transcribe audio using Deepgram API (via backend)
       const formData = new FormData();
       // Determine file extension based on mime type
@@ -277,7 +238,7 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       }
 
       const transcriptResponse = await fetch(
-        "http://localhost:8000/api/transcribe",
+        `${API_BASE_URL}/api/transcribe`,
         {
           method: "POST",
           headers: transcribeHeaders,
@@ -294,42 +255,15 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
 
       const transcriptData = await transcriptResponse.json();
       setTranscript(transcriptData.transcript);
+      setIsTranscribing(false);
 
-      // Step 2: Extract expense information
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const extractResponse = await fetch(
-        "http://localhost:8000/api/extract-expense",
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ transcript: transcriptData.transcript }),
-        }
-      );
-
-      if (!extractResponse.ok) {
-        const errorText = await extractResponse.text();
-        throw new Error(
-          `Expense extraction failed: ${extractResponse.status} - ${errorText}`
-        );
-      }
-
-      const expenseData = await extractResponse.json();
+      // Step 2: Extract expense information using mutation
+      const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
       setExtractedExpense(expenseData);
       checkForPantryItems(expenseData);
-      onExpenseAdded();
     } catch (error) {
       console.error("Error processing audio:", error);
       const errorMessage = error.message || "Unknown error occurred";
-      const errorDetails = error.response
-        ? `Status: ${error.response.status}, ${await error.response
-            .text()
-            .catch(() => "No details")}`
-        : errorMessage;
 
       // Check if it's a quota error
       if (errorMessage.includes("quota") || errorMessage.includes("429")) {
@@ -337,10 +271,10 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
           "Deepgram API quota exceeded. Please try again later or use manual text input."
         );
       } else {
-        setError(`Error: ${errorDetails}`);
+        setError(`Error: ${errorMessage}`);
       }
     } finally {
-      setLoading(false);
+      setIsTranscribing(false);
     }
   };
 
@@ -350,50 +284,25 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       return;
     }
 
-    setLoading(true);
     setError("");
     setTranscript("");
     setExtractedExpense(null);
 
     try {
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const extractResponse = await fetch(
-        "http://localhost:8000/api/extract-expense",
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ transcript: manualInput }),
-        }
-      );
-
-      if (!extractResponse.ok) {
-        const errorText = await extractResponse.text();
-        if (extractResponse.status === 429) {
-          setError(
-            "OpenAI API quota exceeded. Please add payment method or wait for quota reset."
-          );
-        } else {
-          setError(`Error: ${errorText}`);
-        }
-        return;
-      }
-
-      const expenseData = await extractResponse.json();
+      const expenseData = await createExpenseMutation.mutateAsync(manualInput);
       setExtractedExpense(expenseData);
       checkForPantryItems(expenseData);
       setManualInput("");
       setShowManualInput(false);
-      onExpenseAdded();
     } catch (error) {
       console.error("Error processing manual input:", error);
-      setError(`Error: ${error.message}`);
-    } finally {
-      setLoading(false);
+      if (error.message?.includes("429") || error.message?.includes("quota")) {
+        setError(
+          "OpenAI API quota exceeded. Please add payment method or wait for quota reset."
+        );
+      } else {
+        setError(`Error: ${error.message}`);
+      }
     }
   };
 
@@ -531,7 +440,6 @@ const VoiceRecorder = ({ onExpenseAdded, loading, setLoading, token }) => {
       {showPantryModal && pendingPantryExpense && (
         <AddToPantryModal
           expense={pendingPantryExpense}
-          token={token}
           onClose={() => {
             setShowPantryModal(false);
             setPendingPantryExpense(null);

@@ -1,15 +1,22 @@
 import { useState, useMemo } from "react";
 import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search } from "lucide-react";
+import { useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses } from "../hooks";
 import "./ExpenseList.css";
 
-const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, showToast }) => {
+const ExpenseList = ({ expenses, showToast }) => {
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
-  const [sortBy, setSortBy] = useState("recent"); // "recent", "expensive", "name"
+  const [sortBy, setSortBy] = useState("recent");
   const [selectedExpenses, setSelectedExpenses] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(null);
+
+  // React Query mutations
+  const updateMutation = useUpdateExpense();
+  const deleteMutation = useDeleteExpense();
+  const bulkDeleteMutation = useBulkDeleteExpenses();
+
   const handleEdit = (expense) => {
     setEditingId(expense.id);
     setEditForm({
@@ -23,37 +30,15 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
 
   const handleSaveEdit = async (id) => {
     try {
-      const headers = {
-        "Content-Type": "application/json"
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`http://localhost:8000/api/expenses/${id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(editForm)
-      });
-
-      if (response.ok) {
-        setEditingId(null);
-        if (onExpenseUpdated) {
-          onExpenseUpdated();
-        }
-        if (showToast) {
-          showToast("Expense updated successfully", "success");
-        }
-      } else {
-        const error = await response.json();
-        if (showToast) {
-          showToast(`Failed to update expense: ${error.detail || "Unknown error"}`, "error");
-        }
+      await updateMutation.mutateAsync({ id, data: editForm });
+      setEditingId(null);
+      if (showToast) {
+        showToast("Expense updated successfully", "success");
       }
     } catch (error) {
       console.error("Error updating expense:", error);
       if (showToast) {
-        showToast("Error updating expense", "error");
+        showToast(`Failed to update expense: ${error.message || "Unknown error"}`, "error");
       }
     }
   };
@@ -69,26 +54,9 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     }
 
     try {
-      const headers = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-      const response = await fetch(`http://localhost:8000/api/expenses/${id}`, {
-        method: "DELETE",
-        headers,
-      });
-
-      if (response.ok) {
-        if (onExpenseDeleted) {
-          onExpenseDeleted();
-        }
-        if (showToast) {
-          showToast("Expense deleted successfully", "success");
-        }
-      } else {
-        if (showToast) {
-          showToast("Failed to delete expense", "error");
-        }
+      await deleteMutation.mutateAsync(id);
+      if (showToast) {
+        showToast("Expense deleted successfully", "success");
       }
     } catch (error) {
       console.error("Error deleting expense:", error);
@@ -121,23 +89,20 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
 
     switch (sortBy) {
       case "recent":
-        // Sort by date (newest first)
         return filtered.sort((a, b) => {
           const dateA = new Date(a.date);
           const dateB = new Date(b.date);
-          return dateB - dateA; // Newest first
+          return dateB - dateA;
         });
 
       case "expensive":
-        // Sort by amount (highest first)
         return filtered.sort((a, b) => {
           const amountA = parseFloat(a.amount) || 0;
           const amountB = parseFloat(b.amount) || 0;
-          return amountB - amountA; // Highest first
+          return amountB - amountA;
         });
 
       case "name":
-        // Sort by store name (alphabetical)
         return filtered.sort((a, b) => {
           const nameA = (a.store || "").toLowerCase();
           const nameB = (b.store || "").toLowerCase();
@@ -149,28 +114,24 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     }
   }, [expenses, sortBy, searchQuery, categoryFilter]);
 
-  // Handle category tag click
   const handleCategoryClick = (category) => {
     if (categoryFilter === category) {
-      setCategoryFilter(null); // Toggle off if same category
+      setCategoryFilter(null);
     } else {
       setCategoryFilter(category);
     }
   };
 
-  // Clear all filters
   const clearFilters = () => {
     setSearchQuery("");
     setCategoryFilter(null);
   };
 
-  // Toggle select mode
   const toggleSelectMode = () => {
     setIsSelectMode(!isSelectMode);
     setSelectedExpenses(new Set());
   };
 
-  // Toggle individual expense selection
   const toggleExpenseSelection = (expenseId) => {
     const newSelected = new Set(selectedExpenses);
     if (newSelected.has(expenseId)) {
@@ -181,7 +142,6 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     setSelectedExpenses(newSelected);
   };
 
-  // Select/deselect all
   const toggleSelectAll = () => {
     if (selectedExpenses.size === sortedExpenses.length) {
       setSelectedExpenses(new Set());
@@ -190,7 +150,6 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     }
   };
 
-  // Bulk delete
   const handleBulkDelete = async () => {
     if (selectedExpenses.size === 0) {
       if (showToast) {
@@ -204,44 +163,20 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
     }
 
     try {
-      const headers = {
-        "Content-Type": "application/json"
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`http://localhost:8000/api/expenses/bulk`, {
-        method: "DELETE",
-        headers,
-        body: JSON.stringify({ expense_ids: Array.from(selectedExpenses) })
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedExpenses(new Set());
-        setIsSelectMode(false);
-        if (onExpenseDeleted) {
-          onExpenseDeleted();
-        }
-        if (showToast) {
-          showToast(`${data.deleted_count || selectedExpenses.size} expense(s) deleted successfully`, "success");
-        }
-      } else {
-        const error = await response.json();
-        if (showToast) {
-          showToast(`Failed to delete expenses: ${error.detail || "Unknown error"}`, "error");
-        }
+      const result = await bulkDeleteMutation.mutateAsync(Array.from(selectedExpenses));
+      setSelectedExpenses(new Set());
+      setIsSelectMode(false);
+      if (showToast) {
+        showToast(`${result.deleted_count || selectedExpenses.size} expense(s) deleted successfully`, "success");
       }
     } catch (error) {
       console.error("Error deleting expenses:", error);
       if (showToast) {
-        showToast("Error deleting expenses", "error");
+        showToast(`Failed to delete expenses: ${error.message || "Unknown error"}`, "error");
       }
     }
   };
 
-  // Bulk edit (opens edit form for first selected expense)
   const handleBulkEdit = () => {
     if (selectedExpenses.size === 0) {
       if (showToast) {
@@ -314,10 +249,10 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
               <button
                 className="bulk-action-button"
                 onClick={handleBulkDelete}
-                disabled={selectedExpenses.size === 0}
+                disabled={selectedExpenses.size === 0 || bulkDeleteMutation.isPending}
               >
                 <Trash2 size={16} />
-                <span>Delete Selected ({selectedExpenses.size})</span>
+                <span>{bulkDeleteMutation.isPending ? "Deleting..." : `Delete Selected (${selectedExpenses.size})`}</span>
               </button>
               <button
                 className="bulk-action-button"
@@ -432,9 +367,13 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
                   />
                 </div>
                 <div className="edit-actions">
-                  <button className="save-button" onClick={() => handleSaveEdit(expense.id)}>
+                  <button
+                    className="save-button"
+                    onClick={() => handleSaveEdit(expense.id)}
+                    disabled={updateMutation.isPending}
+                  >
                     <Check size={16} />
-                    <span>Save</span>
+                    <span>{updateMutation.isPending ? "Saving..." : "Save"}</span>
                   </button>
                   <button className="cancel-button" onClick={handleCancelEdit}>
                     <X size={16} />
@@ -464,6 +403,7 @@ const ExpenseList = ({ expenses, onExpenseDeleted, onExpenseUpdated, token, show
                         onClick={() => handleDelete(expense.id)}
                         aria-label="Delete expense"
                         title="Delete expense"
+                        disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={16} />
                       </button>

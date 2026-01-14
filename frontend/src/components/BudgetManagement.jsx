@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
-import { DollarSign, Plus, Trash2, Edit2, Check, X, AlertTriangle } from "lucide-react";
+import { useState } from "react";
+import { DollarSign, Plus, Trash2, Edit2, Check, X } from "lucide-react";
 import { CATEGORIES } from "../constants/categories";
+import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from "../hooks";
 import LoadingSkeleton from "./LoadingSkeleton";
 import "./BudgetManagement.css";
 
-const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
-  const [budgets, setBudgets] = useState([]);
-  const [loading, setLoading] = useState(true);
+const BudgetManagement = ({ showToast }) => {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [filterMonth, setFilterMonth] = useState(new Date().getMonth() + 1);
@@ -30,54 +29,18 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
     repeatUnit: "",
   });
 
-  const fetchBudgets = async () => {
-    setLoading(true);
-    try {
-      const headers = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      let url = "http://localhost:8000/api/budgets/check";
-      const params = new URLSearchParams();
-      if (filterMonth) params.append("month", filterMonth);
-      if (filterYear) params.append("year", filterYear);
-      if (params.toString()) {
-        url += `?${params.toString()}`;
-      }
-
-      const response = await fetch(url, { headers });
-
-      if (response.ok) {
-        const data = await response.json();
-        setBudgets(data.budgets || []);
-      } else {
-        throw new Error("Failed to fetch budgets");
-      }
-    } catch (error) {
-      console.error("Error fetching budgets:", error);
-      if (showToast) {
-        showToast("Failed to load budgets", "error");
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchBudgets();
-  }, [token, filterMonth, filterYear]);
+  // React Query hooks
+  const { data: budgets = [], isLoading: loading } = useBudgets({
+    month: filterMonth,
+    year: filterYear,
+  });
+  const createMutation = useCreateBudget();
+  const updateMutation = useUpdateBudget();
+  const deleteMutation = useDeleteBudget();
 
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
       const payload = {
         category: formData.category,
         amount: parseFloat(formData.amount),
@@ -88,62 +51,36 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
         repeat_unit: formData.repeatUnit || null,
       };
 
-      const response = await fetch("http://localhost:8000/api/budgets", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
+      await createMutation.mutateAsync(payload);
+      setShowAddForm(false);
+      const now = new Date();
+      setFormData({
+        category: "",
+        amount: "",
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+        recurring: false,
+        repeatInterval: "",
+        repeatUnit: "",
       });
-
-      if (response.ok) {
-        setShowAddForm(false);
-        const now = new Date();
-        setFormData({
-          category: "",
-          amount: "",
-          month: now.getMonth() + 1,
-          year: now.getFullYear(),
-          recurring: false,
-          repeatInterval: "",
-          repeatUnit: "",
-        });
-        fetchBudgets();
-        if (onBudgetChange) {
-          onBudgetChange();
-        }
-        if (showToast) {
-          showToast("Budget created successfully", "success");
-        }
-      } else {
-        const error = await response.json();
-        const errorMsg = error.detail || "Failed to create budget";
-        if (showToast) {
-          showToast(errorMsg, "error");
-        }
+      if (showToast) {
+        showToast("Budget created successfully", "success");
       }
     } catch (error) {
       console.error("Error creating budget:", error);
       if (showToast) {
-        showToast("Failed to create budget", "error");
+        showToast(error.message || "Failed to create budget", "error");
       }
     }
   };
 
   const handleUpdate = async (id) => {
     try {
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      // Determine if recurring based on repeat_interval and repeat_unit
       const isRecurring = editForm.repeatInterval && editForm.repeatUnit;
-      
-      const response = await fetch(`http://localhost:8000/api/budgets/${id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({
+
+      await updateMutation.mutateAsync({
+        id,
+        data: {
           category: editForm.category,
           amount: parseFloat(editForm.amount),
           month: parseInt(editForm.month),
@@ -151,39 +88,27 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
           recurring: isRecurring,
           repeat_interval: editForm.repeatInterval && editForm.repeatInterval.trim() !== "" ? parseInt(editForm.repeatInterval) : null,
           repeat_unit: editForm.repeatUnit && editForm.repeatUnit.trim() !== "" ? editForm.repeatUnit : null,
-        }),
+        },
       });
 
-      if (response.ok) {
-        setEditingId(null);
-        const now = new Date();
-        setEditForm({
-          category: "",
-          amount: "",
-          month: now.getMonth() + 1,
-          year: now.getFullYear(),
-          recurring: false,
-          repeatInterval: "",
-          repeatUnit: "",
-        });
-        fetchBudgets();
-        if (onBudgetChange) {
-          onBudgetChange();
-        }
-        if (showToast) {
-          showToast("Budget updated successfully", "success");
-        }
-      } else {
-        const error = await response.json();
-        const errorMsg = error.detail || "Failed to update budget";
-        if (showToast) {
-          showToast(errorMsg, "error");
-        }
+      setEditingId(null);
+      const now = new Date();
+      setEditForm({
+        category: "",
+        amount: "",
+        month: now.getMonth() + 1,
+        year: now.getFullYear(),
+        recurring: false,
+        repeatInterval: "",
+        repeatUnit: "",
+      });
+      if (showToast) {
+        showToast("Budget updated successfully", "success");
       }
     } catch (error) {
       console.error("Error updating budget:", error);
       if (showToast) {
-        showToast("Failed to update budget", "error");
+        showToast(error.message || "Failed to update budget", "error");
       }
     }
   };
@@ -194,28 +119,9 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
     }
 
     try {
-      const headers = {};
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await fetch(`http://localhost:8000/api/budgets/${id}`, {
-        method: "DELETE",
-        headers,
-      });
-
-      if (response.ok) {
-        fetchBudgets();
-        if (onBudgetChange) {
-          onBudgetChange();
-        }
-        if (showToast) {
-          showToast("Budget deleted successfully", "success");
-        }
-      } else {
-        if (showToast) {
-          showToast("Failed to delete budget", "error");
-        }
+      await deleteMutation.mutateAsync(id);
+      if (showToast) {
+        showToast("Budget deleted successfully", "success");
       }
     } catch (error) {
       console.error("Error deleting budget:", error);
@@ -367,7 +273,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                   onChange={(e) => {
                     const val = e.target.value;
                     setFormData({
-                      ...formData, 
+                      ...formData,
                       repeatInterval: val,
                       recurring: val && formData.repeatUnit ? true : false
                     });
@@ -379,7 +285,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                   onChange={(e) => {
                     const val = e.target.value;
                     setFormData({
-                      ...formData, 
+                      ...formData,
                       repeatUnit: val,
                       recurring: formData.repeatInterval && val ? true : false
                     });
@@ -399,9 +305,9 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="save-button">
+            <button type="submit" className="save-button" disabled={createMutation.isPending}>
               <Check size={16} />
-              <span>Create Budget</span>
+              <span>{createMutation.isPending ? "Creating..." : "Create Budget"}</span>
             </button>
             <button type="button" className="cancel-button" onClick={() => setShowAddForm(false)}>
               <X size={16} />
@@ -484,7 +390,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                           onChange={(e) => {
                             const val = e.target.value;
                             setEditForm({
-                              ...editForm, 
+                              ...editForm,
                               repeatInterval: val,
                               recurring: val && editForm.repeatUnit ? true : false
                             });
@@ -497,7 +403,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                           onChange={(e) => {
                             const val = e.target.value;
                             setEditForm({
-                              ...editForm, 
+                              ...editForm,
                               repeatUnit: val,
                               recurring: editForm.repeatInterval && val ? true : false
                             });
@@ -518,9 +424,13 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                     </div>
                   </div>
                   <div className="edit-actions">
-                    <button className="save-button" onClick={() => handleUpdate(budget.id)}>
+                    <button
+                      className="save-button"
+                      onClick={() => handleUpdate(budget.id)}
+                      disabled={updateMutation.isPending}
+                    >
                       <Check size={16} />
-                      <span>Save</span>
+                      <span>{updateMutation.isPending ? "Saving..." : "Save"}</span>
                     </button>
                     <button className="cancel-button" onClick={cancelEdit}>
                       <X size={16} />
@@ -544,7 +454,11 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                       <button className="edit-budget-button" onClick={() => startEdit(budget)}>
                         <Edit2 size={16} />
                       </button>
-                      <button className="delete-budget-button" onClick={() => handleDelete(budget.id)}>
+                      <button
+                        className="delete-budget-button"
+                        onClick={() => handleDelete(budget.id)}
+                        disabled={deleteMutation.isPending}
+                      >
                         <Trash2 size={16} />
                       </button>
                     </div>
@@ -571,7 +485,7 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
                         className="budget-progress-fill"
                         style={{
                           width: `${Math.min(budget.percentage_used || 0, 100)}%`,
-                          backgroundColor: 
+                          backgroundColor:
                             (budget.percentage_used || 0) >= 100 ? '#dc2626' :
                             (budget.percentage_used || 0) >= 90 ? '#eab308' :
                             (budget.percentage_used || 0) >= 75 ? '#f59e0b' :
@@ -597,4 +511,3 @@ const BudgetManagement = ({ token, onBudgetChange, showToast }) => {
 };
 
 export default BudgetManagement;
-

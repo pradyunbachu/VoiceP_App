@@ -1,12 +1,16 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Mic, Loader2, Check, X, Package, AlertCircle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
+import { useAuth } from "../context/AuthContext";
+import { useCreateExpense, useCreateExpenseSimple } from "../hooks";
+import { API_BASE_URL } from "../config/api";
 import "./QuickRecordPopup.css";
 
-const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
+const QuickRecordPopup = ({ showToast }) => {
+  const { getToken } = useAuth();
   const [isVisible, setIsVisible] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [extractedExpense, setExtractedExpense] = useState(null);
   const [error, setError] = useState("");
@@ -18,6 +22,13 @@ const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
   const streamRef = useRef(null);
   const timerRef = useRef(null);
   const isSpaceHeldRef = useRef(false);
+
+  // React Query mutations
+  const createExpenseMutation = useCreateExpense();
+  const createExpenseSimpleMutation = useCreateExpenseSimple();
+
+  // Combined processing state
+  const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || isTranscribing;
 
   // Recording timer
   useEffect(() => {
@@ -120,9 +131,11 @@ const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
   }, [isRecording]);
 
   const processAudio = async (audioBlob, mimeType = "audio/webm") => {
-    setIsProcessing(true);
+    setIsTranscribing(true);
 
     try {
+      const token = getToken();
+
       // Step 1: Transcribe
       const formData = new FormData();
       let extension = "webm";
@@ -137,7 +150,7 @@ const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
       }
 
       const transcriptResponse = await fetch(
-        "http://localhost:8000/api/transcribe",
+        `${API_BASE_URL}/api/transcribe`,
         {
           method: "POST",
           headers: transcribeHeaders,
@@ -150,51 +163,22 @@ const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
       }
 
       const transcriptData = await transcriptResponse.json();
+      setIsTranscribing(false);
 
-      // Step 2: Extract expense
-      const headers = {
-        "Content-Type": "application/json",
-      };
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const extractResponse = await fetch(
-        "http://localhost:8000/api/extract-expense",
-        {
-          method: "POST",
-          headers,
-          body: JSON.stringify({ transcript: transcriptData.transcript }),
-        }
-      );
-
-      if (!extractResponse.ok) {
+      // Step 2: Extract expense using mutation
+      try {
+        const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
+        handleExpenseData(expenseData);
+      } catch (extractError) {
         // Try simple extraction fallback
-        const simpleResponse = await fetch(
-          "http://localhost:8000/api/extract-expense-simple",
-          {
-            method: "POST",
-            headers,
-            body: JSON.stringify({ transcript: transcriptData.transcript }),
-          }
-        );
-
-        if (simpleResponse.ok) {
-          const expenseData = await simpleResponse.json();
-          handleExpenseData(expenseData);
-        } else {
-          throw new Error("Failed to extract expense");
-        }
-        return;
+        const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptData.transcript);
+        handleExpenseData(expenseData);
       }
-
-      const expenseData = await extractResponse.json();
-      handleExpenseData(expenseData);
     } catch (error) {
       console.error("Error processing audio:", error);
       setError(error.message || "Failed to process recording");
     } finally {
-      setIsProcessing(false);
+      setIsTranscribing(false);
     }
   };
 
@@ -210,7 +194,6 @@ const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
       });
       checkForPantryItems(expenseData);
     }
-    if (onExpenseAdded) onExpenseAdded();
   };
 
   const handleDismiss = () => {
@@ -364,7 +347,6 @@ const QuickRecordPopup = ({ token, onExpenseAdded, showToast }) => {
       {showPantryModal && pendingPantryExpense && (
         <AddToPantryModal
           expense={pendingPantryExpense}
-          token={token}
           onClose={() => {
             setShowPantryModal(false);
             setPendingPantryExpense(null);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useMemo } from "react";
 import {
   Package,
   Plus,
@@ -18,7 +18,6 @@ import {
   ShoppingCart,
   LayoutGrid,
   List,
-  GripVertical
 } from "lucide-react";
 import {
   DndContext,
@@ -31,6 +30,16 @@ import {
   useDroppable,
 } from "@dnd-kit/core";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
+import {
+  usePantryItems,
+  usePantryStats,
+  useCreatePantryItem,
+  useUpdatePantryItem,
+  useUpdatePantryStatus,
+  useDeletePantryItem,
+  useBulkDeletePantryItems,
+} from "../hooks";
+import LoadingSkeleton from "./LoadingSkeleton";
 import "./Pantry.css";
 
 // Draggable shelf item component
@@ -110,11 +119,8 @@ const DroppableShelf = ({ category, children, isEmpty }) => {
   );
 };
 
-const Pantry = ({ token, showToast }) => {
-  // State management
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [stats, setStats] = useState(null);
+const Pantry = ({ showToast }) => {
+  // View mode state
   const [viewMode, setViewMode] = useState("shelf"); // 'shelf' or 'list'
 
   // Form state
@@ -143,54 +149,21 @@ const Pantry = ({ token, showToast }) => {
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
 
-  // Fetch pantry items
-  const fetchItems = async () => {
-    setLoading(true);
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const params = new URLSearchParams();
-      if (categoryFilter) params.append("category", categoryFilter);
-      if (statusFilter) params.append("stock_status", statusFilter);
-      params.append("sort_by", sortBy);
-      params.append("sort_order", sortOrder);
+  // React Query hooks
+  const { data: items = [], isLoading: loading } = usePantryItems({
+    category: categoryFilter || undefined,
+    stock_status: statusFilter || undefined,
+    sort_by: sortBy,
+    sort_order: sortOrder,
+  });
+  const { data: stats } = usePantryStats();
 
-      const url = `http://localhost:8000/api/pantry?${params.toString()}`;
-      const response = await fetch(url, { headers });
-
-      if (response.ok) {
-        const data = await response.json();
-        setItems(data.items || []);
-      } else {
-        throw new Error("Failed to fetch pantry items");
-      }
-    } catch (error) {
-      console.error("Error fetching pantry:", error);
-      if (showToast) showToast("Failed to load pantry items", "error");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Fetch stats
-  const fetchStats = async () => {
-    try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await fetch("http://localhost:8000/api/pantry/stats", { headers });
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data);
-      }
-    } catch (error) {
-      console.error("Error fetching pantry stats:", error);
-    }
-  };
-
-  useEffect(() => {
-    if (token) {
-      fetchItems();
-      fetchStats();
-    }
-  }, [token, categoryFilter, statusFilter, sortBy, sortOrder]);
+  // Mutations
+  const createMutation = useCreatePantryItem();
+  const updateMutation = useUpdatePantryItem();
+  const statusMutation = useUpdatePantryStatus();
+  const deleteMutation = useDeletePantryItem();
+  const bulkDeleteMutation = useBulkDeletePantryItems();
 
   // Filtered items based on search
   const filteredItems = useMemo(() => {
@@ -249,28 +222,11 @@ const Pantry = ({ token, showToast }) => {
 
     // Update the category
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
-
-      const response = await fetch(`http://localhost:8000/api/pantry/${draggedItemId}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ ...draggedItem, category: targetCategory }),
+      await updateMutation.mutateAsync({
+        id: draggedItemId,
+        data: { ...draggedItem, category: targetCategory },
       });
-
-      if (response.ok) {
-        // Update local state immediately for smooth UX
-        setItems((prevItems) =>
-          prevItems.map((item) =>
-            item.id === draggedItemId ? { ...item, category: targetCategory } : item
-          )
-        );
-        if (showToast) showToast(`Moved "${draggedItem.name}" to ${targetCategory}`, "success");
-      } else {
-        if (showToast) showToast("Failed to update item category", "error");
-      }
+      if (showToast) showToast(`Moved "${draggedItem.name}" to ${targetCategory}`, "success");
     } catch (error) {
       console.error("Error updating category:", error);
       if (showToast) showToast("Error updating item category", "error");
@@ -281,68 +237,34 @@ const Pantry = ({ token, showToast }) => {
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      };
-
-      const response = await fetch("http://localhost:8000/api/pantry", {
-        method: "POST",
-        headers,
-        body: JSON.stringify(formData)
+      await createMutation.mutateAsync(formData);
+      setShowAddForm(false);
+      setFormData({
+        name: "",
+        quantity: 1,
+        unit: "",
+        category: "Other",
+        expiration_date: "",
+        purchase_date: new Date().toISOString().split("T")[0],
+        stock_status: "full",
+        notes: ""
       });
-
-      if (response.ok) {
-        setShowAddForm(false);
-        setFormData({
-          name: "",
-          quantity: 1,
-          unit: "",
-          category: "Other",
-          expiration_date: "",
-          purchase_date: new Date().toISOString().split("T")[0],
-          stock_status: "full",
-          notes: ""
-        });
-        fetchItems();
-        fetchStats();
-        if (showToast) showToast("Item added to pantry", "success");
-      } else {
-        const error = await response.json();
-        if (showToast) showToast(error.detail || "Failed to add item", "error");
-      }
+      if (showToast) showToast("Item added to pantry", "success");
     } catch (error) {
       console.error("Error creating item:", error);
-      if (showToast) showToast("Error adding item to pantry", "error");
+      if (showToast) showToast(error.message || "Error adding item to pantry", "error");
     }
   };
 
   const handleUpdate = async (id) => {
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      };
-
-      const response = await fetch(`http://localhost:8000/api/pantry/${id}`, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify(editForm)
-      });
-
-      if (response.ok) {
-        setEditingId(null);
-        setEditForm({});
-        fetchItems();
-        fetchStats();
-        if (showToast) showToast("Item updated successfully", "success");
-      } else {
-        const error = await response.json();
-        if (showToast) showToast(error.detail || "Failed to update item", "error");
-      }
+      await updateMutation.mutateAsync({ id, data: editForm });
+      setEditingId(null);
+      setEditForm({});
+      if (showToast) showToast("Item updated successfully", "success");
     } catch (error) {
       console.error("Error updating item:", error);
-      if (showToast) showToast("Error updating item", "error");
+      if (showToast) showToast(error.message || "Error updating item", "error");
     }
   };
 
@@ -350,19 +272,8 @@ const Pantry = ({ token, showToast }) => {
     if (!window.confirm("Are you sure you want to delete this item?")) return;
 
     try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await fetch(`http://localhost:8000/api/pantry/${id}`, {
-        method: "DELETE",
-        headers
-      });
-
-      if (response.ok) {
-        fetchItems();
-        fetchStats();
-        if (showToast) showToast("Item deleted successfully", "success");
-      } else {
-        if (showToast) showToast("Failed to delete item", "error");
-      }
+      await deleteMutation.mutateAsync(id);
+      if (showToast) showToast("Item deleted successfully", "success");
     } catch (error) {
       console.error("Error deleting item:", error);
       if (showToast) showToast("Error deleting item", "error");
@@ -372,20 +283,8 @@ const Pantry = ({ token, showToast }) => {
   // Remove item from pantry (keeps the expense)
   const handleRemoveFromPantry = async (id) => {
     try {
-      const headers = { Authorization: `Bearer ${token}` };
-      const response = await fetch(`http://localhost:8000/api/pantry/${id}`, {
-        method: "DELETE",
-        headers
-      });
-
-      if (response.ok) {
-        // Update local state immediately for smooth UX
-        setItems((prevItems) => prevItems.filter((item) => item.id !== id));
-        fetchStats();
-        if (showToast) showToast("Item removed from pantry", "success");
-      } else {
-        if (showToast) showToast("Failed to remove item", "error");
-      }
+      await deleteMutation.mutateAsync(id);
+      if (showToast) showToast("Item removed from pantry", "success");
     } catch (error) {
       console.error("Error removing item:", error);
       if (showToast) showToast("Error removing item", "error");
@@ -394,20 +293,7 @@ const Pantry = ({ token, showToast }) => {
 
   const handleStatusChange = async (id, newStatus) => {
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      };
-
-      const response = await fetch(
-        `http://localhost:8000/api/pantry/${id}/status?stock_status=${newStatus}`,
-        { method: "PUT", headers }
-      );
-
-      if (response.ok) {
-        fetchItems();
-        fetchStats();
-      }
+      await statusMutation.mutateAsync({ id, status: newStatus });
     } catch (error) {
       console.error("Error updating status:", error);
     }
@@ -422,24 +308,10 @@ const Pantry = ({ token, showToast }) => {
     if (!window.confirm(`Delete ${selectedItems.size} item(s)?`)) return;
 
     try {
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`
-      };
-
-      const response = await fetch("http://localhost:8000/api/pantry/bulk", {
-        method: "DELETE",
-        headers,
-        body: JSON.stringify({ item_ids: Array.from(selectedItems) })
-      });
-
-      if (response.ok) {
-        setSelectedItems(new Set());
-        setIsSelectMode(false);
-        fetchItems();
-        fetchStats();
-        if (showToast) showToast("Items deleted successfully", "success");
-      }
+      await bulkDeleteMutation.mutateAsync(Array.from(selectedItems));
+      setSelectedItems(new Set());
+      setIsSelectMode(false);
+      if (showToast) showToast("Items deleted successfully", "success");
     } catch (error) {
       console.error("Error bulk deleting:", error);
       if (showToast) showToast("Error deleting items", "error");
@@ -658,9 +530,9 @@ const Pantry = ({ token, showToast }) => {
             </div>
           </div>
           <div className="form-actions">
-            <button type="submit" className="save-button">
+            <button type="submit" className="save-button" disabled={createMutation.isPending}>
               <Check size={16} />
-              <span>Add Item</span>
+              <span>{createMutation.isPending ? "Adding..." : "Add Item"}</span>
             </button>
             <button type="button" className="cancel-button" onClick={() => setShowAddForm(false)}>
               <X size={16} />
@@ -728,10 +600,10 @@ const Pantry = ({ token, showToast }) => {
             <button
               className="bulk-delete-button"
               onClick={handleBulkDelete}
-              disabled={selectedItems.size === 0}
+              disabled={selectedItems.size === 0 || bulkDeleteMutation.isPending}
             >
               <Trash2 size={16} />
-              <span>Delete ({selectedItems.size})</span>
+              <span>{bulkDeleteMutation.isPending ? "Deleting..." : `Delete (${selectedItems.size})`}</span>
             </button>
             <button
               className="cancel-select-button"
@@ -747,8 +619,7 @@ const Pantry = ({ token, showToast }) => {
       {/* Items Display */}
       {loading ? (
         <div className="loading-state">
-          <div className="loading-spinner"></div>
-          <p>Loading pantry...</p>
+          <LoadingSkeleton type="card" count={6} />
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state">
@@ -858,8 +729,12 @@ const Pantry = ({ token, showToast }) => {
                     className="edit-notes"
                   />
                   <div className="edit-actions">
-                    <button className="save-btn" onClick={() => handleUpdate(item.id)}>
-                      <Check size={16} /> Save
+                    <button
+                      className="save-btn"
+                      onClick={() => handleUpdate(item.id)}
+                      disabled={updateMutation.isPending}
+                    >
+                      <Check size={16} /> {updateMutation.isPending ? "Saving..." : "Save"}
                     </button>
                     <button className="cancel-btn" onClick={() => setEditingId(null)}>
                       <X size={16} /> Cancel
@@ -882,7 +757,12 @@ const Pantry = ({ token, showToast }) => {
                         <button className="edit-button" onClick={() => startEdit(item)} title="Edit">
                           <Edit2 size={16} />
                         </button>
-                        <button className="delete-button" onClick={() => handleDelete(item.id)} title="Delete">
+                        <button
+                          className="delete-button"
+                          onClick={() => handleDelete(item.id)}
+                          title="Delete"
+                          disabled={deleteMutation.isPending}
+                        >
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -1011,8 +891,12 @@ const Pantry = ({ token, showToast }) => {
                 />
               </div>
               <div className="form-actions">
-                <button className="save-button" onClick={() => handleUpdate(editingId)}>
-                  <Check size={16} /> Save
+                <button
+                  className="save-button"
+                  onClick={() => handleUpdate(editingId)}
+                  disabled={updateMutation.isPending}
+                >
+                  <Check size={16} /> {updateMutation.isPending ? "Saving..." : "Save"}
                 </button>
                 <button className="delete-btn" onClick={() => { handleDelete(editingId); setEditingId(null); }}>
                   <Trash2 size={16} /> Delete

@@ -1,41 +1,21 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, Wallet, AlertTriangle } from 'lucide-react'
+import { useBudgets } from '../hooks'
 import LoadingSkeleton from './LoadingSkeleton'
 import './AnalyticsDashboard.css'
 
 const COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
 
-const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
-  const [budgets, setBudgets] = useState([])
-  const [loadingBudgets, setLoadingBudgets] = useState(false)
+const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
   const [budgetMonth, setBudgetMonth] = useState(new Date().getMonth() + 1)
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear())
 
-  useEffect(() => {
-    if (token) {
-      fetchBudgets()
-    }
-  }, [token, budgetMonth, budgetYear])
-
-  const fetchBudgets = async () => {
-    setLoadingBudgets(true)
-    try {
-      const response = await fetch(`http://localhost:8000/api/budgets/check?month=${budgetMonth}&year=${budgetYear}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      })
-      if (response.ok) {
-        const data = await response.json()
-        setBudgets(data.budgets || [])
-      }
-    } catch (error) {
-      console.error('Error fetching budgets:', error)
-    } finally {
-      setLoadingBudgets(false)
-    }
-  }
+  // Use shared budget query - eliminates duplicate fetching with BudgetManagement
+  const { data: budgets = [], isLoading: loadingBudgets } = useBudgets({
+    month: budgetMonth,
+    year: budgetYear,
+  })
 
   const getMonthName = (month) => {
     return new Date(2000, month - 1).toLocaleString('default', { month: 'long' })
@@ -95,8 +75,8 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
           <div className="stat-content">
             <p className="stat-label">Average per Purchase</p>
             <p className="stat-value">
-              ${analytics.expense_count > 0 
-                ? (analytics.total_expenses / analytics.expense_count).toFixed(2) 
+              ${analytics.expense_count > 0
+                ? (analytics.total_expenses / analytics.expense_count).toFixed(2)
                 : '0.00'}
             </p>
           </div>
@@ -122,20 +102,20 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
                 <XAxis dataKey="date" stroke="#a0a0a0" />
                 <YAxis stroke="#a0a0a0" />
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => `$${value.toFixed(2)}`}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(26, 26, 26, 0.95)', 
+                  contentStyle={{
+                    backgroundColor: 'rgba(26, 26, 26, 0.95)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '8px',
                     color: '#e0e0e0'
                   }}
                 />
                 <Legend wrapperStyle={{ color: '#e0e0e0' }} />
-                <Line 
-                  type="monotone" 
-                  dataKey="amount" 
-                  stroke="#22c55e" 
+                <Line
+                  type="monotone"
+                  dataKey="amount"
+                  stroke="#22c55e"
                   strokeWidth={3}
                   name="Amount"
                   dot={{ fill: '#22c55e', r: 4 }}
@@ -201,10 +181,10 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
+                <Tooltip
                   formatter={(value) => `$${value.toFixed(2)}`}
-                  contentStyle={{ 
-                    backgroundColor: 'rgba(26, 26, 26, 0.95)', 
+                  contentStyle={{
+                    backgroundColor: 'rgba(26, 26, 26, 0.95)',
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     borderRadius: '8px',
                     color: '#e0e0e0'
@@ -319,4 +299,3 @@ const AnalyticsDashboard = ({ analytics, onClearAll, token, showToast }) => {
 }
 
 export default AnalyticsDashboard
-

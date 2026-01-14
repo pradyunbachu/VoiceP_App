@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import Navigation from "./components/Navigation";
 import LandingPage from "./components/LandingPage";
 import Login from "./components/Login";
@@ -12,48 +13,26 @@ import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { useExpenses, useAnalytics, useClearAllExpenses } from "./hooks";
 import "./App.css";
 
-// Utility function for API calls with retry
-const fetchWithRetry = async (
-  url,
-  options = {},
-  maxRetries = 3,
-  delay = 1000
-) => {
-  for (let i = 0; i < maxRetries; i++) {
-    try {
-      const response = await fetch(url, options);
-      if (response.ok || response.status === 401) {
-        return response;
-      }
-      // Retry on server errors (5xx) or network errors
-      if (i < maxRetries - 1 && (response.status >= 500 || !response.ok)) {
-        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
-        continue;
-      }
-      return response;
-    } catch (error) {
-      if (i < maxRetries - 1) {
-        await new Promise((resolve) => setTimeout(resolve, delay * (i + 1)));
-        continue;
-      }
-      throw error;
-    }
-  }
-};
-
 function AppContent() {
+  const queryClient = useQueryClient();
   const { session, user: authUser, loading: authLoading, signOut, getToken } = useAuth();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState(null);
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState("landing");
-  const [expenses, setExpenses] = useState([]);
-  const [analytics, setAnalytics] = useState(null);
-  const [loading, setLoading] = useState(false);
   const [toasts, setToasts] = useState([]);
+
+  // React Query hooks for data fetching
+  const { data: expenses = [], isLoading: expensesLoading } = useExpenses();
+  const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
+  const clearAllMutation = useClearAllExpenses();
+
+  // Combined loading state
+  const loading = expensesLoading || analyticsLoading;
 
   // Toast notification helper
   const showToast = useCallback((message, type = "info", duration = 5000) => {
@@ -86,105 +65,6 @@ function AppContent() {
     }
   }, [session, authUser, authLoading, getToken, currentView]);
 
-  const fetchExpenses = async (showLoading = true) => {
-    const currentToken = getToken();
-    if (!currentToken) return;
-    if (showLoading) setLoading(true);
-    try {
-      const response = await fetchWithRetry(
-        "http://localhost:8000/api/expenses",
-        {
-          headers: {
-            Authorization: `Bearer ${currentToken}`,
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        handleLogout();
-        showToast("Session expired. Please login again.", "warning");
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch expenses: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setExpenses(data.expenses || []);
-    } catch (error) {
-      console.error("Error fetching expenses:", error);
-      showToast("Failed to load expenses. Please try again.", "error");
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  const fetchAnalytics = async (showLoading = true) => {
-    const currentToken = getToken();
-    if (!currentToken) return;
-    if (showLoading) setLoading(true);
-    try {
-      const response = await fetchWithRetry(
-        "http://localhost:8000/api/analytics",
-        {
-          headers: {
-            Authorization: `Bearer ${currentToken}`,
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        handleLogout();
-        showToast("Session expired. Please login again.", "warning");
-        return;
-      }
-
-      if (!response.ok) {
-        throw new Error(`Failed to fetch analytics: ${response.status}`);
-      }
-
-      const data = await response.json();
-      setAnalytics(data);
-    } catch (error) {
-      console.error("Error fetching analytics:", error);
-      showToast("Failed to load analytics. Please try again.", "error");
-    } finally {
-      if (showLoading) setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    if (
-      isAuthenticated &&
-      currentView !== "landing" &&
-      currentView !== "login"
-    ) {
-      fetchExpenses();
-      fetchAnalytics();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentView, isAuthenticated, token]);
-
-  const handleExpenseAdded = () => {
-    fetchExpenses(false);
-    fetchAnalytics(false);
-  };
-
-  const handleExpenseDeleted = () => {
-    fetchExpenses(false);
-    fetchAnalytics(false);
-  };
-
-  const handleExpenseUpdated = () => {
-    fetchExpenses(false);
-    fetchAnalytics(false);
-  };
-
-  const handleExpensesChange = (newExpenses) => {
-    setExpenses(newExpenses);
-  };
-
   const handleClearAll = async () => {
     if (
       !window.confirm(
@@ -194,31 +74,9 @@ function AppContent() {
       return;
     }
 
-    const currentToken = getToken();
     try {
-      const response = await fetchWithRetry(
-        "http://localhost:8000/api/expenses",
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${currentToken}`,
-          },
-        }
-      );
-
-      if (response.status === 401) {
-        handleLogout();
-        return;
-      }
-
-      if (response.ok) {
-        showToast("All expenses deleted successfully", "success");
-        fetchExpenses(false);
-        fetchAnalytics(false);
-      } else {
-        const error = await response.json();
-        throw new Error(error.detail || "Failed to clear all expenses");
-      }
+      await clearAllMutation.mutateAsync();
+      showToast("All expenses deleted successfully", "success");
     } catch (error) {
       console.error("Error clearing expenses:", error);
       showToast(
@@ -236,18 +94,14 @@ function AppContent() {
     showToast(`Welcome, ${userData.username}!`, "success");
   };
 
-  const handleBudgetChange = () => {
-    fetchAnalytics(false);
-  };
-
   const handleLogout = async () => {
     await signOut();
+    // Clear all React Query cache on logout
+    queryClient.clear();
     setToken(null);
     setUser(null);
     setIsAuthenticated(false);
     setCurrentView("landing");
-    setExpenses([]);
-    setAnalytics(null);
     showToast("Logged out successfully", "info");
   };
 
@@ -290,13 +144,7 @@ function AppContent() {
       case "record":
         return (
           <div className="view-container" key="record">
-            <VoiceRecorder
-              onExpenseAdded={handleExpenseAdded}
-              loading={loading}
-              setLoading={setLoading}
-              token={token}
-              showToast={showToast}
-            />
+            <VoiceRecorder showToast={showToast} />
           </div>
         );
       case "dashboard":
@@ -311,7 +159,6 @@ function AppContent() {
               <AnalyticsDashboard
                 analytics={analytics}
                 onClearAll={handleClearAll}
-                token={token}
                 showToast={showToast}
               />
             ) : (
@@ -327,10 +174,6 @@ function AppContent() {
           <div className="view-container" key="expenses">
             <ExpenseList
               expenses={expenses}
-              onExpenseDeleted={handleExpenseDeleted}
-              onExpenseUpdated={handleExpenseUpdated}
-              onExpensesChange={handleExpensesChange}
-              token={token}
               showToast={showToast}
             />
           </div>
@@ -339,8 +182,6 @@ function AppContent() {
         return (
           <div className="view-container" key="budgets">
             <BudgetManagement
-              token={token}
-              onBudgetChange={handleBudgetChange}
               showToast={showToast}
             />
           </div>
@@ -349,7 +190,6 @@ function AppContent() {
         return (
           <div className="view-container" key="pantry">
             <Pantry
-              token={token}
               showToast={showToast}
             />
           </div>
@@ -357,13 +197,7 @@ function AppContent() {
       default:
         return (
           <div className="view-container" key="default">
-            <VoiceRecorder
-              onExpenseAdded={handleExpenseAdded}
-              loading={loading}
-              setLoading={setLoading}
-              token={token}
-              showToast={showToast}
-            />
+            <VoiceRecorder showToast={showToast} />
           </div>
         );
     }
@@ -380,11 +214,7 @@ function AppContent() {
             onLogout={handleLogout}
             user={user}
           />
-          <QuickRecordPopup
-            token={token}
-            onExpenseAdded={handleExpenseAdded}
-            showToast={showToast}
-          />
+          <QuickRecordPopup showToast={showToast} />
         </>
       )}
       <main className="app-main">{renderView()}</main>

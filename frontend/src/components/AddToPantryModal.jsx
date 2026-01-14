@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Package, X, Check, Plus, Trash2 } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
+import { useAddFromExpense } from "../hooks";
 import "./AddToPantryModal.css";
 
-const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
+const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
   // Parse quantity and unit from item string like "6 chocolates", "2 lbs chicken", "12 eggs"
   const parseQuantityFromItem = (itemStr) => {
     const trimmed = itemStr.trim();
@@ -172,7 +173,9 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
   };
 
   const [items, setItems] = useState(parseItems(expense?.items));
-  const [submitting, setSubmitting] = useState(false);
+
+  // React Query mutation
+  const addFromExpenseMutation = useAddFromExpense();
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...items];
@@ -213,40 +216,22 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
       return;
     }
 
-    setSubmitting(true);
     try {
-      const response = await fetch(
-        "http://localhost:8000/api/pantry/from-expense",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            expense_id: expense.id,
-            items: selectedItems.map((item) => ({
-              name: item.name.trim(),
-              quantity: item.quantity,
-              unit: item.unit || null,
-              category: item.category,
-              expiration_date: item.expiration_date || null,
-            })),
-          }),
-        }
-      );
+      await addFromExpenseMutation.mutateAsync({
+        expenseId: expense.id,
+        items: selectedItems.map((item) => ({
+          name: item.name.trim(),
+          quantity: item.quantity,
+          unit: item.unit || null,
+          category: item.category,
+          expiration_date: item.expiration_date || null,
+        })),
+      });
 
-      if (response.ok) {
-        const data = await response.json();
-        if (onSuccess) onSuccess(data);
-        onClose();
-      } else {
-        console.error("Failed to add items to pantry");
-      }
+      if (onSuccess) onSuccess();
+      onClose();
     } catch (error) {
       console.error("Error adding to pantry:", error);
-    } finally {
-      setSubmitting(false);
     }
   };
 
@@ -383,8 +368,8 @@ const AddToPantryModal = ({ expense, onClose, onSuccess, token }) => {
           <button
             className="confirm-btn"
             onClick={handleSubmit}
-            disabled={submitting || selectedCount === 0}>
-            {submitting ? (
+            disabled={addFromExpenseMutation.isPending || selectedCount === 0}>
+            {addFromExpenseMutation.isPending ? (
               "Adding..."
             ) : (
               <>
