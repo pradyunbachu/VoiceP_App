@@ -1,7 +1,9 @@
 # ============================================================================
 # ANALYTICS ROUTES
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -9,9 +11,12 @@ from config import supabase
 from auth import get_current_user_dependency
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/analytics")
+@limiter.limit("30/minute")
 async def get_analytics(
+    request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     category: Optional[str] = None,
     month: Optional[int] = None,

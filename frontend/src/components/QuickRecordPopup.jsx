@@ -154,6 +154,7 @@ const QuickRecordPopup = ({ showToast }) => {
         {
           method: "POST",
           headers: transcribeHeaders,
+          credentials: "include",
           body: formData,
         }
       );

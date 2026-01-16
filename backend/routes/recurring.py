@@ -1,16 +1,20 @@
 # ============================================================================
 # RECURRING EXPENSE ROUTES
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 
 from config import supabase
 from auth import get_current_user_dependency
 from services.recurring import process_due_recurring_expenses
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/recurring/process")
-async def process_recurring(current_user: dict = Depends(get_current_user_dependency)):
+@limiter.limit("5/minute")
+async def process_recurring(request: Request, current_user: dict = Depends(get_current_user_dependency)):
     """Manually trigger processing of due recurring expenses"""
     try:
         created = process_due_recurring_expenses()
@@ -22,7 +26,8 @@ async def process_recurring(current_user: dict = Depends(get_current_user_depend
         raise HTTPException(status_code=500, detail=f"Error processing recurring expenses: {str(e)}")
 
 @router.get("/recurring")
-async def get_recurring_expenses(current_user: dict = Depends(get_current_user_dependency)):
+@limiter.limit("60/minute")
+async def get_recurring_expenses(request: Request, current_user: dict = Depends(get_current_user_dependency)):
     """Get all recurring expense templates (parent recurring expenses)"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -33,7 +38,8 @@ async def get_recurring_expenses(current_user: dict = Depends(get_current_user_d
     return {"recurring_expenses": recurring, "count": len(recurring)}
 
 @router.delete("/recurring/{expense_id}")
-async def stop_recurring(expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
+@limiter.limit("30/minute")
+async def stop_recurring(request: Request, expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
     """Stop a recurring expense (sets is_recurring to 0)"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")

@@ -242,6 +242,7 @@ const VoiceRecorder = ({ showToast }) => {
         {
           method: "POST",
           headers: transcribeHeaders,
+          credentials: "include",
           body: formData,
         }
       );

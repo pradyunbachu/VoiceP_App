@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from '../queries/queryKeys';
+import { getCsrfHeaders } from '../../lib/csrf';
 
 export const useCreateBudget = () => {
   const queryClient = useQueryClient();
@@ -12,10 +13,11 @@ export const useCreateBudget = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/budgets`, {
         method: 'POST',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify(budgetData),
       });
 
@@ -42,10 +44,11 @@ export const useUpdateBudget = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
         method: 'PUT',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -72,7 +75,8 @@ export const useDeleteBudget = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
+        credentials: 'include',
       });
 
       if (!response.ok) {

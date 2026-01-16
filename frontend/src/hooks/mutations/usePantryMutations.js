@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from '../queries/queryKeys';
+import { getCsrfHeaders } from '../../lib/csrf';
 
 export const useCreatePantryItem = () => {
   const queryClient = useQueryClient();
@@ -12,10 +13,11 @@ export const useCreatePantryItem = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry`, {
         method: 'POST',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify(itemData),
       });
 
@@ -41,10 +43,11 @@ export const useUpdatePantryItem = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/${id}`, {
         method: 'PUT',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -55,8 +58,36 @@ export const useUpdatePantryItem = () => {
 
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
+    onMutate: async ({ id, data }) => {
+      await queryClient.cancelQueries({ queryKey: ['pantry'] });
+
+      const allQueries = queryClient.getQueryCache().findAll({
+        predicate: (query) => query.queryKey[0] === 'pantry' && query.queryKey[1] === 'items',
+      });
+
+      const previousData = new Map();
+
+      allQueries.forEach((query) => {
+        const queryData = query.state.data;
+        if (queryData && Array.isArray(queryData)) {
+          previousData.set(query.queryKey, queryData);
+          queryClient.setQueryData(query.queryKey,
+            queryData.map((item) => item.id === id ? { ...item, ...data } : item)
+          );
+        }
+      });
+
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      if (context?.previousData) {
+        context.previousData.forEach((data, queryKey) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: ['pantry'] });
     },
   });
 };
@@ -72,7 +103,8 @@ export const useUpdatePantryStatus = () => {
         `${API_BASE_URL}/api/pantry/${id}/status?stock_status=${status}`,
         {
           method: 'PUT',
-          headers: { Authorization: `Bearer ${token}` },
+          headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
+          credentials: 'include',
         }
       );
 
@@ -82,8 +114,40 @@ export const useUpdatePantryStatus = () => {
 
       return response.json();
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
+    onMutate: async ({ id, status }) => {
+      // Cancel outgoing refetches
+      await queryClient.cancelQueries({ queryKey: ['pantry'] });
+
+      // Get all pantry item queries and update them
+      const allQueries = queryClient.getQueryCache().findAll({
+        predicate: (query) => query.queryKey[0] === 'pantry' && query.queryKey[1] === 'items',
+      });
+
+      const previousData = new Map();
+
+      allQueries.forEach((query) => {
+        const data = query.state.data;
+        if (data && Array.isArray(data)) {
+          previousData.set(query.queryKey, data);
+          queryClient.setQueryData(query.queryKey,
+            data.map((item) => item.id === id ? { ...item, stock_status: status } : item)
+          );
+        }
+      });
+
+      return { previousData };
+    },
+    onError: (err, variables, context) => {
+      // Rollback on error
+      if (context?.previousData) {
+        context.previousData.forEach((data, queryKey) => {
+          queryClient.setQueryData(queryKey, data);
+        });
+      }
+    },
+    onSettled: () => {
+      // Refetch to ensure server state
+      queryClient.invalidateQueries({ queryKey: ['pantry'] });
     },
   });
 };
@@ -97,7 +161,8 @@ export const useDeletePantryItem = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -121,10 +186,11 @@ export const useBulkDeletePantryItems = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/bulk`, {
         method: 'DELETE',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify({ item_ids: itemIds }),
       });
 
@@ -149,10 +215,11 @@ export const useAddFromExpense = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/from-expense`, {
         method: 'POST',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify({ expense_id: expenseId, items }),
       });
 

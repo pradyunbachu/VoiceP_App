@@ -34,10 +34,14 @@ services:
     restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     depends_on:
       - backend
     networks:
       - voxalyze-network
+    # Uncomment below for HTTPS support:
+    # volumes:
+    #   - ./certs:/etc/nginx/ssl:ro
 
 networks:
   voxalyze-network:

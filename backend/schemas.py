@@ -41,18 +41,6 @@ class TranscriptRequest(BaseModel):
     transcript: str
 
 # ============================================================================
-# ANALYTICS MODELS
-# ============================================================================
-
-class AnalyticsResponse(BaseModel):
-    total_expenses: float
-    expense_count: int
-    expenses_by_store: dict
-    expenses_by_category: dict
-    expenses_by_date: List[dict]
-    recent_expenses: List[ExpenseResponse]
-
-# ============================================================================
 # BUDGET MODELS
 # ============================================================================
 

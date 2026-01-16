@@ -5,7 +5,13 @@
       "Bash(ls:*)",
       "Bash(cd:*)",
       "Bash(npm install:*)",
-      "Bash(npm run build:*)"
+      "Bash(npm run build:*)",
+      "Bash(xargs:*)",
+      "Bash(grep:*)",
+      "Bash(wc:*)",
+      "Bash(npm uninstall:*)",
+      "WebSearch",
+      "Bash(chmod:*)"
     ]
   }
 }

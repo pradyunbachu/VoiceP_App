@@ -26,12 +26,14 @@ limiter = Limiter(key_func=get_remote_address)
 # ----------------------------------------------------------------------------
 
 @router.post("/extract-expense-simple")
+@limiter.limit("20/minute")
 async def extract_expense_simple_endpoint(
-    request: TranscriptRequest,
+    request: Request,
+    transcript_request: TranscriptRequest,
     current_user: dict = Depends(get_current_user_dependency)
 ):
     """Extract expense information using simple regex (no API needed)"""
-    transcript = request.transcript
+    transcript = transcript_request.transcript
     if not transcript or len(transcript.strip()) == 0:
         raise HTTPException(status_code=400, detail="Empty transcript received")
 
@@ -455,7 +457,9 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
 # ----------------------------------------------------------------------------
 
 @router.post("/expenses")
+@limiter.limit("30/minute")
 async def create_expense(
+    request: Request,
     expense: ExpenseCreate,
     current_user: dict = Depends(get_current_user_dependency)
 ):
@@ -494,7 +498,9 @@ async def create_expense(
         raise HTTPException(status_code=500, detail=f"Failed to create expense: {str(e)}")
 
 @router.get("/expenses")
+@limiter.limit("60/minute")
 async def get_expenses(
+    request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     search: Optional[str] = None,
     category: Optional[str] = None,
@@ -566,7 +572,9 @@ async def get_expenses(
     return {"expenses": expenses, "count": len(expenses)}
 
 @router.put("/expenses/{expense_id}")
+@limiter.limit("30/minute")
 async def update_expense(
+    request: Request,
     expense_id: int,
     expense_update: ExpenseUpdate,
     current_user: dict = Depends(get_current_user_dependency)
@@ -606,20 +614,22 @@ async def update_expense(
     return {"message": "Expense updated successfully"}
 
 @router.delete("/expenses/bulk")
+@limiter.limit("10/minute")
 async def delete_expenses_bulk(
-    request: BulkDeleteRequest,
+    request: Request,
+    bulk_request: BulkDeleteRequest,
     current_user: dict = Depends(get_current_user_dependency)
 ):
     """Delete multiple expenses by their IDs (also removes associated pantry items)"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    if not request.expense_ids:
+    if not bulk_request.expense_ids:
         raise HTTPException(status_code=400, detail="No expense IDs provided")
 
     # Delete expenses that belong to the user
     deleted_count = 0
-    for expense_id in request.expense_ids:
+    for expense_id in bulk_request.expense_ids:
         # First delete associated pantry items
         supabase.table("pantry_items").delete().eq("source_expense_id", expense_id).eq("user_id", current_user["id"]).execute()
         # Then delete the expense
@@ -630,7 +640,8 @@ async def delete_expenses_bulk(
     return {"message": f"{deleted_count} expense(s) deleted successfully", "deleted_count": deleted_count}
 
 @router.delete("/expenses/{expense_id}")
-async def delete_expense(expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
+@limiter.limit("30/minute")
+async def delete_expense(request: Request, expense_id: int, current_user: dict = Depends(get_current_user_dependency)):
     """Delete an expense and its associated pantry items"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -647,7 +658,8 @@ async def delete_expense(expense_id: int, current_user: dict = Depends(get_curre
     return {"message": "Expense deleted successfully"}
 
 @router.delete("/expenses")
-async def delete_all_expenses(current_user: dict = Depends(get_current_user_dependency)):
+@limiter.limit("5/minute")
+async def delete_all_expenses(request: Request, current_user: dict = Depends(get_current_user_dependency)):
     """Delete all expenses and associated pantry items for the current user"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")

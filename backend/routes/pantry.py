@@ -1,7 +1,9 @@
 # ============================================================================
 # PANTRY ROUTES
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -15,9 +17,12 @@ from schemas import (
 )
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/pantry")
+@limiter.limit("60/minute")
 async def get_pantry_items(
+    request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     category: Optional[str] = None,
     stock_status: Optional[str] = None,
@@ -63,7 +68,9 @@ async def get_pantry_items(
     return {"items": items, "count": len(items)}
 
 @router.post("/pantry")
+@limiter.limit("30/minute")
 async def create_pantry_item(
+    request: Request,
     item: PantryItemCreate,
     current_user: dict = Depends(get_current_user_dependency)
 ):
@@ -96,8 +103,10 @@ async def create_pantry_item(
     }
 
 @router.post("/pantry/from-expense")
+@limiter.limit("20/minute")
 async def auto_populate_pantry_from_expense(
-    request: AutoPopulatePantryRequest,
+    request: Request,
+    populate_request: AutoPopulatePantryRequest,
     current_user: dict = Depends(get_current_user_dependency)
 ):
     """Auto-populate pantry from a grocery expense"""
@@ -105,7 +114,7 @@ async def auto_populate_pantry_from_expense(
         raise HTTPException(status_code=500, detail="Database not configured")
 
     # Verify expense belongs to user
-    expense_response = supabase.table("expenses").select("*").eq("id", request.expense_id).eq("user_id", current_user["id"]).execute()
+    expense_response = supabase.table("expenses").select("*").eq("id", populate_request.expense_id).eq("user_id", current_user["id"]).execute()
     if not expense_response.data:
         raise HTTPException(status_code=404, detail="Expense not found")
 
@@ -113,7 +122,7 @@ async def auto_populate_pantry_from_expense(
     now = datetime.now().isoformat()
     created_items = []
 
-    for item_data in request.items:
+    for item_data in populate_request.items:
         response = supabase.table("pantry_items").insert({
             "user_id": current_user["id"],
             "name": item_data.get("name", "Unknown Item"),
@@ -124,7 +133,7 @@ async def auto_populate_pantry_from_expense(
             "purchase_date": expense.get("date"),
             "stock_status": "full",
             "notes": f"Auto-added from {expense.get('store', 'Unknown Store')}",
-            "source_expense_id": request.expense_id,
+            "source_expense_id": populate_request.expense_id,
             "created_at": now,
             "updated_at": now
         }).execute()
@@ -138,7 +147,9 @@ async def auto_populate_pantry_from_expense(
     }
 
 @router.put("/pantry/{item_id}")
+@limiter.limit("30/minute")
 async def update_pantry_item(
+    request: Request,
     item_id: int,
     item_update: PantryItemUpdate,
     current_user: dict = Depends(get_current_user_dependency)
@@ -180,7 +191,9 @@ async def update_pantry_item(
     return {"message": "Pantry item updated successfully"}
 
 @router.put("/pantry/{item_id}/status")
+@limiter.limit("60/minute")
 async def update_pantry_item_status(
+    request: Request,
     item_id: int,
     stock_status: str,
     current_user: dict = Depends(get_current_user_dependency)
@@ -204,7 +217,9 @@ async def update_pantry_item_status(
     return {"message": f"Status updated to {stock_status}"}
 
 @router.delete("/pantry/{item_id}")
+@limiter.limit("30/minute")
 async def delete_pantry_item(
+    request: Request,
     item_id: int,
     current_user: dict = Depends(get_current_user_dependency)
 ):
@@ -220,8 +235,10 @@ async def delete_pantry_item(
     return {"message": "Pantry item deleted successfully"}
 
 @router.delete("/pantry/bulk")
+@limiter.limit("10/minute")
 async def delete_pantry_items_bulk(
-    request: BulkPantryDeleteRequest,
+    request: Request,
+    bulk_request: BulkPantryDeleteRequest,
     current_user: dict = Depends(get_current_user_dependency)
 ):
     """Delete multiple pantry items"""
@@ -229,7 +246,7 @@ async def delete_pantry_items_bulk(
         raise HTTPException(status_code=500, detail="Database not configured")
 
     deleted_count = 0
-    for item_id in request.item_ids:
+    for item_id in bulk_request.item_ids:
         response = supabase.table("pantry_items").delete().eq("id", item_id).eq("user_id", current_user["id"]).execute()
         if response.data:
             deleted_count += 1
@@ -237,7 +254,9 @@ async def delete_pantry_items_bulk(
     return {"message": f"{deleted_count} item(s) deleted successfully", "deleted_count": deleted_count}
 
 @router.get("/pantry/stats")
+@limiter.limit("30/minute")
 async def get_pantry_stats(
+    request: Request,
     current_user: dict = Depends(get_current_user_dependency)
 ):
     """Get pantry statistics"""

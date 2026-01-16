@@ -43,7 +43,7 @@ import LoadingSkeleton from "./LoadingSkeleton";
 import "./Pantry.css";
 
 // Draggable shelf item component
-const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, onEdit, onRemove }) => {
+const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, onEdit, onRemove, onStatusChange }) => {
   const {
     attributes,
     listeners,
@@ -56,6 +56,12 @@ const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, on
     transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
     zIndex: isDragging ? 1000 : 1,
   };
+
+  const statusOptions = [
+    { value: 'full', label: 'In Stock', icon: <CheckCircle size={12} /> },
+    { value: 'low', label: 'Low', icon: <AlertTriangle size={12} /> },
+    { value: 'out_of_stock', label: 'Out', icon: <Circle size={12} /> },
+  ];
 
   return (
     <div
@@ -80,9 +86,6 @@ const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, on
         e.stopPropagation();
         onEdit(item);
       }}>
-        <div className="shelf-item-icon">
-          {getStatusIcon(item.stock_status)}
-        </div>
         <div className="shelf-item-name">{item.name}</div>
         {item.quantity && (
           <div className="shelf-item-qty">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</div>
@@ -93,6 +96,26 @@ const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, on
         {isExpired && (
           <div className="shelf-item-badge expired">Expired</div>
         )}
+      </div>
+      <div
+        className="shelf-item-status-buttons"
+        onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+      >
+        {statusOptions.map((status) => (
+          <button
+            key={status.value}
+            className={`shelf-status-btn ${status.value} ${item.stock_status === status.value ? 'active' : ''}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              onStatusChange(item.id, status.value);
+            }}
+            onPointerDown={(e) => e.stopPropagation()}
+            title={status.label}
+          >
+            {status.icon}
+          </button>
+        ))}
       </div>
     </div>
   );
@@ -198,14 +221,14 @@ const Pantry = ({ showToast }) => {
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8,
+        distance: 5,
       },
     }),
     useSensor(KeyboardSensor)
   );
 
   // Handle drag end - update category when dropped on different shelf
-  const handleDragEnd = async (event) => {
+  const handleDragEnd = (event) => {
     const { active, over } = event;
 
     if (!over) return;
@@ -220,17 +243,18 @@ const Pantry = ({ showToast }) => {
     // If dropped on the same category, do nothing
     if (draggedItem.category === targetCategory) return;
 
-    // Update the category
-    try {
-      await updateMutation.mutateAsync({
-        id: draggedItemId,
-        data: { ...draggedItem, category: targetCategory },
-      });
-      if (showToast) showToast(`Moved "${draggedItem.name}" to ${targetCategory}`, "success");
-    } catch (error) {
-      console.error("Error updating category:", error);
-      if (showToast) showToast("Error updating item category", "error");
-    }
+    // Update the category (optimistic update happens in mutation)
+    updateMutation.mutate(
+      { id: draggedItemId, data: { ...draggedItem, category: targetCategory } },
+      {
+        onSuccess: () => {
+          if (showToast) showToast(`Moved "${draggedItem.name}" to ${targetCategory}`, "success");
+        },
+        onError: () => {
+          if (showToast) showToast("Error updating item category", "error");
+        },
+      }
+    );
   };
 
   // CRUD handlers
@@ -291,12 +315,8 @@ const Pantry = ({ showToast }) => {
     }
   };
 
-  const handleStatusChange = async (id, newStatus) => {
-    try {
-      await statusMutation.mutateAsync({ id, status: newStatus });
-    } catch (error) {
-      console.error("Error updating status:", error);
-    }
+  const handleStatusChange = (id, newStatus) => {
+    statusMutation.mutate({ id, status: newStatus });
   };
 
   const handleBulkDelete = async () => {
@@ -310,7 +330,7 @@ const Pantry = ({ showToast }) => {
     try {
       await bulkDeleteMutation.mutateAsync(Array.from(selectedItems));
       setSelectedItems(new Set());
-      setIsSelectMode(false);
+      // Stay in select mode so user can continue selecting more items
       if (showToast) showToast("Items deleted successfully", "success");
     } catch (error) {
       console.error("Error bulk deleting:", error);
@@ -650,6 +670,7 @@ const Pantry = ({ showToast }) => {
                     getStatusIcon={getStatusIcon}
                     onEdit={startEdit}
                     onRemove={handleRemoveFromPantry}
+                    onStatusChange={handleStatusChange}
                   />
                 ))}
               </DroppableShelf>
@@ -781,7 +802,7 @@ const Pantry = ({ showToast }) => {
                       {["full", "low", "out_of_stock"].map((status) => (
                         <button
                           key={status}
-                          className={`status-button ${item.stock_status === status ? 'active' : ''}`}
+                          className={`status-button ${status} ${item.stock_status === status ? 'active' : ''}`}
                           onClick={() => handleStatusChange(item.id, status)}
                         >
                           {getStatusIcon(status)}

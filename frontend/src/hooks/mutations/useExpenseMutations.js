@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from '../queries/queryKeys';
+import { getCsrfHeaders } from '../../lib/csrf';
 
 export const useCreateExpense = () => {
   const queryClient = useQueryClient();
@@ -12,10 +13,11 @@ export const useCreateExpense = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/extract-expense`, {
         method: 'POST',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify({ transcript }),
       });
 
@@ -42,10 +44,11 @@ export const useCreateExpenseSimple = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/extract-expense-simple`, {
         method: 'POST',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify({ transcript }),
       });
 
@@ -71,10 +74,11 @@ export const useUpdateExpense = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
         method: 'PUT',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify(data),
       });
 
@@ -118,7 +122,8 @@ export const useDeleteExpense = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
+        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -158,10 +163,11 @@ export const useBulkDeleteExpenses = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses/bulk`, {
         method: 'DELETE',
-        headers: {
+        headers: getCsrfHeaders({
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
-        },
+        }),
+        credentials: 'include',
         body: JSON.stringify({ expense_ids: expenseIds }),
       });
 
@@ -188,7 +194,8 @@ export const useClearAllExpenses = () => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
+        headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
+        credentials: 'include',
       });
 
       if (!response.ok) {

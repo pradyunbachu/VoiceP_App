@@ -16,6 +16,19 @@ ENV/
 
 # Environment variables
 .env
+.env.local
+.env.*.local
+backend/.env
+frontend/.env
+**/.env
+!.env.example
+!**/.env.example
+
+# SSL certificates (for local dev)
+certs/
+*.pem
+*.key
+*.crt
 
 # Node
 node_modules/

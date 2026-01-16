@@ -1,7 +1,9 @@
 # ============================================================================
 # BUDGET ROUTES
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends
+from fastapi import APIRouter, HTTPException, Depends, Request
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 
@@ -10,9 +12,12 @@ from auth import get_current_user_dependency
 from schemas import BudgetCreate, BudgetUpdate
 
 router = APIRouter()
+limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/budgets")
+@limiter.limit("60/minute")
 async def get_budgets(
+    request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     month: Optional[int] = None,
     year: Optional[int] = None
@@ -36,7 +41,9 @@ async def get_budgets(
     return {"budgets": budgets, "count": len(budgets)}
 
 @router.post("/budgets")
+@limiter.limit("20/minute")
 async def create_budget(
+    request: Request,
     budget: BudgetCreate,
     current_user: dict = Depends(get_current_user_dependency)
 ):
@@ -135,7 +142,9 @@ async def create_budget(
         raise HTTPException(status_code=500, detail=f"Failed to create budget: {str(e)}")
 
 @router.put("/budgets/{budget_id}")
+@limiter.limit("30/minute")
 async def update_budget(
+    request: Request,
     budget_id: int,
     budget_update: BudgetUpdate,
     current_user: dict = Depends(get_current_user_dependency)
@@ -203,7 +212,9 @@ async def update_budget(
     return {"message": "Budget updated successfully"}
 
 @router.delete("/budgets/{budget_id}")
+@limiter.limit("30/minute")
 async def delete_budget(
+    request: Request,
     budget_id: int,
     current_user: dict = Depends(get_current_user_dependency)
 ):
@@ -219,7 +230,9 @@ async def delete_budget(
     return {"message": "Budget deleted successfully"}
 
 @router.get("/budgets/check")
+@limiter.limit("30/minute")
 async def check_budgets(
+    request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     month: Optional[int] = None,
     year: Optional[int] = None

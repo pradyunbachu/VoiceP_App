@@ -1,6 +1,7 @@
 # ============================================================================
 # VOICEP API - MAIN ENTRY POINT
 # ============================================================================
+import os
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -12,6 +13,7 @@ from slowapi.errors import RateLimitExceeded
 from config import supabase
 from services.recurring import process_due_recurring_expenses
 from routes import transcription, expenses, analytics, budgets, recurring, pantry
+from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
 # APPLICATION INITIALIZATION
@@ -35,13 +37,33 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # CORS MIDDLEWARE
 # ============================================================================
 
+# Get allowed origins from environment or use defaults for development
+ALLOWED_ORIGINS = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000,http://localhost:5173"
+).split(",")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=[
+        "Authorization",
+        "Content-Type",
+        "X-CSRF-Token",
+        "X-Requested-With",
+    ],
+    expose_headers=["X-CSRF-Token"],
 )
+
+# ============================================================================
+# CSRF MIDDLEWARE
+# ============================================================================
+
+# Enable CSRF protection (can be disabled for development via env var)
+if os.getenv("DISABLE_CSRF", "false").lower() != "true":
+    app.add_middleware(CSRFMiddleware)
 
 # ============================================================================
 # INCLUDE ROUTERS
@@ -61,6 +83,12 @@ app.include_router(pantry.router, prefix="/api", tags=["Pantry"])
 @app.get("/")
 async def root():
     return {"message": "VoiceP Expense Tracker API"}
+
+
+@app.get("/api/csrf-token", tags=["Security"])
+async def csrf_token_endpoint(request: Request):
+    """Get a CSRF token for state-changing requests."""
+    return await get_csrf_token(request)
 
 # ============================================================================
 # STARTUP EVENT

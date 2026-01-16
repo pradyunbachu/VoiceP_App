@@ -13,7 +13,8 @@ router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/me")
-async def get_current_user_info(current_user: dict = Depends(get_current_user_dependency)):
+@limiter.limit("60/minute")
+async def get_current_user_info(request: Request, current_user: dict = Depends(get_current_user_dependency)):
     """Get current user information"""
     return current_user
 
