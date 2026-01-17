@@ -1,4 +1,4 @@
-# Frontend Dockerfile for VoiceP/Voxalyze
+# Frontend Dockerfile for VoxAlyze
 # Multi-stage build for smaller production image
 
 # Stage 1: Build

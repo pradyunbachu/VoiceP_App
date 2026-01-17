@@ -1,0 +1,221 @@
+.chat-response {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  text-align: left;
+  border-radius: 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+}
+
+.chat-response-header {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.chat-response-header h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chat-response-header svg {
+  color: var(--accent-primary);
+}
+
+/* Intent-specific styling */
+.chat-pantry_query .chat-response-header svg {
+  color: #8b5cf6; /* Purple for pantry */
+}
+
+.chat-expense_query .chat-response-header svg {
+  color: #f59e0b; /* Amber for expenses */
+}
+
+.chat-suggestion .chat-response-header svg {
+  color: #22c55e; /* Green for suggestions */
+}
+
+.chat-general .chat-response-header svg {
+  color: #6b7280; /* Gray for general */
+}
+
+.chat-response-text {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin-bottom: 1rem;
+}
+
+.chat-response-text p {
+  margin: 0 0 0.5rem 0;
+}
+
+.chat-response-text p:last-child {
+  margin-bottom: 0;
+}
+
+/* Data list styling */
+.chat-data-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 1rem;
+}
+
+.chat-data-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  background: var(--bg-input);
+  border-radius: 8px;
+  border: 1px solid var(--border-secondary);
+}
+
+.chat-data-item .item-name {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.chat-data-item .item-details {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  color: var(--text-tertiary);
+  font-size: 0.9rem;
+}
+
+/* Stock status badges */
+.stock-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+
+.stock-badge.full {
+  background: var(--accent-success-bg);
+  color: var(--accent-success);
+}
+
+.stock-badge.low {
+  background: var(--accent-warning-bg);
+  color: var(--accent-warning);
+}
+
+.stock-badge.out_of_stock {
+  background: var(--accent-danger-bg);
+  color: var(--accent-danger);
+}
+
+/* Expense summary styling */
+.chat-data-summary {
+  margin-top: 1rem;
+}
+
+.expense-total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  background: var(--accent-primary-bg);
+  border-radius: 8px;
+  margin-bottom: 0.75rem;
+}
+
+.expense-total .total-label {
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+}
+
+.expense-total .total-amount {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--accent-primary);
+}
+
+.expense-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.expense-meta span {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: var(--bg-input);
+  border-radius: 20px;
+  font-size: 0.8rem;
+  color: var(--text-tertiary);
+}
+
+.expense-item .expense-date {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Shopping list styling */
+.shopping-list {
+  gap: 1rem;
+}
+
+.shopping-section {
+  margin-bottom: 0.5rem;
+}
+
+.shopping-section-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 0.5rem 0;
+}
+
+.shopping-section-title svg {
+  color: var(--accent-danger);
+}
+
+.shopping-item {
+  background: var(--bg-input);
+}
+
+.shopping-item.urgent {
+  background: var(--accent-danger-bg);
+  border-color: var(--accent-danger);
+}
+
+.shopping-item .item-category {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* Responsive adjustments */
+@media (max-width: 480px) {
+  .chat-response {
+    padding: 1rem;
+  }
+
+  .chat-data-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .chat-data-item .item-details {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .expense-total .total-amount {
+    font-size: 1.25rem;
+  }
+}

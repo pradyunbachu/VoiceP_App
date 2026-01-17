@@ -8,6 +8,7 @@ import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import ExpenseList from "./components/ExpenseList";
 import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
+import ShoppingList from "./components/ShoppingList";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
@@ -190,6 +191,14 @@ function AppContent() {
         return (
           <div className="view-container" key="pantry">
             <Pantry
+              showToast={showToast}
+            />
+          </div>
+        );
+      case "shopping-list":
+        return (
+          <div className="view-container" key="shopping-list">
+            <ShoppingList
               showToast={showToast}
             />
           </div>

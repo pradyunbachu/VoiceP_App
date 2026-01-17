@@ -1,5 +1,5 @@
 -- ============================================================================
--- Supabase Database Schema for Voxalyze
+-- Supabase Database Schema for VoxAlyze
 -- ============================================================================
 -- Run this SQL in your Supabase SQL Editor to create all tables
 -- ============================================================================
@@ -100,3 +100,39 @@ CREATE POLICY "Users can delete their own budgets"
 -- For now, you can disable RLS if needed:
 -- ALTER TABLE expenses DISABLE ROW LEVEL SECURITY;
 -- ALTER TABLE budgets DISABLE ROW LEVEL SECURITY;
+
+-- ============================================================================
+-- Shopping List Table (for Supabase Auth)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS shopping_list (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    quantity REAL DEFAULT 1,
+    unit TEXT,
+    category TEXT,
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_shopping_list_user_id ON shopping_list(user_id);
+
+-- Enable RLS for shopping_list
+ALTER TABLE shopping_list ENABLE ROW LEVEL SECURITY;
+
+-- Policies for shopping_list
+CREATE POLICY "Users can view their own shopping list"
+    ON shopping_list FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own shopping list items"
+    ON shopping_list FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own shopping list items"
+    ON shopping_list FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own shopping list items"
+    ON shopping_list FOR DELETE
+    USING (auth.uid() = user_id);

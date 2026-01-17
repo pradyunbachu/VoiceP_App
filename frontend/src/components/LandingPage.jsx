@@ -46,8 +46,8 @@ const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
       <div className="landing-content">
         <div className="landing-logo">
           <Mic size={80} className="logo-icon" />
-          <h1>Voxalyze</h1>
-          <p className="landing-tagline">Voice Powered Expense Tracker</p>
+          <h1>VoxAlyze</h1>
+          <p className="landing-tagline">Your Voice Powered Personal Assistant</p>
           <p className="landing-description">
             Simply speak about your purchases and let AI extract all the details automatically.
             Track your expenses effortlessly with voice commands and powerful analytics.

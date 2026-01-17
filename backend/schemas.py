@@ -97,3 +97,37 @@ class BulkPantryDeleteRequest(BaseModel):
 class AutoPopulatePantryRequest(BaseModel):
     expense_id: int
     items: List[dict]
+
+# ============================================================================
+# SHOPPING LIST MODELS
+# ============================================================================
+
+class ShoppingListItemCreate(BaseModel):
+    name: str
+    quantity: Optional[float] = 1
+    unit: Optional[str] = None
+    category: Optional[str] = None
+    notes: Optional[str] = None
+
+class ShoppingListItemUpdate(BaseModel):
+    name: Optional[str] = None
+    quantity: Optional[float] = None
+    unit: Optional[str] = None
+    category: Optional[str] = None
+    notes: Optional[str] = None
+
+class BulkShoppingListDeleteRequest(BaseModel):
+    item_ids: List[int]
+
+# ============================================================================
+# CHAT MODELS
+# ============================================================================
+
+class ChatRequest(BaseModel):
+    message: str
+
+class ChatResponse(BaseModel):
+    intent: str
+    sub_intent: Optional[str] = None
+    response_text: str
+    data: Optional[dict] = None

@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, Loader2, Check, X, Package, AlertCircle } from "lucide-react";
+import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import { useAuth } from "../context/AuthContext";
-import { useCreateExpense, useCreateExpenseSimple } from "../hooks";
+import { useCreateExpense, useCreateExpenseSimple, useChat } from "../hooks";
 import { API_BASE_URL } from "../config/api";
 import "./QuickRecordPopup.css";
 
@@ -13,6 +13,7 @@ const QuickRecordPopup = ({ showToast }) => {
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
   const [extractedExpense, setExtractedExpense] = useState(null);
+  const [chatResponse, setChatResponse] = useState(null);
   const [error, setError] = useState("");
   const [showPantryModal, setShowPantryModal] = useState(false);
   const [pendingPantryExpense, setPendingPantryExpense] = useState(null);
@@ -26,9 +27,10 @@ const QuickRecordPopup = ({ showToast }) => {
   // React Query mutations
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
+  const chatMutation = useChat();
 
   // Combined processing state
-  const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || isTranscribing;
+  const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
   // Recording timer
   useEffect(() => {
@@ -132,6 +134,7 @@ const QuickRecordPopup = ({ showToast }) => {
 
   const processAudio = async (audioBlob, mimeType = "audio/webm") => {
     setIsTranscribing(true);
+    setChatResponse(null);
 
     try {
       const token = getToken();
@@ -166,14 +169,23 @@ const QuickRecordPopup = ({ showToast }) => {
       const transcriptData = await transcriptResponse.json();
       setIsTranscribing(false);
 
-      // Step 2: Extract expense using mutation
-      try {
-        const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
-        handleExpenseData(expenseData);
-      } catch (extractError) {
-        // Try simple extraction fallback
-        const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptData.transcript);
-        handleExpenseData(expenseData);
+      // Step 2: Send to chat endpoint for intent detection
+      const chatResult = await chatMutation.mutateAsync(transcriptData.transcript);
+
+      // Step 3: Route based on intent
+      if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
+        // Process as expense input
+        try {
+          const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
+          handleExpenseData(expenseData);
+        } catch (extractError) {
+          // Try simple extraction fallback
+          const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptData.transcript);
+          handleExpenseData(expenseData);
+        }
+      } else {
+        // Display chat response for queries/suggestions
+        setChatResponse(chatResult);
       }
     } catch (error) {
       console.error("Error processing audio:", error);
@@ -200,6 +212,7 @@ const QuickRecordPopup = ({ showToast }) => {
   const handleDismiss = () => {
     setIsVisible(false);
     setExtractedExpense(null);
+    setChatResponse(null);
     setError("");
     setPendingPantryExpense(null);
   };
@@ -227,7 +240,7 @@ const QuickRecordPopup = ({ showToast }) => {
         return;
       }
 
-      if (e.code === "Space" && !isSpaceHeldRef.current && !isProcessing && !extractedExpense) {
+      if (e.code === "Space" && !isSpaceHeldRef.current && !isProcessing && !extractedExpense && !chatResponse) {
         e.preventDefault();
         isSpaceHeldRef.current = true;
         startRecording();
@@ -251,7 +264,7 @@ const QuickRecordPopup = ({ showToast }) => {
       window.removeEventListener("keydown", handleKeyDown);
       window.removeEventListener("keyup", handleKeyUp);
     };
-  }, [startRecording, stopRecording, isRecording, isProcessing, extractedExpense]);
+  }, [startRecording, stopRecording, isRecording, isProcessing, extractedExpense, chatResponse]);
 
   if (!isVisible) return null;
 
@@ -337,6 +350,32 @@ const QuickRecordPopup = ({ showToast }) => {
                 )}
                 <button className="dismiss-btn" onClick={handleDismiss}>
                   <X size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Chat Response State */}
+          {chatResponse && !isProcessing && !extractedExpense && (
+            <div className="quick-record-result quick-record-chat">
+              <h3>
+                <MessageCircle size={20} />
+                <span>
+                  {chatResponse.intent === "pantry_query" && "Pantry"}
+                  {chatResponse.intent === "expense_query" && "Spending"}
+                  {chatResponse.intent === "suggestion" && "Shopping List"}
+                  {chatResponse.intent === "general" && "Help"}
+                </span>
+              </h3>
+              <div className="chat-response-text">
+                {chatResponse.response_text.split("\n").map((line, index) => (
+                  <p key={index}>{line}</p>
+                ))}
+              </div>
+              <div className="quick-record-actions">
+                <button className="confirm-btn" onClick={handleDismiss}>
+                  <Check size={18} />
+                  <span>Done</span>
                 </button>
               </div>
             </div>

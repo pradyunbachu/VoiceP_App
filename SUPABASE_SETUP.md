@@ -1,6 +1,6 @@
 # Supabase Setup Guide
 
-This guide will help you set up Supabase for the Voxalyze application.
+This guide will help you set up Supabase for the VoxAlyze application.
 
 ## Prerequisites
 
@@ -12,7 +12,7 @@ This guide will help you set up Supabase for the Voxalyze application.
 1. Go to https://supabase.com/dashboard
 2. Click "New Project"
 3. Fill in:
-   - **Name**: Voxalyze (or your preferred name)
+   - **Name**: VoxAlyze (or your preferred name)
    - **Database Password**: Choose a strong password (save this!)
    - **Region**: Choose closest to you
 4. Click "Create new project"

@@ -25,4 +25,10 @@ export const queryKeys = {
     items: (filters) => [...queryKeys.pantry.all, 'items', filters],
     stats: () => [...queryKeys.pantry.all, 'stats'],
   },
+
+  // Shopping List
+  shoppingList: {
+    all: ['shoppingList'],
+    items: (filters) => [...queryKeys.shoppingList.all, 'items', filters],
+  },
 };

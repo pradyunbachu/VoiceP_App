@@ -253,6 +253,38 @@
   white-space: nowrap;
 }
 
+/* Chat Response State */
+.quick-record-chat h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.quick-record-chat h3::before {
+  display: none;
+}
+
+.quick-record-chat h3 svg {
+  color: var(--accent-primary);
+}
+
+.quick-record-chat .chat-response-text {
+  background: var(--bg-input);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.quick-record-chat .chat-response-text p {
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 0.5rem 0;
+}
+
+.quick-record-chat .chat-response-text p:last-child {
+  margin-bottom: 0;
+}
+
 /* Dark mode adjustments */
 [data-theme="dark"] .quick-record-popup {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);

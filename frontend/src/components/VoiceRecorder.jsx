@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { Mic, Square, Loader2, Type, Package } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
+import ChatResponseDisplay from "./ChatResponseDisplay";
 import { useAuth } from "../context/AuthContext";
-import { useCreateExpense, useCreateExpenseSimple } from "../hooks";
+import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "../hooks";
 import { API_BASE_URL } from "../config/api";
 import "./VoiceRecorder.css";
 
@@ -11,6 +12,7 @@ const VoiceRecorder = ({ showToast }) => {
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [extractedExpense, setExtractedExpense] = useState(null);
+  const [chatResponse, setChatResponse] = useState(null);
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
   const [error, setError] = useState("");
@@ -26,9 +28,11 @@ const VoiceRecorder = ({ showToast }) => {
   // React Query mutations
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
+  const chatMutation = useChat();
+  const removePurchasedMutation = useRemovePurchasedItems();
 
   // Combined loading state
-  const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || isTranscribing;
+  const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
   // Recording timer effect
   useEffect(() => {
@@ -58,14 +62,25 @@ const VoiceRecorder = ({ showToast }) => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Check if expense is a grocery expense and enable pantry button
-  const checkForPantryItems = (expenseData) => {
+  // Handle side effects after expense is created
+  const handleExpenseCreated = async (expenseData) => {
     // Handle both single expense and array of expenses
     let expenses = [];
     if (expenseData.expenses) {
       expenses = expenseData.expenses;
     } else if (expenseData.id) {
       expenses = [expenseData];
+    }
+
+    // Collect all items from the expenses to remove from shopping list
+    const allItems = expenses.map(exp => exp.items).filter(Boolean).join(', ');
+    if (allItems) {
+      try {
+        await removePurchasedMutation.mutateAsync(allItems);
+      } catch (error) {
+        // Silently fail - not critical if shopping list removal fails
+        console.log('Note: Could not remove items from shopping list:', error);
+      }
     }
 
     // Find the first grocery expense to add to pantry
@@ -157,14 +172,14 @@ const VoiceRecorder = ({ showToast }) => {
       // Handle both old format (single expense) and new format (array of expenses)
       if (expenseData.expenses) {
         setExtractedExpense(expenseData);
-        checkForPantryItems(expenseData);
+        handleExpenseCreated(expenseData);
       } else {
         setExtractedExpense({
           expenses: [expenseData],
           count: 1,
           message: expenseData.message
         });
-        checkForPantryItems(expenseData);
+        handleExpenseCreated(expenseData);
       }
     } catch (error) {
       console.error("Error processing transcript:", error);
@@ -197,14 +212,14 @@ const VoiceRecorder = ({ showToast }) => {
       // Handle both old format (single expense) and new format (array of expenses)
       if (expenseData.expenses) {
         setExtractedExpense(expenseData);
-        checkForPantryItems(expenseData);
+        handleExpenseCreated(expenseData);
       } else {
         setExtractedExpense({
           expenses: [expenseData],
           count: 1,
           message: expenseData.message
         });
-        checkForPantryItems(expenseData);
+        handleExpenseCreated(expenseData);
       }
     } catch (error) {
       console.error("Error with simple extraction:", error);
@@ -218,6 +233,7 @@ const VoiceRecorder = ({ showToast }) => {
     setIsTranscribing(true);
     setTranscript("");
     setExtractedExpense(null);
+    setChatResponse(null);
 
     try {
       const token = getToken();
@@ -258,10 +274,19 @@ const VoiceRecorder = ({ showToast }) => {
       setTranscript(transcriptData.transcript);
       setIsTranscribing(false);
 
-      // Step 2: Extract expense information using mutation
-      const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
-      setExtractedExpense(expenseData);
-      checkForPantryItems(expenseData);
+      // Step 2: Send to chat endpoint for intent detection
+      const chatResult = await chatMutation.mutateAsync(transcriptData.transcript);
+
+      // Step 3: Route based on intent
+      if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
+        // Process as expense input
+        const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
+        setExtractedExpense(expenseData);
+        handleExpenseCreated(expenseData);
+      } else {
+        // Display chat response for queries/suggestions
+        setChatResponse(chatResult);
+      }
     } catch (error) {
       console.error("Error processing audio:", error);
       const errorMessage = error.message || "Unknown error occurred";
@@ -281,25 +306,36 @@ const VoiceRecorder = ({ showToast }) => {
 
   const handleManualSubmit = async () => {
     if (!manualInput.trim()) {
-      setError("Please enter a description of your purchase");
+      setError("Please enter your message");
       return;
     }
 
     setError("");
     setTranscript("");
     setExtractedExpense(null);
+    setChatResponse(null);
 
     try {
-      const expenseData = await createExpenseMutation.mutateAsync(manualInput);
-      setExtractedExpense(expenseData);
-      checkForPantryItems(expenseData);
+      // First, detect intent via chat endpoint
+      const chatResult = await chatMutation.mutateAsync(manualInput);
+
+      // Route based on intent
+      if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
+        // Process as expense input
+        const expenseData = await createExpenseMutation.mutateAsync(manualInput);
+        setExtractedExpense(expenseData);
+        handleExpenseCreated(expenseData);
+      } else {
+        // Display chat response for queries/suggestions
+        setChatResponse(chatResult);
+      }
       setManualInput("");
       setShowManualInput(false);
     } catch (error) {
       console.error("Error processing manual input:", error);
       if (error.message?.includes("429") || error.message?.includes("quota")) {
         setError(
-          "OpenAI API quota exceeded. Please add payment method or wait for quota reset."
+          "API quota exceeded. Please try again later."
         );
       } else {
         setError(`Error: ${error.message}`);
@@ -309,10 +345,13 @@ const VoiceRecorder = ({ showToast }) => {
 
   return (
     <div className="voice-recorder">
-      <h2>Record Your Expense</h2>
+      <h2>VoxAssistant</h2>
       <p className="recorder-description">
-        Click the microphone button and describe your purchase. For example: "I
-        bought groceries at Walmart for $45.50 - milk, bread, and eggs"
+        Click the microphone and speak naturally. Log expenses, check your pantry,
+        track spending, or get shopping suggestions.
+      </p>
+      <p className="recorder-examples">
+        Try: "I spent $20 at Walmart", "How many eggs do I have?", or "What should I get from the store?"
       </p>
 
       <div className="recorder-controls">
@@ -351,12 +390,12 @@ const VoiceRecorder = ({ showToast }) => {
 
       {showManualInput && (
         <div className="manual-input-section">
-          <h3>Type Your Expense</h3>
+          <h3>Type Your Message</h3>
           <textarea
             className="manual-textarea"
             value={manualInput}
             onChange={(e) => setManualInput(e.target.value)}
-            placeholder="Example: I bought groceries at Walmart for $45.50 - milk, bread, and eggs"
+            placeholder="Examples: 'I spent $20 at Walmart on groceries', 'How many eggs do I have?', 'What should I get from the store?'"
             rows={4}
             disabled={loading}
           />
@@ -364,7 +403,7 @@ const VoiceRecorder = ({ showToast }) => {
             className="submit-manual-button"
             onClick={handleManualSubmit}
             disabled={loading || !manualInput.trim()}>
-            {loading ? "Processing..." : "Submit Expense"}
+            {loading ? "Processing..." : "Submit"}
           </button>
         </div>
       )}
@@ -435,6 +474,11 @@ const VoiceRecorder = ({ showToast }) => {
             </button>
           )}
         </div>
+      )}
+
+      {/* Chat Response Display for queries */}
+      {chatResponse && !extractedExpense && (
+        <ChatResponseDisplay chatResponse={chatResponse} />
       )}
 
       {/* Add to Pantry Modal for grocery expenses */}

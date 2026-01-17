@@ -1,4 +1,4 @@
-# Voxalyze - Voice Powered Expense Tracker
+# VoxAlyze - Voice Powered Personal Assistant
 
 A modern expense tracking application that lets you record expenses using your voice. Speak about your purchase, and the app extracts store name, items, amount, date, and categories, then displays everything in an analytics dashboard.
 
