@@ -24,6 +24,8 @@ CSRF_PROTECTED_METHODS = {"POST", "PUT", "DELETE", "PATCH"}
 CSRF_EXEMPT_PATHS = {
     "/",
     "/api/transcribe",  # Uses file upload with auth header
+    "/api/insights",  # Protected by JWT authentication
+    "/api/scan-receipt",  # Protected by JWT authentication
 }
 
 

@@ -1,5 +1,5 @@
 .pantry {
-  padding: 2rem;
+  padding: var(--space-6);
   max-width: 1200px;
   margin: 0 auto;
 }
@@ -8,114 +8,118 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .pantry-header h2 {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   margin: 0;
   color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 .pantry-subtitle {
-  color: var(--text-tertiary);
-  margin: 0.5rem 0 0 0;
-  font-size: 0.95rem;
+  color: var(--text-muted);
+  margin: var(--space-2) 0 0 0;
+  font-size: 0.9rem;
 }
 
 .add-item-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
   background: var(--accent-primary);
   color: white;
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  font-family: 'Ubuntu', sans-serif;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .add-item-button:hover {
   background: var(--accent-primary-hover);
-  transform: translateY(-2px);
 }
 
 /* Stats Cards */
 .pantry-stats {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 1rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
 }
 
 .stat-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 1rem;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .stat-card:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--border-primary);
 }
 
 .stat-card.full {
-  border-color: var(--accent-primary);
+  border-color: var(--accent-primary-border);
 }
 
 .stat-card.low {
-  border-color: var(--accent-warning);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .stat-card.out {
-  border-color: var(--accent-danger);
+  border-color: var(--accent-danger-border);
 }
 
 .stat-card.expiring {
-  border-color: var(--accent-warning);
-  background: rgba(234, 179, 8, 0.1);
+  border-color: rgba(251, 191, 36, 0.3);
+  background: var(--accent-warning-bg);
 }
 
 .stat-value {
   display: block;
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 600;
   color: var(--text-primary);
 }
 
 .stat-label {
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 /* Form Styles */
 .pantry-form {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 2rem;
-  margin-bottom: 2rem;
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-6);
 }
 
 .pantry-form h3 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 var(--space-5) 0;
   color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .form-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .form-group {
@@ -124,21 +128,21 @@
 }
 
 .form-group label {
-  margin-bottom: 0.5rem;
-  color: var(--text-primary);
+  margin-bottom: var(--space-2);
+  color: var(--text-tertiary);
   font-weight: 500;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
 }
 
 .form-group select,
 .form-group input {
-  padding: 0.75rem;
+  padding: var(--space-3);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 1rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
 }
 
 .form-group select:focus,
@@ -154,23 +158,22 @@
 
 .form-actions {
   display: flex;
-  gap: 1rem;
-  margin-top: 1.5rem;
+  gap: var(--space-3);
+  margin-top: var(--space-5);
 }
 
 .save-button,
 .cancel-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.9rem;
   font-weight: 500;
-  font-family: 'Ubuntu', sans-serif;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .save-button {
@@ -183,7 +186,7 @@
 }
 
 .cancel-button {
-  background: var(--bg-input);
+  background: transparent;
   color: var(--text-primary);
   border: 1px solid var(--border-primary);
 }
@@ -195,8 +198,8 @@
 /* Controls */
 .pantry-controls {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
 }
 
@@ -208,21 +211,21 @@
 
 .search-icon {
   position: absolute;
-  left: 0.75rem;
+  left: var(--space-3);
   top: 50%;
   transform: translateY(-50%);
-  color: var(--text-tertiary);
+  color: var(--text-muted);
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 0.75rem 0.75rem 2.5rem;
+  padding: var(--space-3) var(--space-3) var(--space-3) var(--space-10);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 1rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
 }
 
 .search-input:focus {
@@ -232,19 +235,19 @@
 
 .filter-controls {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .filter-controls select {
-  padding: 0.75rem;
+  padding: var(--space-3);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 0.95rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-size: 0.875rem;
   cursor: pointer;
+  transition: all 0.15s ease;
 }
 
 .filter-controls select option {
@@ -255,61 +258,61 @@
 .sort-control {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--text-tertiary);
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 .sort-control select {
-  padding: 0.75rem;
+  padding: var(--space-3);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 0.95rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-size: 0.875rem;
 }
 
 /* Bulk Controls */
 .bulk-controls {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-5);
 }
 
 .select-mode-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   background: transparent;
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .select-mode-button:hover {
-  border-color: var(--accent-primary);
-  color: var(--accent-primary);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .bulk-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .bulk-delete-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   background: var(--accent-danger);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: white;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .bulk-delete-button:hover:not(:disabled) {
@@ -324,15 +327,15 @@
 .cancel-select-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 1rem;
-  background: var(--bg-input);
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 0.9rem;
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .cancel-select-button:hover {
@@ -342,48 +345,47 @@
 /* Items Grid */
 .pantry-items {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
 }
 
 .pantry-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 1.25rem;
-  transition: all 0.2s;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  transition: all 0.15s ease;
   position: relative;
 }
 
 .pantry-card:hover {
-  border-color: var(--border-hover);
-  box-shadow: var(--shadow-sm);
+  border-color: var(--border-primary);
 }
 
 .pantry-card.selected {
-  border-color: var(--accent-primary);
-  background: rgba(34, 197, 94, 0.05);
+  border-color: var(--accent-primary-border);
+  background: var(--accent-primary-bg);
 }
 
 .pantry-card.expired {
-  border-color: var(--accent-danger);
-  background: rgba(239, 68, 68, 0.05);
+  border-color: var(--accent-danger-border);
+  background: var(--accent-danger-bg);
 }
 
 .pantry-card.expiring-soon {
-  border-color: var(--accent-warning);
+  border-color: rgba(251, 191, 36, 0.3);
 }
 
 .checkbox-button {
   position: absolute;
-  top: 0.75rem;
-  left: 0.75rem;
+  top: var(--space-3);
+  left: var(--space-3);
   background: none;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   cursor: pointer;
   padding: 0;
-  transition: color 0.2s;
+  transition: color 0.15s ease;
 }
 
 .checkbox-button:hover {
@@ -398,87 +400,86 @@
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .item-name {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  gap: var(--space-1);
 }
 
 .item-name .name {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .item-quantity {
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
+  font-size: 0.8rem;
+  color: var(--text-muted);
 }
 
 .item-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-1);
 }
 
 .edit-button,
 .delete-button {
   background: none;
   border: none;
-  padding: 0.4rem;
+  padding: var(--space-2);
   cursor: pointer;
-  color: var(--text-tertiary);
-  border-radius: 6px;
-  transition: all 0.2s;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
 }
 
 .edit-button:hover {
   color: var(--accent-primary);
-  background: rgba(34, 197, 94, 0.1);
+  background: var(--accent-primary-bg);
 }
 
 .delete-button:hover {
   color: var(--accent-danger);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--accent-danger-bg);
 }
 
 .pantry-card-body {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .item-category {
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
-  padding: 0.25rem 0.6rem;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
   background: var(--bg-input);
-  border-radius: 20px;
-  font-size: 0.8rem;
-  color: var(--text-secondary);
-  margin-bottom: 0.75rem;
+  border-radius: var(--radius-full);
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin-bottom: var(--space-3);
 }
 
 .status-selector {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-2);
   flex-wrap: wrap;
 }
 
 .status-button {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.35rem 0.7rem;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
   border: 1px solid var(--border-primary);
-  border-radius: 20px;
+  border-radius: var(--radius-full);
   background: transparent;
-  color: var(--text-tertiary);
-  font-size: 0.75rem;
+  color: var(--text-muted);
+  font-size: 0.7rem;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: 'Ubuntu', sans-serif;
+  transition: all 0.15s ease;
 }
 
 .status-button:hover {
@@ -486,26 +487,25 @@
   background: var(--bg-card-hover);
 }
 
-/* Active status button states with color-coded backgrounds */
 .status-button.active {
   font-weight: 600;
 }
 
 .status-button.full.active {
-  background: rgba(34, 197, 94, 0.15);
-  border-color: var(--accent-primary);
+  background: var(--accent-primary-bg);
+  border-color: var(--accent-primary-border);
   color: var(--accent-primary);
 }
 
 .status-button.low.active {
-  background: rgba(234, 179, 8, 0.15);
-  border-color: var(--accent-warning);
-  color: #b45309;
+  background: var(--accent-warning-bg);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: var(--accent-warning);
 }
 
 .status-button.out_of_stock.active {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: var(--accent-danger);
+  background: var(--accent-danger-bg);
+  border-color: var(--accent-danger-border);
   color: var(--accent-danger);
 }
 
@@ -515,17 +515,17 @@
 
 .pantry-card-footer {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
   flex-wrap: wrap;
-  font-size: 0.8rem;
-  color: var(--text-tertiary);
+  font-size: 0.75rem;
+  color: var(--text-muted);
 }
 
 .expiration,
 .purchase-date {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: var(--space-1);
 }
 
 .expiration.expired {
@@ -539,11 +539,11 @@
 }
 
 .item-notes {
-  margin-top: 0.75rem;
-  padding-top: 0.75rem;
-  border-top: 1px solid var(--border-primary);
-  font-size: 0.85rem;
-  color: var(--text-tertiary);
+  margin-top: var(--space-3);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border-secondary);
+  font-size: 0.8rem;
+  color: var(--text-muted);
   font-style: italic;
 }
 
@@ -551,24 +551,24 @@
 .edit-form {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: var(--space-3);
 }
 
 .edit-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .edit-form input,
 .edit-form select {
-  padding: 0.5rem;
+  padding: var(--space-2);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   color: var(--text-primary);
-  font-size: 0.9rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
 }
 
 .edit-form input:focus,
@@ -583,22 +583,21 @@
 
 .edit-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.5rem;
+  gap: var(--space-2);
+  margin-top: var(--space-2);
 }
 
 .save-btn,
 .cancel-btn {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.4rem 0.8rem;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-3);
   border: none;
-  border-radius: 6px;
-  font-size: 0.85rem;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
   cursor: pointer;
-  font-family: 'Ubuntu', sans-serif;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .save-btn {
@@ -611,7 +610,7 @@
 }
 
 .cancel-btn {
-  background: var(--bg-input);
+  background: transparent;
   color: var(--text-secondary);
   border: 1px solid var(--border-primary);
 }
@@ -624,29 +623,30 @@
 .empty-state,
 .loading-state {
   text-align: center;
-  padding: 4rem 2rem;
-  color: var(--text-tertiary);
+  padding: var(--space-12) var(--space-6);
+  color: var(--text-muted);
 }
 
 .empty-state svg,
 .loading-state svg {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
   opacity: 0.5;
 }
 
 .empty-state h3 {
   color: var(--text-primary);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
+  font-size: 1.1rem;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid var(--border-primary);
+  width: 36px;
+  height: 36px;
+  border: 2px solid var(--border-primary);
   border-top-color: var(--accent-primary);
   border-radius: 50%;
   animation: spin 1s linear infinite;
-  margin: 0 auto 1rem;
+  margin: 0 auto var(--space-4);
 }
 
 @keyframes spin {
@@ -656,7 +656,7 @@
 /* Header Actions & View Toggle */
 .header-actions {
   display: flex;
-  gap: 1rem;
+  gap: var(--space-4);
   align-items: center;
 }
 
@@ -664,7 +664,7 @@
   display: flex;
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -672,12 +672,12 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.6rem 0.8rem;
+  padding: var(--space-2) var(--space-3);
   background: transparent;
   border: none;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .view-toggle-btn:hover {
@@ -699,9 +699,9 @@
   background: var(--bg-card);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
-  border: 1px solid var(--border-primary);
-  border-radius: 20px;
-  padding: 2rem 1.5rem;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6) var(--space-5);
   min-height: 400px;
   position: relative;
   overflow: hidden;
@@ -710,7 +710,7 @@
 /* Individual Shelf */
 .shelf {
   position: relative;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-6);
 }
 
 .shelf:last-child {
@@ -718,28 +718,26 @@
 }
 
 .shelf-label {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-tertiary);
-  margin-bottom: 0.6rem;
-  padding-left: 0.25rem;
-  opacity: 0.8;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: var(--space-2);
+  padding-left: var(--space-1);
 }
 
-/* The actual shelf surface - clean floating shelf look */
+/* The actual shelf surface */
 .shelf-surface {
   position: relative;
   background: #C9B896;
-  border-radius: 8px;
-  padding: 1rem 1.25rem 1.25rem;
-  min-height: 90px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  min-height: 85px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.2s ease;
 }
 
-/* Subtle bottom edge for depth */
 .shelf-surface::after {
   content: '';
   position: absolute;
@@ -748,18 +746,18 @@
   right: 0;
   height: 4px;
   background: #B8A785;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
 }
 
 /* Minimal shelf brackets */
 .shelf-bracket {
   position: absolute;
   bottom: -8px;
-  width: 16px;
-  height: 16px;
+  width: 14px;
+  height: 14px;
   background: #A89878;
   border-radius: 0 0 4px 4px;
-  opacity: 0.6;
+  opacity: 0.5;
 }
 
 .shelf-bracket.left {
@@ -774,43 +772,43 @@
 .shelf-items {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.875rem;
+  gap: var(--space-3);
   position: relative;
   z-index: 1;
   align-items: flex-end;
-  min-height: 60px;
-  padding-bottom: 0.25rem;
+  min-height: 55px;
+  padding-bottom: var(--space-1);
 }
 
-/* Individual item on shelf - clean floating cards */
+/* Individual item on shelf */
 .shelf-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 0.5rem 0.5rem 0.4rem;
+  padding: var(--space-2) var(--space-2) var(--space-1);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
-  border-radius: 10px;
-  min-width: 75px;
-  max-width: 105px;
+  border-radius: var(--radius-md);
+  min-width: 70px;
+  max-width: 100px;
   cursor: grab;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
   position: relative;
 }
 
 .shelf-item:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
 }
 
 .shelf-item:active {
   cursor: grabbing;
 }
 
-/* Status-based item styling - subtle indicators */
+/* Status-based item styling */
 .shelf-item.full {
   border-bottom: 2px solid var(--accent-primary);
 }
@@ -823,22 +821,22 @@
 .shelf-item.out_of_stock {
   border-bottom: 2px solid var(--accent-danger);
   background: rgba(254, 242, 242, 0.95);
-  opacity: 0.75;
+  opacity: 0.7;
 }
 
 .shelf-item.expiring-soon {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1.5px rgba(234, 179, 8, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 0 0 1.5px rgba(251, 191, 36, 0.4);
 }
 
 .shelf-item.expired {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06), 0 0 0 1.5px rgba(239, 68, 68, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 0 0 1.5px rgba(248, 113, 113, 0.5);
 }
 
 /* Shelf Item Status Buttons */
 .shelf-item-status-buttons {
   display: flex;
-  gap: 0.35rem;
-  margin-top: 0.4rem;
+  gap: var(--space-1);
+  margin-top: var(--space-2);
   width: 100%;
   justify-content: center;
 }
@@ -847,8 +845,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.3rem;
-  border: 1px solid rgba(0, 0, 0, 0.08);
+  padding: var(--space-1);
+  border: 1px solid rgba(0, 0, 0, 0.06);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.7);
   color: #888;
@@ -857,56 +855,56 @@
 }
 
 .shelf-status-btn:hover {
-  transform: scale(1.15);
+  transform: scale(1.1);
 }
 
 .shelf-status-btn.full:hover,
 .shelf-status-btn.full.active {
-  background: rgba(34, 197, 94, 0.2);
-  border-color: var(--accent-primary);
+  background: var(--accent-primary-bg);
+  border-color: var(--accent-primary-border);
   color: var(--accent-primary);
 }
 
 .shelf-status-btn.low:hover,
 .shelf-status-btn.low.active {
-  background: rgba(234, 179, 8, 0.2);
-  border-color: var(--accent-warning);
-  color: #b45309;
+  background: var(--accent-warning-bg);
+  border-color: rgba(251, 191, 36, 0.3);
+  color: var(--accent-warning);
 }
 
 .shelf-status-btn.out_of_stock:hover,
 .shelf-status-btn.out_of_stock.active {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: var(--accent-danger);
+  background: var(--accent-danger-bg);
+  border-color: var(--accent-danger-border);
   color: var(--accent-danger);
 }
 
 /* Dark mode shelf status buttons */
 [data-theme="dark"] .shelf-status-btn {
   background: rgba(60, 60, 60, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
 }
 
 [data-theme="dark"] .shelf-status-btn.full.active {
-  background: rgba(34, 197, 94, 0.2);
+  background: var(--accent-primary-bg);
 }
 
 [data-theme="dark"] .shelf-status-btn.low.active {
-  background: rgba(234, 179, 8, 0.2);
+  background: var(--accent-warning-bg);
   color: var(--accent-warning);
 }
 
 [data-theme="dark"] .shelf-status-btn.out_of_stock.active {
-  background: rgba(239, 68, 68, 0.2);
+  background: var(--accent-danger-bg);
 }
 
 .shelf-item-icon {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--space-1);
 }
 
 .shelf-item-name {
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   font-weight: 600;
   color: #333;
   text-align: center;
@@ -915,9 +913,9 @@
 }
 
 .shelf-item-qty {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   color: #666;
-  margin-top: 0.15rem;
+  margin-top: var(--space-1);
 }
 
 .shelf-item-badge {
@@ -926,40 +924,40 @@
   right: -5px;
   font-size: 0.5rem;
   font-weight: 600;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
+  padding: var(--space-1) var(--space-2);
+  border-radius: var(--radius-sm);
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.02em;
 }
 
 .shelf-item-badge.expiring {
-  background: rgba(234, 179, 8, 0.9);
+  background: rgba(251, 191, 36, 0.9);
   color: #000;
 }
 
 .shelf-item-badge.expired {
-  background: rgba(239, 68, 68, 0.9);
+  background: rgba(248, 113, 113, 0.9);
   color: white;
 }
 
 /* Drag and Drop Styles */
 .shelf-item-remove {
   position: absolute;
-  top: 4px;
-  right: 4px;
-  width: 18px;
-  height: 18px;
+  top: 3px;
+  right: 3px;
+  width: 16px;
+  height: 16px;
   padding: 0;
   border: none;
   border-radius: 50%;
-  background: rgba(0, 0, 0, 0.5);
+  background: rgba(0, 0, 0, 0.4);
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
   opacity: 0;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
   z-index: 10;
 }
 
@@ -968,7 +966,7 @@
 }
 
 .shelf-item-remove:hover {
-  background: rgba(239, 68, 68, 0.9);
+  background: var(--accent-danger);
 }
 
 .shelf-item-content {
@@ -980,35 +978,34 @@
 }
 
 .shelf-item.dragging {
-  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
-  transform: scale(1.03);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
+  transform: scale(1.02);
   z-index: 1000;
 }
 
 .shelf.drag-over .shelf-surface {
   background: #D4C4A1;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08), 0 0 0 2px var(--accent-primary);
-  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), 0 0 0 2px var(--accent-primary);
+  transition: all 0.15s ease;
 }
 
 .shelf-empty-hint {
-  color: rgba(80, 65, 50, 0.5);
-  font-size: 0.8rem;
+  color: rgba(80, 65, 50, 0.4);
+  font-size: 0.75rem;
   font-weight: 400;
-  padding: 0.75rem 1rem;
+  padding: var(--space-3) var(--space-4);
   text-align: center;
   width: 100%;
 }
 
 [data-theme="dark"] .shelf-empty-hint {
-  color: rgba(180, 160, 140, 0.6);
+  color: rgba(180, 160, 140, 0.5);
 }
 
 [data-theme="dark"] .shelf.drag-over .shelf-surface {
   background: #5A4A3A;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), 0 0 0 2px var(--accent-primary);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--accent-primary);
 }
-
 
 /* Shelf Edit Modal */
 .shelf-edit-modal {
@@ -1022,14 +1019,14 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
-  padding: 1rem;
+  padding: var(--space-4);
 }
 
 .shelf-edit-content {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 1.5rem;
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
   width: 100%;
   max-width: 400px;
   max-height: 90vh;
@@ -1037,45 +1034,46 @@
 }
 
 .shelf-edit-content h3 {
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 var(--space-5) 0;
   color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
 }
 
 .shelf-edit-content .form-group {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .shelf-edit-content .form-row {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .shelf-edit-content .form-actions {
-  margin-top: 1.5rem;
+  margin-top: var(--space-5);
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   flex-wrap: wrap;
 }
 
 .delete-btn {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
-  padding: 0.75rem 1rem;
+  gap: var(--space-1);
+  padding: var(--space-3) var(--space-4);
   background: var(--accent-danger);
   color: white;
   border: none;
-  border-radius: 8px;
-  font-size: 0.9rem;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
   cursor: pointer;
-  font-family: 'Ubuntu', sans-serif;
-  transition: all 0.2s;
+  transition: all 0.15s ease;
 }
 
 .delete-btn:hover {
   opacity: 0.9;
 }
 
-/* Dark mode shelf adjustments - clean muted tones */
+/* Dark mode shelf adjustments */
 [data-theme="dark"] .shelf-surface {
   background: #4A3D30;
 }
@@ -1090,7 +1088,7 @@
 
 [data-theme="dark"] .shelf-item {
   background: rgba(45, 45, 45, 0.95);
-  border-color: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.06);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -1114,12 +1112,12 @@
 /* Responsive */
 @media (max-width: 768px) {
   .pantry {
-    padding: 1.5rem 1rem;
+    padding: var(--space-5) var(--space-4);
   }
 
   .pantry-header {
     flex-direction: column;
-    gap: 1rem;
+    gap: var(--space-4);
     align-items: flex-start;
   }
 
@@ -1163,25 +1161,25 @@
 
   /* Shelf view responsive */
   .pantry-shelves {
-    padding: 1.5rem 1rem;
+    padding: var(--space-5) var(--space-4);
   }
 
   .shelf-items {
-    gap: 0.5rem;
+    gap: var(--space-2);
   }
 
   .shelf-item {
-    min-width: 65px;
-    max-width: 90px;
-    padding: 0.4rem 0.4rem 0.35rem;
+    min-width: 60px;
+    max-width: 85px;
+    padding: var(--space-1) var(--space-1) var(--space-1);
   }
 
   .shelf-item-name {
-    font-size: 0.7rem;
+    font-size: 0.65rem;
   }
 
   .shelf-status-btn {
-    padding: 0.25rem;
+    padding: var(--space-1);
   }
 
   .shelf-bracket.left {

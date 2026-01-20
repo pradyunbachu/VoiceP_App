@@ -4,6 +4,8 @@ export { useAnalytics } from './queries/useAnalytics';
 export { useBudgets } from './queries/useBudgets';
 export { usePantryItems, usePantryStats } from './queries/usePantry';
 export { useShoppingList } from './queries/useShoppingList';
+export { useSpendingInsights } from './queries/useSpendingInsights';
+export { useCalendarEvents } from './queries/useCalendarEvents';
 export { queryKeys } from './queries/queryKeys';
 
 // Expense mutations
@@ -36,6 +38,9 @@ export {
 // Chat mutations
 export { useChat } from './mutations/useChatMutation';
 
+// Receipt mutations
+export { useScanReceipt } from './mutations/useReceiptMutation';
+
 // Shopping List mutations
 export {
   useCreateShoppingListItem,
@@ -45,3 +50,10 @@ export {
   useClearShoppingList,
   useRemovePurchasedItems,
 } from './mutations/useShoppingListMutations';
+
+// Calendar mutations
+export {
+  useCreateCalendarEvent,
+  useUpdateCalendarEvent,
+  useDeleteCalendarEvent,
+} from './mutations/useCalendarMutations';

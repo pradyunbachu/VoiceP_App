@@ -9,6 +9,8 @@ import ExpenseList from "./components/ExpenseList";
 import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
 import ShoppingList from "./components/ShoppingList";
+import SpendingInsights from "./components/SpendingInsights";
+import Calendar from "./components/Calendar";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
@@ -187,6 +189,14 @@ function AppContent() {
             />
           </div>
         );
+      case "insights":
+        return (
+          <div className="view-container" key="insights">
+            <SpendingInsights
+              showToast={showToast}
+            />
+          </div>
+        );
       case "pantry":
         return (
           <div className="view-container" key="pantry">
@@ -199,6 +209,14 @@ function AppContent() {
         return (
           <div className="view-container" key="shopping-list">
             <ShoppingList
+              showToast={showToast}
+            />
+          </div>
+        );
+      case "calendar":
+        return (
+          <div className="view-container" key="calendar">
+            <Calendar
               showToast={showToast}
             />
           </div>

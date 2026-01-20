@@ -31,4 +31,16 @@ export const queryKeys = {
     all: ['shoppingList'],
     items: (filters) => [...queryKeys.shoppingList.all, 'items', filters],
   },
+
+  // Insights
+  insights: {
+    all: ['insights'],
+    report: (timePeriod) => [...queryKeys.insights.all, 'report', timePeriod],
+  },
+
+  // Calendar
+  calendar: {
+    all: ['calendar'],
+    events: (filters) => [...queryKeys.calendar.all, 'events', filters],
+  },
 };

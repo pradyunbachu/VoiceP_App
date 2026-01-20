@@ -6,16 +6,17 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
   flex-wrap: wrap;
-  gap: 1rem;
+  gap: var(--space-4);
 }
 
 .expense-list h2 {
   color: var(--text-primary);
   margin: 0;
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
 }
 
 /* Search bar styles */
@@ -24,34 +25,32 @@
   display: flex;
   align-items: center;
   flex: 1;
-  max-width: 350px;
+  max-width: 320px;
   min-width: 200px;
 }
 
 .search-icon {
   position: absolute;
-  left: 1rem;
+  left: var(--space-4);
   color: var(--text-muted);
   pointer-events: none;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.75rem 2.5rem 0.75rem 3rem;
+  padding: var(--space-3) var(--space-8) var(--space-3) var(--space-10);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 12px;
+  border-radius: var(--radius-md);
   color: var(--text-primary);
-  font-size: 0.95rem;
-  font-family: 'Ubuntu', sans-serif;
-  transition: all 0.2s ease;
+  font-size: 0.875rem;
+  transition: all 0.15s ease;
 }
 
 .search-input:focus {
   outline: none;
   border-color: var(--accent-primary);
   background: var(--bg-input-focus);
-  box-shadow: 0 0 0 3px var(--accent-primary-bg);
 }
 
 .search-input::placeholder {
@@ -60,17 +59,17 @@
 
 .clear-filters-button {
   position: absolute;
-  right: 0.75rem;
+  right: var(--space-3);
   background: transparent;
   border: none;
   color: var(--text-muted);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .clear-filters-button:hover {
@@ -82,14 +81,14 @@
 .active-filter {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.5rem 1rem;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-4);
   background: var(--accent-purple-bg);
   border: 1px solid var(--accent-purple-border);
-  border-radius: 8px;
-  margin-bottom: 1rem;
+  border-radius: var(--radius-md);
+  margin-bottom: var(--space-4);
   color: var(--accent-purple);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
 }
 
 .active-filter strong {
@@ -101,12 +100,12 @@
   border: none;
   color: var(--accent-purple);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .active-filter button:hover {
@@ -116,37 +115,35 @@
 
 /* Expense controls row */
 .expense-controls {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .sort-controls {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--text-primary);
+  gap: var(--space-2);
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
 }
 
 .sort-select {
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-4);
   color: var(--text-primary);
-  font-size: 0.95rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.15s ease;
 }
 
 .sort-select:hover {
-  border-color: var(--accent-primary);
-  background: var(--bg-input-focus);
+  border-color: var(--border-hover);
 }
 
 .sort-select:focus {
   outline: none;
   border-color: var(--accent-primary);
-  background: var(--bg-input-focus);
 }
 
 .sort-select option {
@@ -157,221 +154,206 @@
 .empty-state {
   text-align: center;
   color: var(--text-muted);
-  padding: 3rem;
-  font-size: 1.1rem;
+  padding: var(--space-12);
+  font-size: 0.95rem;
 }
 
 .expenses-container {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  gap: var(--space-3);
 }
 
 .expense-card {
-  padding: 1.5rem;
-  transition: all 0.2s ease;
-  border-bottom: 1px solid var(--border-secondary);
+  padding: var(--space-5);
+  transition: all 0.15s ease;
   background: var(--bg-card);
-  margin-bottom: 0.5rem;
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--border-secondary);
 }
 
 .expense-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
 }
 
 .expense-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-3);
 }
 
 .expense-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--space-1);
   align-items: center;
 }
 
 .expense-store {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--accent-primary);
+  gap: var(--space-2);
+  color: var(--text-primary);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .edit-button,
 .delete-button {
   background: transparent;
-  border: 1px solid transparent;
+  border: none;
   cursor: pointer;
-  padding: 0.5rem;
-  border-radius: 8px;
-  transition: all 0.2s ease;
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .edit-button {
-  color: var(--accent-primary);
+  color: var(--text-muted);
 }
 
 .edit-button:hover {
   background: var(--accent-primary-bg);
-  border-color: var(--accent-primary-border);
-  transform: scale(1.05);
+  color: var(--accent-primary);
 }
 
 .delete-button {
-  color: var(--accent-danger);
+  color: var(--text-muted);
 }
 
 .delete-button:hover {
   background: var(--accent-danger-bg);
-  border-color: var(--accent-danger-border);
-  transform: scale(1.05);
+  color: var(--accent-danger);
 }
 
 .expense-items {
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-3);
   color: var(--text-tertiary);
-  line-height: 1.5;
-  min-height: 2.5rem;
+  line-height: 1.6;
+  font-size: 0.9rem;
 }
 
 .expense-categories {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
 }
 
 .expense-category {
   display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.25rem 0.75rem;
+  gap: var(--space-2);
+  padding: var(--space-1) var(--space-3);
   background: var(--accent-purple-bg);
-  border: 1px solid var(--accent-purple-border);
-  border-radius: 12px;
+  border: none;
+  border-radius: var(--radius-full);
   color: var(--accent-purple);
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Ubuntu', sans-serif;
+  transition: all 0.15s ease;
 }
 
 .expense-category:hover {
   background: var(--accent-purple-bg-active);
-  border-color: var(--accent-purple);
-  transform: translateY(-1px);
 }
 
 .expense-category.active {
   background: var(--accent-purple-bg-active);
-  border-color: var(--accent-purple);
-  box-shadow: 0 2px 8px rgba(123, 47, 247, 0.3);
 }
 
 .expense-footer {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border-primary);
-  gap: 1rem;
+  padding-top: var(--space-4);
+  border-top: 1px solid var(--border-secondary);
+  gap: var(--space-4);
   flex-wrap: wrap;
 }
 
 .expense-footer-left {
   display: flex;
   align-items: center;
-  gap: 1.5rem;
+  gap: var(--space-5);
 }
 
 .add-to-pantry-button {
   display: inline-flex;
   align-items: center;
-  gap: 0.4rem;
-  padding: 0.4rem 0.75rem;
-  background: var(--accent-success-bg, rgba(34, 197, 94, 0.1));
-  border: 1px solid var(--accent-success-border, rgba(34, 197, 94, 0.3));
-  border-radius: 8px;
-  color: var(--accent-success, #22c55e);
-  font-size: 0.85rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent-primary-bg);
+  border: none;
+  border-radius: var(--radius-md);
+  color: var(--accent-primary);
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Ubuntu', sans-serif;
+  transition: all 0.15s ease;
 }
 
 .add-to-pantry-button:hover:not(:disabled) {
-  background: var(--accent-success-bg-hover, rgba(34, 197, 94, 0.2));
-  border-color: var(--accent-success, #22c55e);
-  transform: translateY(-1px);
+  background: var(--accent-primary-bg-hover);
 }
 
 .add-to-pantry-button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .expense-amount {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--accent-primary-light);
+  gap: var(--space-2);
+  color: var(--accent-primary);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .expense-date {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  color: var(--text-tertiary);
-  font-size: 0.9rem;
+  gap: var(--space-2);
+  color: var(--text-muted);
+  font-size: 0.8rem;
 }
 
 .edit-form {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
+  gap: var(--space-4);
+  padding: var(--space-4);
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px solid var(--accent-primary-border);
 }
 
 .edit-form-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--space-2);
 }
 
 .edit-form-group label {
   color: var(--text-tertiary);
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
 .edit-form-group input {
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
-  padding: 0.75rem;
+  border-radius: var(--radius-md);
+  padding: var(--space-3);
   color: var(--text-primary);
-  font-size: 1rem;
-  font-family: 'Ubuntu', sans-serif;
-  transition: all 0.2s ease;
+  font-size: 0.9rem;
+  transition: all 0.15s ease;
 }
 
 .edit-form-group input:focus {
@@ -386,25 +368,24 @@
 
 .edit-actions {
   display: flex;
-  gap: 0.75rem;
-  margin-top: 0.5rem;
+  gap: var(--space-3);
+  margin-top: var(--space-2);
 }
 
 .save-button,
 .cancel-button {
   flex: 1;
-  padding: 0.75rem 1.5rem;
+  padding: var(--space-3) var(--space-4);
   border: none;
-  border-radius: 8px;
-  font-size: 1rem;
-  font-weight: 600;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.5rem;
-  transition: all 0.2s ease;
-  font-family: 'Ubuntu', sans-serif;
+  gap: var(--space-2);
+  transition: all 0.15s ease;
 }
 
 .save-button {
@@ -413,8 +394,6 @@
 }
 
 .save-button:hover {
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
   background: var(--accent-primary-hover);
 }
 
@@ -426,35 +405,34 @@
 
 .cancel-button:hover {
   background: var(--bg-card-hover);
-  transform: translateY(-2px);
+  border-color: var(--border-hover);
 }
 
 /* Selection Mode Styles */
 .select-mode-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--accent-primary-bg);
-  border: 1px solid var(--accent-primary-border);
-  border-radius: 8px;
-  color: var(--accent-primary);
-  font-size: 0.95rem;
-  font-weight: 600;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Ubuntu', sans-serif;
+  transition: all 0.15s ease;
 }
 
 .select-mode-button:hover {
-  background: var(--accent-primary-bg-hover);
-  border-color: var(--accent-primary);
-  transform: translateY(-1px);
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .bulk-actions {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--space-3);
   align-items: center;
   flex-wrap: wrap;
 }
@@ -462,23 +440,20 @@
 .bulk-action-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
   background: var(--accent-primary-bg);
-  border: 1px solid var(--accent-primary-border);
-  border-radius: 8px;
+  border: none;
+  border-radius: var(--radius-md);
   color: var(--accent-primary);
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Ubuntu', sans-serif;
+  transition: all 0.15s ease;
 }
 
 .bulk-action-button:hover:not(:disabled) {
   background: var(--accent-primary-bg-hover);
-  border-color: var(--accent-primary);
-  transform: translateY(-1px);
 }
 
 .bulk-action-button:disabled {
@@ -487,36 +462,36 @@
 }
 
 .bulk-action-button.cancel {
-  background: var(--bg-card);
-  border-color: var(--border-primary);
-  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  color: var(--text-tertiary);
 }
 
 .bulk-action-button.cancel:hover {
-  background: var(--bg-card-hover);
+  background: var(--bg-card);
   border-color: var(--border-hover);
+  color: var(--text-primary);
 }
 
 .select-all-controls {
-  margin-bottom: 1rem;
-  padding: 1rem;
+  margin-bottom: var(--space-4);
+  padding: var(--space-4);
   background: var(--accent-primary-bg);
   border: 1px solid var(--accent-primary-border);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
 }
 
 .select-all-button {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   background: transparent;
   border: none;
   color: var(--accent-primary);
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
-  font-family: 'Ubuntu', sans-serif;
+  transition: opacity 0.15s ease;
 }
 
 .select-all-button:hover {
@@ -526,7 +501,7 @@
 .selection-count {
   color: var(--text-tertiary);
   font-weight: 400;
-  margin-left: 0.5rem;
+  margin-left: var(--space-2);
 }
 
 .expense-card.selected {
@@ -536,8 +511,8 @@
 
 .expense-checkbox {
   position: absolute;
-  top: 1rem;
-  left: 1rem;
+  top: var(--space-4);
+  left: var(--space-4);
   z-index: 10;
 }
 
@@ -546,9 +521,9 @@
   border: none;
   color: var(--accent-primary);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -556,7 +531,6 @@
 
 .checkbox-button:hover {
   background: var(--accent-primary-bg);
-  transform: scale(1.1);
 }
 
 .expense-card.selected .checkbox-button {
@@ -565,11 +539,11 @@
 
 @media (max-width: 768px) {
   .expenses-container {
-    grid-template-columns: 1fr;
+    gap: var(--space-2);
   }
 
   .edit-form {
-    padding: 0.75rem;
+    padding: var(--space-3);
   }
 
   .edit-actions {

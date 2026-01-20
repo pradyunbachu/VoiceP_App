@@ -131,3 +131,77 @@ class ChatResponse(BaseModel):
     sub_intent: Optional[str] = None
     response_text: str
     data: Optional[dict] = None
+
+# ============================================================================
+# INSIGHTS MODELS
+# ============================================================================
+
+class InsightsRequest(BaseModel):
+    time_period: str = "last_30_days"  # last_7_days, last_30_days, last_90_days
+
+class InsightsResponse(BaseModel):
+    period: dict
+    summary: dict
+    comparisons: dict
+    top_categories: List[dict]
+    top_stores: List[dict]
+    budget_status: Optional[List[dict]] = None
+    ai_insights: Optional[dict] = None
+    generated_at: str
+
+# ============================================================================
+# RECEIPT SCANNING MODELS
+# ============================================================================
+
+class ReceiptScanRequest(BaseModel):
+    ocr_text: str
+
+class ReceiptScanResponse(BaseModel):
+    store: str
+    items: str
+    amount: float
+    date: Optional[str] = None
+    category: str
+    expense_id: Optional[int] = None
+    message: str
+
+# ============================================================================
+# CALENDAR MODELS
+# ============================================================================
+
+class CalendarEventCreate(BaseModel):
+    title: str
+    description: Optional[str] = None
+    start_date: str  # YYYY-MM-DD
+    start_time: Optional[str] = None  # HH:MM
+    end_date: Optional[str] = None  # YYYY-MM-DD
+    end_time: Optional[str] = None  # HH:MM
+    all_day: Optional[bool] = False
+    color: Optional[str] = "#3b82f6"
+
+class CalendarEventUpdate(BaseModel):
+    title: Optional[str] = None
+    description: Optional[str] = None
+    start_date: Optional[str] = None
+    start_time: Optional[str] = None
+    end_date: Optional[str] = None
+    end_time: Optional[str] = None
+    all_day: Optional[bool] = None
+    color: Optional[str] = None
+
+class CalendarEventResponse(BaseModel):
+    id: int
+    title: str
+    description: Optional[str]
+    start_date: str
+    start_time: Optional[str]
+    end_date: Optional[str]
+    end_time: Optional[str]
+    all_day: bool
+    color: str
+    created_at: str
+    updated_at: str
+
+class CalendarEventsListResponse(BaseModel):
+    events: List[CalendarEventResponse]
+    count: int

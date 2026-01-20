@@ -6,174 +6,174 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 2rem;
+  margin-bottom: var(--space-8);
 }
 
 .analytics-dashboard h2 {
   color: var(--text-primary);
-  font-size: 1.8rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .clear-all-button {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem 1.5rem;
-  background: var(--accent-danger-bg);
-  border: 1px solid var(--accent-danger-border);
-  border-radius: 8px;
-  color: var(--accent-danger);
-  font-size: 0.95rem;
-  font-weight: 600;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
 }
 
 .clear-all-button:hover {
-  background: rgba(255, 107, 107, 0.25);
-  border-color: var(--accent-danger);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 107, 107, 0.3);
+  background: var(--accent-danger-bg);
+  border-color: var(--accent-danger-border);
+  color: var(--accent-danger);
 }
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 1.5rem;
-  margin-bottom: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-4);
+  margin-bottom: var(--space-8);
 }
 
 .stat-card {
   display: flex;
   align-items: center;
-  gap: 1rem;
-  padding: 1.5rem;
+  gap: var(--space-4);
+  padding: var(--space-5);
   background: var(--bg-card);
   border: 1px solid var(--border-secondary);
-  border-radius: 16px;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-lg);
+  transition: all 0.15s ease;
 }
 
 .stat-card:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
-  width: 50px;
-  height: 50px;
-  border-radius: 12px;
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
   display: flex;
   align-items: center;
   justify-content: center;
   color: white;
   flex-shrink: 0;
-  box-shadow: var(--shadow-md);
 }
 
 .stat-content {
   flex: 1;
+  min-width: 0;
 }
 
 .stat-label {
-  color: var(--text-tertiary);
-  font-size: 0.9rem;
-  margin-bottom: 0.25rem;
-  font-weight: 400;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  margin-bottom: var(--space-1);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
 .stat-value {
   color: var(--text-primary);
-  font-size: 1.5rem;
-  font-weight: 700;
+  font-size: 1.35rem;
+  font-weight: 600;
   margin: 0;
+  letter-spacing: -0.02em;
 }
 
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-  gap: 2rem;
-  margin-top: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
+  gap: var(--space-6);
+  margin-top: var(--space-6);
 }
 
 .chart-container {
-  padding: 1.5rem;
+  padding: var(--space-5);
   background: var(--bg-card);
   border: 1px solid var(--border-secondary);
-  border-radius: 16px;
-  margin-bottom: 2rem;
-  transition: all 0.2s ease;
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-6);
+  transition: all 0.15s ease;
 }
 
 .chart-container:hover {
   background: var(--bg-card-hover);
   border-color: var(--border-primary);
-  box-shadow: var(--shadow-md);
 }
 
 .chart-container h3 {
   color: var(--text-primary);
-  margin-bottom: 1.5rem;
-  font-size: 1.3rem;
+  margin-bottom: var(--space-5);
+  font-size: 1rem;
   font-weight: 600;
-  letter-spacing: -0.3px;
+  letter-spacing: -0.01em;
 }
 
 .empty-chart {
-  height: 300px;
+  height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--text-muted);
-  font-style: italic;
   text-align: center;
-  padding: 2rem;
+  padding: var(--space-6);
 }
 
 .empty-chart p {
   margin: 0;
-  font-size: 1rem;
+  font-size: 0.9rem;
 }
 
 .budget-section {
-  margin-top: 3rem;
-  padding-top: 2rem;
-  border-top: 1px solid var(--border-primary);
+  margin-top: var(--space-10);
+  padding-top: var(--space-8);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .section-header h3 {
   color: var(--text-primary);
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 600;
   margin: 0;
+  letter-spacing: -0.01em;
 }
 
 .budget-filters {
   display: flex;
-  gap: 0.75rem;
-  margin-bottom: 1.5rem;
+  gap: var(--space-3);
+  margin-bottom: var(--space-5);
 }
 
 .budget-filter-select {
-  padding: 0.5rem 1rem;
+  padding: var(--space-2) var(--space-4);
   background: var(--bg-input);
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-secondary);
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   cursor: pointer;
-  transition: all 0.3s ease;
+  transition: all 0.15s ease;
 }
 
 .budget-filter-select:hover {
@@ -191,52 +191,52 @@
 }
 
 .empty-budget-message {
-  padding: 2rem;
+  padding: var(--space-6);
   text-align: center;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   background: var(--bg-card);
-  border-radius: 12px;
+  border-radius: var(--radius-lg);
   border: 1px dashed var(--border-primary);
+  font-size: 0.9rem;
 }
 
 .budget-comparison-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
 }
 
 .budget-comparison-card {
   background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: 12px;
-  padding: 1.5rem;
-  transition: all 0.3s ease;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  transition: all 0.15s ease;
 }
 
 .budget-comparison-card:hover {
-  border-color: var(--border-hover);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--border-primary);
+  background: var(--bg-card-hover);
 }
 
 .budget-card-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1rem;
+  margin-bottom: var(--space-4);
 }
 
 .budget-category-name {
   color: var(--text-primary);
   font-weight: 600;
-  font-size: 1.1rem;
+  font-size: 1rem;
 }
 
 .budget-stats-row {
   display: flex;
   justify-content: space-between;
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
 }
 
 .budget-stat-item {
@@ -246,15 +246,18 @@
 }
 
 .budget-stat-label {
-  color: var(--text-tertiary);
-  font-size: 0.875rem;
-  margin-bottom: 0.25rem;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-bottom: var(--space-1);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  font-weight: 500;
 }
 
 .budget-stat-value {
   color: var(--text-primary);
   font-weight: 600;
-  font-size: 1rem;
+  font-size: 0.95rem;
 }
 
 .budget-stat-value.spent {
@@ -266,38 +269,39 @@
 }
 
 .budget-progress-container {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--space-3);
 }
 
 .budget-progress-bar {
   width: 100%;
-  height: 8px;
+  height: 6px;
   background: var(--border-primary);
-  border-radius: 4px;
+  border-radius: var(--radius-full);
   overflow: hidden;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--space-2);
 }
 
 .budget-progress-fill {
   height: 100%;
   transition: width 0.3s ease;
+  border-radius: var(--radius-full);
 }
 
 .budget-percentage {
-  font-size: 0.875rem;
+  font-size: 0.8rem;
   font-weight: 500;
 }
 
 .budget-period {
   font-size: 0.75rem;
-  color: var(--text-tertiary);
+  color: var(--text-muted);
   text-align: center;
-  margin-top: 0.5rem;
+  margin-top: var(--space-2);
 }
 
 @media (max-width: 768px) {
   .stats-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
   }
 
   .charts-grid {
@@ -306,5 +310,11 @@
 
   .budget-comparison-grid {
     grid-template-columns: 1fr;
+  }
+
+  .dashboard-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: var(--space-4);
   }
 }

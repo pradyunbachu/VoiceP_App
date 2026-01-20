@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Loader2, Type, Package } from "lucide-react";
+import { Mic, Square, Loader2, Type, Package, Camera } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ChatResponseDisplay from "./ChatResponseDisplay";
+import ReceiptScanner from "./ReceiptScanner";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "../hooks";
 import { API_BASE_URL } from "../config/api";
@@ -20,6 +21,7 @@ const VoiceRecorder = ({ showToast }) => {
   const [showPantryModal, setShowPantryModal] = useState(false);
   const [pendingPantryExpense, setPendingPantryExpense] = useState(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [showReceiptScanner, setShowReceiptScanner] = useState(false);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
@@ -376,6 +378,13 @@ const VoiceRecorder = ({ showToast }) => {
           <Type size={20} />
           <span>{showManualInput ? "Hide" : "Type"} Manual Entry</span>
         </button>
+        <button
+          className="receipt-button"
+          onClick={() => setShowReceiptScanner(true)}
+          disabled={loading}>
+          <Camera size={20} />
+          <span>Scan Receipt</span>
+        </button>
       </div>
 
       {error && (
@@ -492,6 +501,27 @@ const VoiceRecorder = ({ showToast }) => {
           onSuccess={() => {
             setShowPantryModal(false);
             setPendingPantryExpense(null);
+          }}
+        />
+      )}
+
+      {/* Receipt Scanner Modal */}
+      {showReceiptScanner && (
+        <ReceiptScanner
+          onClose={() => setShowReceiptScanner(false)}
+          onSuccess={(result) => {
+            // Show the expense result
+            setExtractedExpense({
+              expenses: [result],
+              count: 1,
+              message: result.message
+            });
+            // Check if it's a grocery expense for pantry prompt
+            const category = (result.category || "").toLowerCase();
+            if (category.includes("groceries") || category.includes("grocery")) {
+              setPendingPantryExpense(result);
+            }
+            setShowReceiptScanner(false);
           }}
         />
       )}
