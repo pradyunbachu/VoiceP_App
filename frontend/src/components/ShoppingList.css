@@ -36,7 +36,7 @@
   color: var(--text-tertiary);
   font-size: 0.85rem;
   cursor: pointer;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
   transition: all 0.2s;
 }
 
@@ -51,244 +51,234 @@
   cursor: not-allowed;
 }
 
-/* ==================== NOTEPAD CONTAINER ==================== */
-.notepad-container {
-  perspective: 1000px;
+/* ==================== MODERN LIST CARD ==================== */
+.list-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 16px;
+  overflow: visible;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
-.notepad {
+/* ==================== ADD ITEM INPUT ==================== */
+.add-item-container {
   position: relative;
-  background: #fffef7;
-  border-radius: 4px 12px 12px 4px;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.05),
-    0 8px 24px rgba(0, 0, 0, 0.08),
-    0 0 0 1px rgba(0, 0, 0, 0.04),
-    inset 0 1px 0 rgba(255, 255, 255, 0.8);
-  overflow: hidden;
-  transform: rotateX(2deg);
-  transform-origin: center top;
-}
-
-/* Subtle paper texture */
-.notepad::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 31px,
-      #e8e4dc 31px,
-      #e8e4dc 32px
-    );
-  background-position: 0 72px;
-  pointer-events: none;
-  z-index: 0;
-}
-
-/* Red margin line */
-.notepad::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 48px;
-  bottom: 0;
-  width: 1px;
-  background: #ffb4b4;
-  z-index: 1;
-}
-
-/* ==================== SPIRAL BINDING ==================== */
-.notepad-binding {
-  position: absolute;
-  top: 0;
-  left: 0;
-  bottom: 0;
-  width: 28px;
-  background: linear-gradient(90deg, #f5f5f5 0%, #e8e8e8 50%, #f0f0f0 100%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding: 16px 0;
-  gap: 24px;
-  z-index: 10;
-  box-shadow: 2px 0 4px rgba(0, 0, 0, 0.05);
-}
-
-.binding-ring {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #d4d4d4, #f0f0f0);
-  box-shadow:
-    inset 2px 2px 4px rgba(0, 0, 0, 0.15),
-    inset -1px -1px 2px rgba(255, 255, 255, 0.8);
-  position: relative;
-}
-
-.binding-ring::after {
-  content: '';
-  position: absolute;
-  top: 4px;
-  left: 4px;
-  right: 4px;
-  bottom: 4px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, #888, #aaa);
-  box-shadow: inset 1px 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-/* ==================== NOTEPAD HEADER ==================== */
-.notepad-header {
-  position: relative;
-  z-index: 2;
-  padding: 1rem 1rem 0.75rem 60px;
-  display: flex;
-  justify-content: space-between;
-  align-items: baseline;
-  border-bottom: 2px solid #e8e4dc;
-}
-
-.notepad-title {
-  font-family: 'Ubuntu', sans-serif;
-  font-size: 1.25rem;
-  font-weight: 600;
-  color: #2d3748;
-  letter-spacing: 0.3px;
-}
-
-.notepad-count {
-  font-family: 'Ubuntu', sans-serif;
-  font-size: 0.85rem;
-  color: #718096;
-}
-
-/* ==================== NOTEPAD CONTENT ==================== */
-.notepad-content {
-  position: relative;
-  z-index: 2;
-  padding: 8px 0;
-  min-height: 400px;
-}
-
-.notepad-loading {
-  padding: 1rem 60px;
-}
-
-/* ==================== NOTEPAD LINES ==================== */
-.notepad-line {
   display: flex;
   align-items: center;
-  height: 32px;
-  padding: 0 1rem 0 0;
-  position: relative;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+  border-radius: 16px 16px 0 0;
 }
 
-.line-number {
-  width: 24px;
-  margin-left: 28px;
-  font-family: 'Courier New', monospace;
-  font-size: 0.65rem;
-  color: #c0b8a8;
-  text-align: right;
-  user-select: none;
+.add-item-icon {
+  color: var(--text-tertiary);
   flex-shrink: 0;
 }
 
-.line-bullet {
-  width: 28px;
-  text-align: center;
-  color: #a0a0a0;
-  font-size: 0.75rem;
-  flex-shrink: 0;
-}
-
-.line-text {
-  flex: 1;
-  font-family: 'Ubuntu', sans-serif;
-  font-size: 1rem;
-  font-weight: 500;
-  color: #2d3748;
-  line-height: 32px;
-  padding-right: 24px;
-}
-
-.line-delete {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 20px;
-  height: 20px;
-  border: none;
-  background: transparent;
-  color: #ccc;
-  font-size: 1.25rem;
-  font-weight: 300;
-  cursor: pointer;
-  opacity: 0;
-  transition: all 0.15s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 50%;
-}
-
-.notepad-line.has-item:hover .line-delete {
-  opacity: 1;
-}
-
-.line-delete:hover {
-  color: #e53e3e;
-  background: rgba(229, 62, 62, 0.1);
-}
-
-/* Input line */
-.notepad-line.input-line {
-  background: rgba(66, 153, 225, 0.03);
-}
-
-.line-input {
+.add-item-input {
   flex: 1;
   border: none;
   background: transparent;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
   font-size: 1rem;
-  font-weight: 400;
-  color: #2d3748;
-  line-height: 32px;
-  padding: 0;
+  color: var(--text-primary);
   outline: none;
 }
 
-.line-input::placeholder {
-  color: #a0aec0;
-  font-style: italic;
+.add-item-input::placeholder {
+  color: var(--text-tertiary);
 }
 
-.line-input:focus {
-  background: transparent;
+.add-item-input:focus {
+  outline: none;
 }
 
-/* Empty lines */
-.notepad-line.empty-line {
+.add-item-container:focus-within {
+  background: var(--bg-card);
+}
+
+.add-item-container:focus-within .add-item-icon {
+  color: var(--accent-primary);
+}
+
+/* ==================== LIST CONTENT ==================== */
+.list-content {
+  min-height: 200px;
+}
+
+.list-loading {
+  padding: 1.5rem;
+}
+
+.list-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 1.5rem;
+  color: var(--text-tertiary);
+  text-align: center;
+}
+
+.list-empty svg {
+  margin-bottom: 1rem;
   opacity: 0.4;
 }
 
-.notepad-line.empty-line .line-bullet {
-  visibility: hidden;
+.list-empty p {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-secondary);
 }
 
-/* ==================== NOTEPAD FOOTER ==================== */
-.notepad-footer {
+.list-empty span {
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+
+/* ==================== SHOPPING ITEMS ==================== */
+.shopping-items {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.shopping-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border-primary);
+  transition: background 0.15s;
+}
+
+.shopping-item:last-child {
+  border-bottom: none;
+}
+
+.shopping-item:hover {
+  background: var(--bg-secondary);
+}
+
+.item-bullet {
+  color: var(--accent-primary);
+  flex-shrink: 0;
+  opacity: 0.6;
+}
+
+.item-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.item-text {
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 1rem;
+  color: var(--text-primary);
+}
+
+/* ==================== PANTRY STOCK INFO ==================== */
+.pantry-stock-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+}
+
+.pantry-stock-info svg {
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.stock-qty {
+  color: var(--text-secondary);
+}
+
+.stock-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.stock-badge.stock-full {
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--accent-primary);
+}
+
+.stock-badge.stock-full svg {
+  color: var(--accent-primary);
+}
+
+.stock-badge.stock-low {
+  background: rgba(245, 158, 11, 0.1);
+  color: var(--accent-warning);
+}
+
+.stock-badge.stock-low svg {
+  color: var(--accent-warning);
+}
+
+.stock-badge.stock-out {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--accent-danger);
+}
+
+.stock-badge.stock-out svg {
+  color: var(--accent-danger);
+}
+
+.item-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
   height: 32px;
-  position: relative;
-  z-index: 2;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 8px;
+  opacity: 0;
+  transition: all 0.15s;
+}
+
+.shopping-item:hover .item-delete {
+  opacity: 1;
+}
+
+.item-delete:hover {
+  color: var(--accent-danger);
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.item-delete:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+/* ==================== LIST FOOTER ==================== */
+.list-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid var(--border-primary);
+  background: var(--bg-secondary);
+}
+
+.item-count {
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
 }
 
 /* ==================== PANTRY NEEDS SECTION ==================== */
@@ -325,13 +315,13 @@
   font-size: 0.85rem;
   color: var(--text-primary);
   cursor: pointer;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
   transition: all 0.2s;
 }
 
 .pantry-chip:hover:not(:disabled) {
   border-color: var(--accent-primary);
-  background: rgba(34, 197, 94, 0.05);
+  background: rgba(59, 130, 246, 0.05);
 }
 
 .pantry-chip:disabled {
@@ -339,7 +329,7 @@
 }
 
 .pantry-chip.added {
-  background: rgba(34, 197, 94, 0.1);
+  background: rgba(59, 130, 246, 0.1);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
 }
@@ -366,90 +356,53 @@
   color: var(--accent-primary);
 }
 
-/* ==================== DARK MODE ==================== */
-[data-theme="dark"] .notepad {
-  background: #2a2a28;
-  box-shadow:
-    0 2px 4px rgba(0, 0, 0, 0.2),
-    0 8px 24px rgba(0, 0, 0, 0.3),
-    0 0 0 1px rgba(255, 255, 255, 0.05),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+/* ==================== SUGGESTIONS DROPDOWN ==================== */
+.suggestions-dropdown {
+  position: absolute;
+  top: 100%;
+  left: -1px;
+  right: -1px;
+  z-index: 50;
+  list-style: none;
+  margin: 0;
+  padding: 0.25rem 0;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-top: none;
+  border-radius: 0 0 12px 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  max-height: 280px;
+  overflow-y: auto;
 }
 
-[data-theme="dark"] .notepad::before {
-  background:
-    repeating-linear-gradient(
-      0deg,
-      transparent,
-      transparent 31px,
-      #3d3d3a 31px,
-      #3d3d3a 32px
-    );
-  background-position: 0 72px;
+.suggestion-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.6rem 1.25rem;
+  cursor: pointer;
+  transition: background 0.1s;
 }
 
-[data-theme="dark"] .notepad::after {
-  background: #8b4a4a;
+.suggestion-item:hover,
+.suggestion-item.selected {
+  background: var(--accent-primary-bg, rgba(59, 130, 246, 0.08));
 }
 
-[data-theme="dark"] .notepad-binding {
-  background: linear-gradient(90deg, #1a1a1a 0%, #2a2a2a 50%, #1f1f1f 100%);
+.suggestion-name {
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  text-transform: capitalize;
 }
 
-[data-theme="dark"] .binding-ring {
-  background: linear-gradient(145deg, #2a2a2a, #3a3a3a);
-  box-shadow:
-    inset 2px 2px 4px rgba(0, 0, 0, 0.4),
-    inset -1px -1px 2px rgba(255, 255, 255, 0.05);
-}
-
-[data-theme="dark"] .binding-ring::after {
-  background: linear-gradient(145deg, #444, #555);
-}
-
-[data-theme="dark"] .notepad-header {
-  border-bottom-color: #3d3d3a;
-}
-
-[data-theme="dark"] .notepad-title {
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] .notepad-count {
-  color: #a0aec0;
-}
-
-[data-theme="dark"] .line-number {
-  color: #5a5a55;
-}
-
-[data-theme="dark"] .line-bullet {
-  color: #5a5a55;
-}
-
-[data-theme="dark"] .line-text {
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] .line-input {
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] .line-input::placeholder {
-  color: #6b7280;
-}
-
-[data-theme="dark"] .line-delete {
-  color: #6b7280;
-}
-
-[data-theme="dark"] .line-delete:hover {
-  color: #f87171;
-  background: rgba(248, 113, 113, 0.1);
-}
-
-[data-theme="dark"] .notepad-line.input-line {
-  background: rgba(66, 153, 225, 0.05);
+.suggestion-category {
+  font-size: 0.7rem;
+  font-weight: 500;
+  padding: 0.15rem 0.5rem;
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-tertiary);
+  white-space: nowrap;
 }
 
 /* ==================== RESPONSIVE ==================== */
@@ -468,62 +421,24 @@
     align-self: flex-end;
   }
 
-  .notepad {
-    border-radius: 4px 8px 8px 4px;
-    transform: none;
+  .list-card {
+    border-radius: 12px;
   }
 
-  .notepad-binding {
-    width: 22px;
-    gap: 20px;
-    padding: 12px 0;
+  .add-item-container {
+    padding: 0.875rem 1rem;
   }
 
-  .binding-ring {
-    width: 12px;
-    height: 12px;
+  .shopping-item {
+    padding: 0.75rem 1rem;
   }
 
-  .binding-ring::after {
-    top: 3px;
-    left: 3px;
-    right: 3px;
-    bottom: 3px;
+  .item-delete {
+    opacity: 1;
   }
 
-  .notepad::after {
-    left: 40px;
-  }
-
-  .notepad-header {
-    padding: 0.75rem 0.75rem 0.5rem 50px;
-  }
-
-  .notepad-title {
-    font-size: 1.25rem;
-  }
-
-  .line-number {
-    width: 18px;
-    margin-left: 22px;
-    font-size: 0.6rem;
-  }
-
-  .line-bullet {
-    width: 20px;
-  }
-
-  .line-text,
-  .line-input {
-    font-size: 0.95rem;
-  }
-
-  .notepad-content {
-    min-height: 320px;
-  }
-
-  .notepad-line {
-    height: 28px;
+  .list-footer {
+    padding: 0.625rem 1rem;
   }
 
   .pantry-needs-chips {
@@ -535,4 +450,3 @@
     font-size: 0.8rem;
   }
 }
-

@@ -82,7 +82,7 @@ const Login = ({ onLogin }) => {
           <h2>{isLogin ? "Login" : "Create Account"}</h2>
           <p>
             {isLogin
-              ? "Welcome back to VoxAlyze"
+              ? "Welcome back to voxal"
               : "Start tracking your expenses"}
           </p>
         </div>

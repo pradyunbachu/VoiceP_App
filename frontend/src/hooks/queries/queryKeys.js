@@ -30,6 +30,7 @@ export const queryKeys = {
   shoppingList: {
     all: ['shoppingList'],
     items: (filters) => [...queryKeys.shoppingList.all, 'items', filters],
+    pantryMatches: () => [...queryKeys.shoppingList.all, 'pantryMatches'],
   },
 
   // Insights
@@ -42,5 +43,11 @@ export const queryKeys = {
   calendar: {
     all: ['calendar'],
     events: (filters) => [...queryKeys.calendar.all, 'events', filters],
+  },
+
+  // Google Calendar
+  googleCalendar: {
+    all: ['googleCalendar'],
+    status: () => [...queryKeys.googleCalendar.all, 'status'],
   },
 };

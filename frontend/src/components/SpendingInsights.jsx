@@ -163,7 +163,7 @@ const SpendingInsights = ({ showToast }) => {
       {/* Summary Cards */}
       <div className="summary-cards">
         <div className="summary-card">
-          <div className="card-icon" style={{ background: '#22c55e' }}>
+          <div className="card-icon" style={{ background: '#3b82f6' }}>
             <DollarSign size={20} />
           </div>
           <div className="card-content">
@@ -385,7 +385,7 @@ const SpendingInsights = ({ showToast }) => {
                     style={{
                       width: `${Math.min(budget.percentage_used, 100)}%`,
                       backgroundColor: budget.status === 'over' ? '#ef4444' :
-                        budget.status === 'warning' ? '#f59e0b' : '#22c55e'
+                        budget.status === 'warning' ? '#f59e0b' : '#3b82f6'
                     }}
                   />
                 </div>

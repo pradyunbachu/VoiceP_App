@@ -154,7 +154,7 @@ class InsightsResponse(BaseModel):
 # ============================================================================
 
 class ReceiptScanRequest(BaseModel):
-    ocr_text: str
+    image_base64: str
 
 class ReceiptScanResponse(BaseModel):
     store: str
@@ -205,3 +205,28 @@ class CalendarEventResponse(BaseModel):
 class CalendarEventsListResponse(BaseModel):
     events: List[CalendarEventResponse]
     count: int
+
+# ============================================================================
+# GOOGLE CALENDAR INTEGRATION MODELS
+# ============================================================================
+
+class GoogleCalendarAuthUrlResponse(BaseModel):
+    auth_url: str
+
+class GoogleCalendarCallbackRequest(BaseModel):
+    code: str
+    state: str
+
+class GoogleCalendarStatusResponse(BaseModel):
+    connected: bool
+    google_email: Optional[str] = None
+    connected_at: Optional[str] = None
+
+class GoogleCalendarImportRequest(BaseModel):
+    time_min: Optional[str] = None  # ISO datetime string
+    time_max: Optional[str] = None  # ISO datetime string
+
+class GoogleCalendarImportResponse(BaseModel):
+    imported_count: int
+    skipped_count: int
+    message: str

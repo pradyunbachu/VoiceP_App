@@ -43,7 +43,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
       <div className="nav-left">
         <div className="nav-logo" onClick={() => onViewChange("dashboard")}>
           <Mic size={20} />
-          <span>VoxAlyze</span>
+          <span>voxal</span>
         </div>
         <button
           className="nav-theme-toggle"

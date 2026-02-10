@@ -11,7 +11,15 @@
       "Bash(wc:*)",
       "Bash(npm uninstall:*)",
       "WebSearch",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "Bash(python3:*)",
+      "Bash(source venv/bin/activate)",
+      "Bash(pip install:*)",
+      "Bash(brew install:*)",
+      "Bash(node --version:*)",
+      "Bash(npm --version:*)",
+      "Bash(curl:*)",
+      "Bash(npx vite build)"
     ]
   }
 }

@@ -6,6 +6,7 @@ import {
   useUpdateCalendarEvent,
   useDeleteCalendarEvent,
 } from "../hooks";
+import GoogleCalendarButton from "./GoogleCalendarButton";
 import "./Calendar.css";
 
 const DAYS_OF_WEEK = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -49,6 +50,8 @@ const Calendar = ({ showToast }) => {
     start.setDate(start.getDate() - start.getDay());
     return start;
   });
+  const [currentDay, setCurrentDay] = useState(new Date(today));
+  const [currentMonthDate, setCurrentMonthDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [miniCalendarDate, setMiniCalendarDate] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
   const [showEventModal, setShowEventModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState(null);
@@ -67,6 +70,12 @@ const Calendar = ({ showToast }) => {
     all_day: false,
     color: "#3b82f6",
   });
+  const [draggingEvent, setDraggingEvent] = useState(null);
+  const [dragPreview, setDragPreview] = useState(null); // { dayIndex, hour, minutes, height }
+  const [calendarView, setCalendarView] = useState("week"); // day, week, month
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const timeGridRef = useRef(null);
+  const viewDropdownRef = useRef(null);
 
   // Update current time every minute
   useEffect(() => {
@@ -76,8 +85,26 @@ const Calendar = ({ showToast }) => {
     return () => clearInterval(interval);
   }, []);
 
-  const month = currentWeekStart.getMonth() + 1;
-  const year = currentWeekStart.getFullYear();
+  // Close view dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (viewDropdownRef.current && !viewDropdownRef.current.contains(event.target)) {
+        setShowViewDropdown(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Determine month/year based on current view for API call
+  const getViewDate = () => {
+    if (calendarView === "day") return currentDay;
+    if (calendarView === "month") return currentMonthDate;
+    return currentWeekStart;
+  };
+  const viewDate = getViewDate();
+  const month = viewDate.getMonth() + 1;
+  const year = viewDate.getFullYear();
 
   const { data: events = [], isLoading } = useCalendarEvents(month, year);
   const createMutation = useCreateCalendarEvent();
@@ -134,6 +161,45 @@ const Calendar = ({ showToast }) => {
     return days;
   }, [miniCalendarDate]);
 
+  // Month view calendar days
+  const monthViewDays = useMemo(() => {
+    const firstDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1);
+    const lastDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0);
+    const daysInMonth = lastDay.getDate();
+    const startDayOfWeek = firstDay.getDay();
+
+    const days = [];
+
+    // Previous month padding
+    const prevMonth = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 0);
+    const prevMonthDays = prevMonth.getDate();
+    for (let i = startDayOfWeek - 1; i >= 0; i--) {
+      days.push({
+        date: new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, prevMonthDays - i),
+        isCurrentMonth: false,
+      });
+    }
+
+    // Current month days
+    for (let i = 1; i <= daysInMonth; i++) {
+      days.push({
+        date: new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), i),
+        isCurrentMonth: true,
+      });
+    }
+
+    // Next month padding (ensure we have complete weeks)
+    const remainingDays = 42 - days.length;
+    for (let i = 1; i <= remainingDays; i++) {
+      days.push({
+        date: new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, i),
+        isCurrentMonth: false,
+      });
+    }
+
+    return days;
+  }, [currentMonthDate]);
+
   const formatDateForApi = (date) => {
     const d = new Date(date);
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -171,22 +237,41 @@ const Calendar = ({ showToast }) => {
     return dateStr >= weekStartStr && dateStr <= weekEndStr;
   };
 
-  const goToPreviousWeek = () => {
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(newStart.getDate() - 7);
-    setCurrentWeekStart(newStart);
+  // Navigation based on current view
+  const goToPrevious = () => {
+    if (calendarView === "day") {
+      const newDay = new Date(currentDay);
+      newDay.setDate(newDay.getDate() - 1);
+      setCurrentDay(newDay);
+    } else if (calendarView === "week") {
+      const newStart = new Date(currentWeekStart);
+      newStart.setDate(newStart.getDate() - 7);
+      setCurrentWeekStart(newStart);
+    } else if (calendarView === "month") {
+      setCurrentMonthDate(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() - 1, 1));
+    }
   };
 
-  const goToNextWeek = () => {
-    const newStart = new Date(currentWeekStart);
-    newStart.setDate(newStart.getDate() + 7);
-    setCurrentWeekStart(newStart);
+  const goToNext = () => {
+    if (calendarView === "day") {
+      const newDay = new Date(currentDay);
+      newDay.setDate(newDay.getDate() + 1);
+      setCurrentDay(newDay);
+    } else if (calendarView === "week") {
+      const newStart = new Date(currentWeekStart);
+      newStart.setDate(newStart.getDate() + 7);
+      setCurrentWeekStart(newStart);
+    } else if (calendarView === "month") {
+      setCurrentMonthDate(new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 1));
+    }
   };
 
   const goToToday = () => {
     const start = new Date(today);
     start.setDate(start.getDate() - start.getDay());
     setCurrentWeekStart(start);
+    setCurrentDay(new Date(today));
+    setCurrentMonthDate(new Date(today.getFullYear(), today.getMonth(), 1));
     setMiniCalendarDate(new Date(today.getFullYear(), today.getMonth(), 1));
   };
 
@@ -199,9 +284,14 @@ const Calendar = ({ showToast }) => {
   };
 
   const handleMiniDayClick = (date) => {
+    // Set day view date
+    setCurrentDay(new Date(date));
+    // Set week view start
     const start = new Date(date);
     start.setDate(start.getDate() - start.getDay());
     setCurrentWeekStart(start);
+    // Set month view date
+    setCurrentMonthDate(new Date(date.getFullYear(), date.getMonth(), 1));
   };
 
   const getEventsForDay = (date) => {
@@ -366,6 +456,114 @@ const Calendar = ({ showToast }) => {
     } catch (error) {
       showToast(error.message || "Failed to delete event", "error");
     }
+  };
+
+  // Drag and drop handlers
+  const handleEventDragStart = (event, e) => {
+    e.stopPropagation();
+    setDraggingEvent(event);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", event.id);
+    // Add a slight delay to allow the drag image to be captured before adding opacity
+    setTimeout(() => {
+      e.target.classList.add("dragging");
+    }, 0);
+  };
+
+  const handleEventDragEnd = (e) => {
+    e.target.classList.remove("dragging");
+    setDraggingEvent(null);
+    setDragPreview(null);
+  };
+
+  const handleTimeCellDragOver = (e, date, hour, dayIndex) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+    e.currentTarget.classList.add("drag-over");
+
+    if (!draggingEvent) return;
+
+    // Calculate snap position
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeY = e.clientY - rect.top;
+    const minuteOffset = Math.floor((relativeY / rect.height) * 60);
+    const roundedMinutes = Math.round(minuteOffset / 15) * 15;
+    const snappedMinutes = Math.min(Math.max(roundedMinutes, 0), 45);
+
+    // Calculate event height (duration)
+    let durationMinutes = 60;
+    if (draggingEvent.start_time && draggingEvent.end_time) {
+      const [startH, startM] = draggingEvent.start_time.split(":").map(Number);
+      const [endH, endM] = draggingEvent.end_time.split(":").map(Number);
+      durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    }
+
+    setDragPreview({
+      dayIndex,
+      hour,
+      minutes: snappedMinutes,
+      height: durationMinutes,
+    });
+  };
+
+  const handleTimeCellDragLeave = (e) => {
+    e.currentTarget.classList.remove("drag-over");
+  };
+
+  const handleTimeCellDrop = async (date, hour, e) => {
+    e.preventDefault();
+    e.currentTarget.classList.remove("drag-over");
+
+    if (!draggingEvent) return;
+
+    // Calculate the precise drop position within the cell
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relativeY = e.clientY - rect.top;
+    const minuteOffset = Math.floor((relativeY / rect.height) * 60);
+    const roundedMinutes = Math.round(minuteOffset / 15) * 15; // Round to nearest 15 minutes
+
+    const newStartHour = hour;
+    const newStartMinutes = Math.min(roundedMinutes, 45); // Cap at 45 minutes
+
+    // Calculate duration of original event
+    let durationMinutes = 60; // Default 1 hour
+    if (draggingEvent.start_time && draggingEvent.end_time) {
+      const [startH, startM] = draggingEvent.start_time.split(":").map(Number);
+      const [endH, endM] = draggingEvent.end_time.split(":").map(Number);
+      durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
+    }
+
+    // Calculate new end time
+    const newStartTotalMinutes = newStartHour * 60 + newStartMinutes;
+    const newEndTotalMinutes = newStartTotalMinutes + durationMinutes;
+    const newEndHour = Math.floor(newEndTotalMinutes / 60);
+    const newEndMinutes = newEndTotalMinutes % 60;
+
+    const newStartTime = `${String(newStartHour).padStart(2, "0")}:${String(newStartMinutes).padStart(2, "0")}`;
+    const newEndTime = `${String(newEndHour).padStart(2, "0")}:${String(newEndMinutes).padStart(2, "0")}`;
+    const newDate = formatDateForApi(date);
+
+    try {
+      await updateMutation.mutateAsync({
+        id: draggingEvent.id,
+        data: {
+          title: draggingEvent.title,
+          description: draggingEvent.description,
+          start_date: newDate,
+          start_time: newStartTime,
+          end_date: newDate,
+          end_time: newEndTime,
+          all_day: false,
+          color: draggingEvent.color,
+        },
+      });
+      showToast("Event moved successfully", "success");
+    } catch (error) {
+      showToast(error.message || "Failed to move event", "error");
+    }
+
+    setDraggingEvent(null);
+    setDragPreview(null);
   };
 
   // ICS file parser
@@ -557,13 +755,20 @@ const Calendar = ({ showToast }) => {
     }
   };
 
-  const getWeekDateRange = () => {
-    const start = weekDays[0];
-    const end = weekDays[6];
-    if (start.getMonth() === end.getMonth()) {
-      return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()} - ${end.getDate()}`;
+  const getDateRangeHeader = () => {
+    if (calendarView === "day") {
+      return `${MONTHS[currentDay.getMonth()]} ${currentDay.getDate()}, ${currentDay.getFullYear()}`;
+    } else if (calendarView === "month") {
+      return `${MONTHS[currentMonthDate.getMonth()]} ${currentMonthDate.getFullYear()}`;
+    } else {
+      // Week view
+      const start = weekDays[0];
+      const end = weekDays[6];
+      if (start.getMonth() === end.getMonth()) {
+        return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()} - ${end.getDate()}`;
+      }
+      return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()} - ${MONTHS_SHORT[end.getMonth()]} ${end.getDate()}`;
     }
-    return `${MONTHS_SHORT[start.getMonth()]} ${start.getDate()} - ${MONTHS_SHORT[end.getMonth()]} ${end.getDate()}`;
   };
 
   const currentTimePos = getCurrentTimePosition();
@@ -648,6 +853,9 @@ const Calendar = ({ showToast }) => {
             ))}
           </div>
         </div>
+
+        {/* Google Calendar Integration */}
+        <GoogleCalendarButton showToast={showToast} />
       </aside>
 
       {/* Main Calendar */}
@@ -655,132 +863,339 @@ const Calendar = ({ showToast }) => {
         {/* Header */}
         <header className="calendar-header">
           <div className="calendar-header-left">
-            <button className="nav-arrow" onClick={goToPreviousWeek}>
+            <button className="nav-arrow" onClick={goToPrevious}>
               <ChevronLeft size={20} />
             </button>
             <button className="today-btn" onClick={goToToday}>
               Today
             </button>
-            <button className="nav-arrow" onClick={goToNextWeek}>
+            <button className="nav-arrow" onClick={goToNext}>
               <ChevronRight size={20} />
             </button>
-            <h2 className="date-range">{getWeekDateRange()}</h2>
+            <h2 className="date-range">{getDateRangeHeader()}</h2>
           </div>
           <div className="calendar-header-right">
             <button className="header-icon-btn">
               <Search size={18} />
             </button>
-            <div className="view-selector">
-              <span>Week</span>
-              <ChevronLeft size={14} style={{ transform: "rotate(-90deg)" }} />
+            <div className="view-selector-container" ref={viewDropdownRef}>
+              <button
+                className="view-selector"
+                onClick={() => setShowViewDropdown(!showViewDropdown)}
+              >
+                <span>{calendarView.charAt(0).toUpperCase() + calendarView.slice(1)}</span>
+                <ChevronLeft size={14} style={{ transform: showViewDropdown ? "rotate(90deg)" : "rotate(-90deg)" }} />
+              </button>
+              {showViewDropdown && (
+                <div className="view-dropdown">
+                  <button
+                    className={`view-option ${calendarView === "day" ? "active" : ""}`}
+                    onClick={() => { setCalendarView("day"); setShowViewDropdown(false); }}
+                  >
+                    Day
+                  </button>
+                  <button
+                    className={`view-option ${calendarView === "week" ? "active" : ""}`}
+                    onClick={() => { setCalendarView("week"); setShowViewDropdown(false); }}
+                  >
+                    Week
+                  </button>
+                  <button
+                    className={`view-option ${calendarView === "month" ? "active" : ""}`}
+                    onClick={() => { setCalendarView("month"); setShowViewDropdown(false); }}
+                  >
+                    Month
+                  </button>
+                </div>
+              )}
             </div>
           </div>
         </header>
 
-        {/* Week Grid */}
-        <div className="week-grid">
-          {/* Day Headers */}
-          <div className="week-header">
-            <div className="time-gutter-header">
-              <span className="gmt-label">GMT-5</span>
-            </div>
-            {weekDays.map((date, index) => (
-              <div key={index} className={`day-header ${isToday(date) ? "today" : ""}`}>
-                <span className="day-name">{DAYS_OF_WEEK[date.getDay()]}</span>
-                <span className={`day-number ${isToday(date) ? "today-number" : ""}`}>
-                  {date.getDate()}
+        {/* Day View */}
+        {calendarView === "day" && (
+          <div className="day-view-grid">
+            {/* Day Header */}
+            <div className="day-view-header">
+              <div className="time-gutter-header">
+                <span className="gmt-label">GMT-5</span>
+              </div>
+              <div className={`day-header single-day ${isToday(currentDay) ? "today" : ""}`}>
+                <span className="day-name">{DAYS_OF_WEEK[currentDay.getDay()]}</span>
+                <span className={`day-number ${isToday(currentDay) ? "today-number" : ""}`}>
+                  {currentDay.getDate()}
                 </span>
               </div>
-            ))}
-          </div>
-
-          {/* All Day Row */}
-          <div className="all-day-row">
-            <div className="time-gutter">
-              <span>ALL-DAY</span>
             </div>
-            {weekDays.map((date, index) => {
-              const dayEvents = getEventsForDay(date).filter(e => e.all_day);
-              return (
-                <div key={index} className="all-day-cell">
-                  {dayEvents.map((event) => (
-                    <div
-                      key={event.id}
-                      className="all-day-event"
-                      style={{ backgroundColor: event.color || "#3b82f6" }}
-                      onClick={(e) => handleEventClick(event, e)}
-                    >
-                      {event.title}
-                    </div>
-                  ))}
-                </div>
-              );
-            })}
-          </div>
 
-          {/* Time Grid */}
-          <div className="time-grid-container">
-            <div className="time-grid">
-              {HOURS.map((hour) => (
-                <div key={hour} className="time-row">
-                  <div className="time-gutter">
-                    <span>{formatTimeDisplay(hour)}</span>
+            {/* All Day Row */}
+            <div className="all-day-row day-view-all-day">
+              <div className="time-gutter">
+                <span>ALL-DAY</span>
+              </div>
+              <div className="all-day-cell single-day-cell">
+                {getEventsForDay(currentDay).filter(e => e.all_day).map((event) => (
+                  <div
+                    key={event.id}
+                    className="all-day-event"
+                    style={{ backgroundColor: event.color || "#3b82f6" }}
+                    onClick={(e) => handleEventClick(event, e)}
+                  >
+                    {event.title}
                   </div>
-                  {weekDays.map((date, dayIndex) => (
-                    <div
-                      key={dayIndex}
-                      className="time-cell"
-                      onClick={() => handleTimeSlotClick(date, hour)}
-                    />
-                  ))}
-                </div>
-              ))}
+                ))}
+              </div>
+            </div>
 
-              {/* Current Time Line */}
-              {showCurrentTimeLine && (
-                <div
-                  className="current-time-line"
-                  style={{ top: `${currentTimePos}px` }}
-                >
-                  <span className="current-time-label">{formatCurrentTime()}</span>
-                  <div className="current-time-dot" />
-                  <div className="current-time-bar" />
-                </div>
-              )}
-
-              {/* Events Layer */}
-              <div className="events-layer">
-                {weekDays.map((date, dayIndex) => {
-                  const dayEvents = getEventsForDay(date).filter(e => !e.all_day && e.start_time);
-                  return (
-                    <div key={dayIndex} className="day-events-column" style={{ left: `calc(60px + ${dayIndex} * ((100% - 60px) / 7))`, width: `calc((100% - 60px) / 7)` }}>
-                      {dayEvents.map((event) => {
-                        const { top, height } = getEventPosition(event);
-                        return (
-                          <div
-                            key={event.id}
-                            className="week-event"
-                            style={{
-                              backgroundColor: event.color || "#3b82f6",
-                              top: `${top}px`,
-                              height: `${height}px`,
-                            }}
-                            onClick={(e) => handleEventClick(event, e)}
-                          >
-                            <div className="week-event-title">{event.title}</div>
-                            <div className="week-event-time">
-                              {formatEventTime(event.start_time)} - {formatEventTime(event.end_time)}
-                            </div>
-                          </div>
-                        );
-                      })}
+            {/* Time Grid */}
+            <div className="time-grid-container">
+              <div className="time-grid day-view-time-grid">
+                {HOURS.map((hour) => (
+                  <div key={hour} className="time-row">
+                    <div className="time-gutter">
+                      <span>{formatTimeDisplay(hour)}</span>
                     </div>
-                  );
-                })}
+                    <div
+                      className="time-cell single-day-cell"
+                      onClick={() => handleTimeSlotClick(currentDay, hour)}
+                    />
+                  </div>
+                ))}
+
+                {/* Current Time Line */}
+                {isToday(currentDay) && currentTimePos !== null && (
+                  <div
+                    className="current-time-line day-view-time-line"
+                    style={{ top: `${currentTimePos}px` }}
+                  >
+                    <span className="current-time-label">{formatCurrentTime()}</span>
+                    <div className="current-time-dot" />
+                    <div className="current-time-bar" />
+                  </div>
+                )}
+
+                {/* Events Layer */}
+                <div className="events-layer day-view-events">
+                  <div className="day-events-column" style={{ left: '60px', width: 'calc(100% - 60px)' }}>
+                    {getEventsForDay(currentDay).filter(e => !e.all_day && e.start_time).map((event) => {
+                      const { top, height } = getEventPosition(event);
+                      return (
+                        <div
+                          key={event.id}
+                          className="week-event"
+                          style={{
+                            backgroundColor: event.color || "#3b82f6",
+                            top: `${top}px`,
+                            height: `${height}px`,
+                          }}
+                          onClick={(e) => handleEventClick(event, e)}
+                        >
+                          <div className="week-event-title">{event.title}</div>
+                          <div className="week-event-time">
+                            {formatEventTime(event.start_time)} - {formatEventTime(event.end_time)}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {/* Week View */}
+        {calendarView === "week" && (
+          <div className="week-grid">
+            {/* Day Headers */}
+            <div className="week-header">
+              <div className="time-gutter-header">
+                <span className="gmt-label">GMT-5</span>
+              </div>
+              {weekDays.map((date, index) => (
+                <div key={index} className={`day-header ${isToday(date) ? "today" : ""}`}>
+                  <span className="day-name">{DAYS_OF_WEEK[date.getDay()]}</span>
+                  <span className={`day-number ${isToday(date) ? "today-number" : ""}`}>
+                    {date.getDate()}
+                  </span>
+                </div>
+              ))}
+            </div>
+
+            {/* All Day Row */}
+            <div className="all-day-row">
+              <div className="time-gutter">
+                <span>ALL-DAY</span>
+              </div>
+              {weekDays.map((date, index) => {
+                const dayEvents = getEventsForDay(date).filter(e => e.all_day);
+                return (
+                  <div key={index} className="all-day-cell">
+                    {dayEvents.map((event) => (
+                      <div
+                        key={event.id}
+                        className="all-day-event"
+                        style={{ backgroundColor: event.color || "#3b82f6" }}
+                        onClick={(e) => handleEventClick(event, e)}
+                      >
+                        {event.title}
+                      </div>
+                    ))}
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Time Grid */}
+            <div className="time-grid-container">
+              <div className="time-grid">
+                {HOURS.map((hour) => (
+                  <div key={hour} className="time-row">
+                    <div className="time-gutter">
+                      <span>{formatTimeDisplay(hour)}</span>
+                    </div>
+                    {weekDays.map((date, dayIndex) => (
+                      <div
+                        key={dayIndex}
+                        className="time-cell"
+                        onClick={() => handleTimeSlotClick(date, hour)}
+                        onDragOver={(e) => handleTimeCellDragOver(e, date, hour, dayIndex)}
+                        onDragLeave={handleTimeCellDragLeave}
+                        onDrop={(e) => handleTimeCellDrop(date, hour, e)}
+                      />
+                    ))}
+                  </div>
+                ))}
+
+                {/* Current Time Line */}
+                {showCurrentTimeLine && (
+                  <div
+                    className="current-time-line"
+                    style={{ top: `${currentTimePos}px` }}
+                  >
+                    <span className="current-time-label">{formatCurrentTime()}</span>
+                    <div className="current-time-dot" />
+                    <div className="current-time-bar" />
+                  </div>
+                )}
+
+                {/* Events Layer */}
+                <div className="events-layer">
+                  {weekDays.map((date, dayIndex) => {
+                    const dayEvents = getEventsForDay(date).filter(e => !e.all_day && e.start_time);
+                    return (
+                      <div key={dayIndex} className="day-events-column" style={{ left: `calc(60px + ${dayIndex} * ((100% - 60px) / 7))`, width: `calc((100% - 60px) / 7)` }}>
+                        {dayEvents.map((event) => {
+                          const { top, height } = getEventPosition(event);
+                          return (
+                            <div
+                              key={event.id}
+                              className={`week-event ${draggingEvent?.id === event.id ? "dragging" : ""}`}
+                              style={{
+                                backgroundColor: event.color || "#3b82f6",
+                                top: `${top}px`,
+                                height: `${height}px`,
+                              }}
+                              draggable
+                              onDragStart={(e) => handleEventDragStart(event, e)}
+                              onDragEnd={handleEventDragEnd}
+                              onClick={(e) => handleEventClick(event, e)}
+                            >
+                              <div className="week-event-title">{event.title}</div>
+                              <div className="week-event-time">
+                                {formatEventTime(event.start_time)} - {formatEventTime(event.end_time)}
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    );
+                  })}
+
+                  {/* Drag Preview Ghost */}
+                  {dragPreview && draggingEvent && (
+                    <div
+                      className="drag-preview-ghost"
+                      style={{
+                        left: `calc(60px + ${dragPreview.dayIndex} * ((100% - 60px) / 7))`,
+                        width: `calc((100% - 60px) / 7)`,
+                        top: `${(dragPreview.hour - 7) * 60 + dragPreview.minutes}px`,
+                        height: `${Math.max(dragPreview.height, 30)}px`,
+                        backgroundColor: draggingEvent.color || "#3b82f6",
+                      }}
+                    >
+                      <div className="drag-preview-title">{draggingEvent.title}</div>
+                      <div className="drag-preview-time">
+                        {`${dragPreview.hour % 12 || 12}:${String(dragPreview.minutes).padStart(2, "0")}${dragPreview.hour >= 12 ? "pm" : "am"}`}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Month View */}
+        {calendarView === "month" && (
+          <div className="month-view-grid">
+            {/* Weekday Headers */}
+            <div className="month-weekday-header">
+              {DAYS_OF_WEEK.map((day, index) => (
+                <div key={index} className="month-weekday">{day}</div>
+              ))}
+            </div>
+
+            {/* Month Days Grid */}
+            <div className="month-days-grid">
+              {monthViewDays.map((day, index) => {
+                const dayEvents = getEventsForDay(day.date);
+                const maxEventsToShow = 3;
+                const visibleEvents = dayEvents.slice(0, maxEventsToShow);
+                const remainingCount = dayEvents.length - maxEventsToShow;
+
+                return (
+                  <div
+                    key={index}
+                    className={`month-day-cell ${!day.isCurrentMonth ? "other-month" : ""} ${isToday(day.date) ? "today" : ""}`}
+                    onClick={() => handleTimeSlotClick(day.date, 9)}
+                  >
+                    <span className={`month-day-number ${isToday(day.date) ? "today-number" : ""}`}>
+                      {day.date.getDate()}
+                    </span>
+                    <div className="month-day-events">
+                      {visibleEvents.map((event) => (
+                        <div
+                          key={event.id}
+                          className="month-event"
+                          style={{ backgroundColor: event.color || "#3b82f6" }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleEventClick(event, e);
+                          }}
+                        >
+                          {event.all_day ? (
+                            <span className="month-event-title">{event.title}</span>
+                          ) : (
+                            <>
+                              <span className="month-event-time">{formatEventTime(event.start_time)}</span>
+                              <span className="month-event-title">{event.title}</span>
+                            </>
+                          )}
+                        </div>
+                      ))}
+                      {remainingCount > 0 && (
+                        <div className="month-more-events">
+                          +{remainingCount} more
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Event Modal */}

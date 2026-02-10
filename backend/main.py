@@ -1,5 +1,5 @@
 # ============================================================================
-# VOICEP API - MAIN ENTRY POINT
+# VOXAL API - MAIN ENTRY POINT
 # ============================================================================
 import os
 from fastapi import FastAPI, Request
@@ -12,14 +12,14 @@ from slowapi.errors import RateLimitExceeded
 
 from config import supabase
 from services.recurring import process_due_recurring_expenses
-from routes import transcription, expenses, analytics, budgets, recurring, pantry, chat, shopping_list, insights, receipt, calendar
+from routes import transcription, expenses, analytics, budgets, recurring, pantry, chat, shopping_list, insights, receipt, calendar, google_calendar
 from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
 # APPLICATION INITIALIZATION
 # ============================================================================
 
-app = FastAPI(title="VoiceP Expense Tracker API")
+app = FastAPI(title="voxal API")
 
 # Rate limiting setup
 limiter = Limiter(key_func=get_remote_address)
@@ -80,6 +80,7 @@ app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(receipt.router, prefix="/api", tags=["Receipt"])
 app.include_router(calendar.router, prefix="/api", tags=["Calendar"])
+app.include_router(google_calendar.router, prefix="/api", tags=["Google Calendar"])
 
 # ============================================================================
 # ROOT ENDPOINT
@@ -87,7 +88,7 @@ app.include_router(calendar.router, prefix="/api", tags=["Calendar"])
 
 @app.get("/")
 async def root():
-    return {"message": "VoiceP Expense Tracker API"}
+    return {"message": "voxal API"}
 
 
 @app.get("/api/csrf-token", tags=["Security"])

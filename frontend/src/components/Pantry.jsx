@@ -18,6 +18,7 @@ import {
   ShoppingCart,
   LayoutGrid,
   List,
+  Download,
 } from "lucide-react";
 import {
   DndContext,
@@ -39,6 +40,7 @@ import {
   useDeletePantryItem,
   useBulkDeletePantryItems,
 } from "../hooks";
+import { exportPantryCsv } from "../lib/csvExport";
 import LoadingSkeleton from "./LoadingSkeleton";
 import "./Pantry.css";
 
@@ -426,6 +428,15 @@ const Pantry = ({ showToast }) => {
               <List size={18} />
             </button>
           </div>
+          <button
+            className="export-pantry-button"
+            onClick={() => exportPantryCsv(filteredItems)}
+            disabled={filteredItems.length === 0}
+            title="Export pantry items to CSV"
+          >
+            <Download size={18} />
+            <span>Export CSV</span>
+          </button>
           <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
             <Plus size={18} />
             <span>Add Item</span>

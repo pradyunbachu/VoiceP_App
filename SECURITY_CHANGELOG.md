@@ -2,7 +2,7 @@
 
 ## Overview
 
-This update implements critical security measures across the entire VoiceP application stack, addressing authentication, authorization, input validation, and infrastructure security concerns. These changes prepare the application for production deployment by implementing industry-standard security practices.
+This update implements critical security measures across the entire voxal application stack, addressing authentication, authorization, input validation, and infrastructure security concerns. These changes prepare the application for production deployment by implementing industry-standard security practices.
 
 ---
 

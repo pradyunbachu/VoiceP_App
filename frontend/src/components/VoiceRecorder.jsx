@@ -519,7 +519,11 @@ const VoiceRecorder = ({ showToast }) => {
             // Check if it's a grocery expense for pantry prompt
             const category = (result.category || "").toLowerCase();
             if (category.includes("groceries") || category.includes("grocery")) {
-              setPendingPantryExpense(result);
+              // Map expense_id to id for AddToPantryModal compatibility
+              setPendingPantryExpense({
+                ...result,
+                id: result.expense_id
+              });
             }
             setShowReceiptScanner(false);
           }}

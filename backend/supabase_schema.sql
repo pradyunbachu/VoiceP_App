@@ -1,5 +1,5 @@
 -- ============================================================================
--- Supabase Database Schema for VoxAlyze
+-- Supabase Database Schema for voxal
 -- ============================================================================
 -- Run this SQL in your Supabase SQL Editor to create all tables
 -- ============================================================================
@@ -135,4 +135,41 @@ CREATE POLICY "Users can update their own shopping list items"
 
 CREATE POLICY "Users can delete their own shopping list items"
     ON shopping_list FOR DELETE
+    USING (auth.uid() = user_id);
+
+-- ============================================================================
+-- Google Calendar Tokens Table (for Supabase Auth)
+-- ============================================================================
+-- Stores OAuth tokens for Google Calendar integration
+CREATE TABLE IF NOT EXISTS google_calendar_tokens (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    access_token TEXT NOT NULL,
+    refresh_token TEXT NOT NULL,
+    token_expiry TIMESTAMPTZ NOT NULL,
+    google_email TEXT,
+    connected_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_google_calendar_tokens_user_id ON google_calendar_tokens(user_id);
+
+-- Enable RLS for google_calendar_tokens
+ALTER TABLE google_calendar_tokens ENABLE ROW LEVEL SECURITY;
+
+-- Policies for google_calendar_tokens
+CREATE POLICY "Users can view their own Google Calendar tokens"
+    ON google_calendar_tokens FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own Google Calendar tokens"
+    ON google_calendar_tokens FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own Google Calendar tokens"
+    ON google_calendar_tokens FOR UPDATE
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own Google Calendar tokens"
+    ON google_calendar_tokens FOR DELETE
     USING (auth.uid() = user_id);

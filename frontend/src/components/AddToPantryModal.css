@@ -108,7 +108,7 @@
 
 .pantry-item-row.selected {
   border-color: var(--accent-primary);
-  background: rgba(34, 197, 94, 0.05);
+  background: rgba(59, 130, 246, 0.05);
 }
 
 .item-checkbox {
@@ -133,7 +133,7 @@
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 1rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
 }
 
 .item-name-input:focus {
@@ -170,7 +170,7 @@
   border-radius: 6px;
   color: var(--text-primary);
   font-size: 0.85rem;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
 }
 
 .item-quantity-input:focus,
@@ -215,7 +215,7 @@
   font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
 }
 
 .add-more-btn:hover {
@@ -242,7 +242,7 @@
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  font-family: 'Ubuntu', sans-serif;
+  font-family: 'Bricolage Grotesque', sans-serif;
   transition: all 0.2s;
 }
 

@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus } from "lucide-react";
-import { useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems, useCreatePantryItem } from "../hooks";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download } from "lucide-react";
+import { useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems } from "../hooks";
+import { exportExpensesCsv } from "../lib/csvExport";
+import AddToPantryModal from "./AddToPantryModal";
 import "./ExpenseList.css";
 
 const ExpenseList = ({ expenses, showToast }) => {
@@ -11,15 +13,13 @@ const ExpenseList = ({ expenses, showToast }) => {
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(null);
-  const [addingToPantryId, setAddingToPantryId] = useState(null);
+  const [pantryModalExpense, setPantryModalExpense] = useState(null);
   const [addedToPantry, setAddedToPantry] = useState(new Set());
 
   // React Query mutations
   const updateMutation = useUpdateExpense();
   const deleteMutation = useDeleteExpense();
   const bulkDeleteMutation = useBulkDeleteExpenses();
-  const createPantryItemMutation = useCreatePantryItem();
-
   // Fetch pantry items to check if expense items are already in pantry
   const { data: pantryItems = [] } = usePantryItems();
 
@@ -28,44 +28,10 @@ const ExpenseList = ({ expenses, showToast }) => {
     return addedToPantry.has(expenseId) || pantryItems.some(item => item.source_expense_id === expenseId);
   };
 
-  // Add expense items to pantry
-  const handleAddToPantry = async (expense) => {
-    // Prevent double-clicks
-    if (addingToPantryId === expense.id || addedToPantry.has(expense.id)) {
-      return;
-    }
-
-    setAddingToPantryId(expense.id);
-
-    try {
-      const itemsString = expense.items || "";
-      const itemName = itemsString.trim() || expense.store || "Unknown Item";
-
-      await createPantryItemMutation.mutateAsync({
-        name: itemName,
-        quantity: 1,
-        unit: "count",
-        category: "Other",
-        stock_status: "full",
-        purchase_date: expense.date,
-        source_expense_id: expense.id,
-        notes: `Added from expense at ${expense.store}`
-      });
-
-      // Mark as added immediately to prevent showing button before query refreshes
-      setAddedToPantry(prev => new Set([...prev, expense.id]));
-
-      if (showToast) {
-        showToast("Added to pantry successfully", "success");
-      }
-    } catch (error) {
-      console.error("Error adding to pantry:", error);
-      if (showToast) {
-        showToast(`Failed to add to pantry: ${error.message || "Unknown error"}`, "error");
-      }
-    } finally {
-      setAddingToPantryId(null);
-    }
+  // Open Add to Pantry modal for an expense
+  const handleAddToPantry = (expense) => {
+    if (addedToPantry.has(expense.id)) return;
+    setPantryModalExpense(expense);
   };
 
   const handleEdit = (expense) => {
@@ -323,13 +289,24 @@ const ExpenseList = ({ expenses, showToast }) => {
             </div>
           )}
           {!isSelectMode && (
-            <button
-              className="select-mode-button"
-              onClick={toggleSelectMode}
-            >
-              <CheckSquare size={18} />
-              <span>Select</span>
-            </button>
+            <>
+              <button
+                className="select-mode-button"
+                onClick={toggleSelectMode}
+              >
+                <CheckSquare size={18} />
+                <span>Select</span>
+              </button>
+              <button
+                className="select-mode-button export-button"
+                onClick={() => exportExpensesCsv(sortedExpenses)}
+                disabled={sortedExpenses.length === 0}
+                title="Export filtered expenses to CSV"
+              >
+                <Download size={18} />
+                <span>Export CSV</span>
+              </button>
+            </>
           )}
           <div className="sort-controls">
             <ArrowUpDown size={18} />
@@ -499,11 +476,10 @@ const ExpenseList = ({ expenses, showToast }) => {
                     <button
                       className="add-to-pantry-button"
                       onClick={() => handleAddToPantry(expense)}
-                      disabled={addingToPantryId === expense.id}
                       title="Add to pantry"
                     >
                       <Plus size={14} />
-                      <span>{addingToPantryId === expense.id ? "Adding..." : "Add to Pantry"}</span>
+                      <span>Add to Pantry</span>
                     </button>
                   )}
                 </div>
@@ -512,6 +488,17 @@ const ExpenseList = ({ expenses, showToast }) => {
           </div>
         ))}
       </div>
+
+      {pantryModalExpense && (
+        <AddToPantryModal
+          expense={pantryModalExpense}
+          onClose={() => setPantryModalExpense(null)}
+          onSuccess={() => {
+            setAddedToPantry(prev => new Set([...prev, pantryModalExpense.id]));
+            if (showToast) showToast("Added to pantry successfully", "success");
+          }}
+        />
+      )}
     </div>
   );
 };

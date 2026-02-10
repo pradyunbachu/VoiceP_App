@@ -9,7 +9,7 @@ export const useScanReceipt = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (ocrText) => {
+    mutationFn: async (imageBase64) => {
       const token = getToken();
       const response = await fetch(`${API_BASE_URL}/api/scan-receipt`, {
         method: 'POST',
@@ -18,7 +18,7 @@ export const useScanReceipt = () => {
           Authorization: `Bearer ${token}`,
         }),
         credentials: 'include',
-        body: JSON.stringify({ ocr_text: ocrText }),
+        body: JSON.stringify({ image_base64: imageBase64 }),
       });
 
       if (!response.ok) {

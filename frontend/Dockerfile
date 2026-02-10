@@ -1,4 +1,4 @@
-# Frontend Dockerfile for VoxAlyze
+# Frontend Dockerfile for voxal
 # Multi-stage build for smaller production image
 
 # Stage 1: Build

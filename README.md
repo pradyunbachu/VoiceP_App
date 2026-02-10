@@ -1,4 +1,4 @@
-# VoxAlyze - Voice Powered Personal Assistant
+# voxal - Voice Powered Personal Assistant
 
 A modern expense tracking application that lets you record expenses using your voice. Speak about your purchase, and the app extracts store name, items, amount, date, and categories, then displays everything in an analytics dashboard.
 
@@ -36,7 +36,7 @@ A modern expense tracking application that lets you record expenses using your v
   - Ensures app works even without API keys
 - SQLite - Lightweight, file-based database
 
-  - Stores expenses locally in voxalyze.db
+  - Stores expenses locally in voxal.db
   - Tracks: store, items, category, amount, date, and timestamps
   - Provides analytics aggregation (totals, by store, by date, by category)
 
@@ -71,7 +71,7 @@ A modern expense tracking application that lets you record expenses using your v
   - CSS Grid and Flexbox for responsive layouts
   - CSS animations and transitions
   - Dark theme with gradient accents
-  - Ubuntu font family
+  - Bricolage Grotesque font family
 
 ## Architecture
 
@@ -94,13 +94,13 @@ A modern expense tracking application that lets you record expenses using your v
 ## Project Structure
 
 ```
-VoiceP_App/
+voxal/
 ├── backend/
 │   ├── main.py              # FastAPI application with all endpoints
 │   ├── requirements.txt      # Python dependencies
 │   ├── .env                  # Environment variables (API keys) - NOT in git
 │   ├── .env.example          # Template for environment variables
-│   ├── voxalyze.db           # SQLite database - NOT in git
+│   ├── voxal.db              # SQLite database - NOT in git
 │   └── venv/                 # Virtual environment - NOT in git
 ├── frontend/
 │   ├── src/
@@ -294,7 +294,7 @@ The app has multiple layers of fallbacks to ensure it always works:
 - "Failed to fetch" error: Make sure backend is running on port 8000
 - No transcription: Check browser microphone permissions and Deepgram API key
 - Poor extraction: Add Groq API key for better accuracy
-- Database errors: Check file permissions on `voxalyze.db`
+- Database errors: Check file permissions on `voxal.db`
 
 ## License
 

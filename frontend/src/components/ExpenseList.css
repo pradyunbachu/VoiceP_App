@@ -430,6 +430,17 @@
   color: var(--text-primary);
 }
 
+.select-mode-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.select-mode-button:disabled:hover {
+  background: transparent;
+  border-color: var(--border-primary);
+  color: var(--text-tertiary);
+}
+
 .bulk-actions {
   display: flex;
   gap: var(--space-3);

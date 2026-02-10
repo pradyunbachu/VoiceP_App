@@ -3,7 +3,7 @@ export { useExpenses } from './queries/useExpenses';
 export { useAnalytics } from './queries/useAnalytics';
 export { useBudgets } from './queries/useBudgets';
 export { usePantryItems, usePantryStats } from './queries/usePantry';
-export { useShoppingList } from './queries/useShoppingList';
+export { useShoppingList, useShoppingPantryMatches } from './queries/useShoppingList';
 export { useSpendingInsights } from './queries/useSpendingInsights';
 export { useCalendarEvents } from './queries/useCalendarEvents';
 export { queryKeys } from './queries/queryKeys';
@@ -57,3 +57,15 @@ export {
   useUpdateCalendarEvent,
   useDeleteCalendarEvent,
 } from './mutations/useCalendarMutations';
+
+// Grocery suggestions
+export { useGrocerySuggestions } from './useGrocerySuggestions';
+
+// Google Calendar hooks
+export {
+  useGoogleCalendarStatus,
+  useGoogleCalendarAuthUrl,
+  useGoogleCalendarCallback,
+  useImportGoogleCalendarEvents,
+  useDisconnectGoogleCalendar,
+} from './queries/useGoogleCalendar';

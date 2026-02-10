@@ -28,6 +28,13 @@ CSRF_EXEMPT_PATHS = {
     "/api/scan-receipt",  # Protected by JWT authentication
 }
 
+# Path prefixes exempt from CSRF protection
+# All /api/ routes use JWT Bearer token auth, which is not vulnerable to CSRF
+# (CSRF exploits cookie-based auth; Bearer tokens must be explicitly attached)
+CSRF_EXEMPT_PREFIXES = (
+    "/api/",
+)
+
 
 def generate_csrf_token() -> str:
     """Generate a cryptographically secure CSRF token."""
@@ -57,8 +64,10 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
         # Check if this is a state-changing request that needs CSRF validation
         if request.method in CSRF_PROTECTED_METHODS:
-            # Skip validation for exempt paths
-            if request.url.path not in CSRF_EXEMPT_PATHS:
+            # Skip validation for exempt paths and prefixes
+            path = request.url.path
+            is_exempt = path in CSRF_EXEMPT_PATHS or path.startswith(CSRF_EXEMPT_PREFIXES)
+            if not is_exempt:
                 # Get the CSRF token from header
                 csrf_header = request.headers.get(CSRF_HEADER_NAME)
 

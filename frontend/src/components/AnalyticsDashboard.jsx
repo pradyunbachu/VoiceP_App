@@ -5,7 +5,7 @@ import { useBudgets } from '../hooks'
 import LoadingSkeleton from './LoadingSkeleton'
 import './AnalyticsDashboard.css'
 
-const COLORS = ['#22c55e', '#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
+const COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
 
 const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
   const [budgetMonth, setBudgetMonth] = useState(new Date().getMonth() + 1)
@@ -49,7 +49,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#22c55e' }}>
+          <div className="stat-icon" style={{ background: '#3b82f6' }}>
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
@@ -59,7 +59,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#16a34a' }}>
+          <div className="stat-icon" style={{ background: '#2563eb' }}>
             <ShoppingBag size={24} />
           </div>
           <div className="stat-content">
@@ -69,7 +69,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#15803d' }}>
+          <div className="stat-icon" style={{ background: '#1d4ed8' }}>
             <TrendingUp size={24} />
           </div>
           <div className="stat-content">
@@ -83,7 +83,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#4ade80' }}>
+          <div className="stat-icon" style={{ background: '#60a5fa' }}>
             <Calendar size={24} />
           </div>
           <div className="stat-content">
@@ -115,10 +115,10 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
                 <Line
                   type="monotone"
                   dataKey="amount"
-                  stroke="#22c55e"
+                  stroke="#3b82f6"
                   strokeWidth={3}
                   name="Amount"
-                  dot={{ fill: '#22c55e', r: 4 }}
+                  dot={{ fill: '#3b82f6', r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -243,7 +243,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
                 percentage >= 100 ? '#dc2626' :
                 percentage >= 90 ? '#eab308' :
                 percentage >= 75 ? '#f59e0b' :
-                '#22c55e'
+                '#3b82f6'
 
               return (
                 <div key={budget.id} className="budget-comparison-card">

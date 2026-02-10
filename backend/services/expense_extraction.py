@@ -262,7 +262,7 @@ def extract_expense_simple(transcript: str):
                     else:
                         amount = num1
                     break
-                elif 'for\s+' in pattern:  # Handle "for 2350" -> $23.50
+                elif r'for\s+' in pattern:  # Handle "for 2350" -> $23.50
                     num_str = match.group(1)
                     # If it's a whole number (no decimal), check if it should be split
                     if '.' not in num_str:

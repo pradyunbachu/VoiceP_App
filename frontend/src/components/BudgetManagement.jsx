@@ -1,7 +1,8 @@
 import { useState } from "react";
-import { DollarSign, Plus, Trash2, Edit2, Check, X } from "lucide-react";
+import { DollarSign, Plus, Trash2, Edit2, Check, X, Download } from "lucide-react";
 import { CATEGORIES } from "../constants/categories";
 import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from "../hooks";
+import { exportBudgetsCsv } from "../lib/csvExport";
 import LoadingSkeleton from "./LoadingSkeleton";
 import "./BudgetManagement.css";
 
@@ -173,13 +174,24 @@ const BudgetManagement = ({ showToast }) => {
           <h2>Budget Management</h2>
           <p className="budget-subtitle">Track your spending against monthly budgets</p>
         </div>
-        <button
-          className="add-budget-button"
-          onClick={() => setShowAddForm(!showAddForm)}
-        >
-          <Plus size={18} />
-          <span>Add Budget</span>
-        </button>
+        <div className="budget-header-actions">
+          <button
+            className="export-budget-button"
+            onClick={() => exportBudgetsCsv(budgets)}
+            disabled={budgets.length === 0}
+            title="Export budgets to CSV"
+          >
+            <Download size={18} />
+            <span>Export CSV</span>
+          </button>
+          <button
+            className="add-budget-button"
+            onClick={() => setShowAddForm(!showAddForm)}
+          >
+            <Plus size={18} />
+            <span>Add Budget</span>
+          </button>
+        </div>
       </div>
 
       <div className="budget-filters">
@@ -489,7 +501,7 @@ const BudgetManagement = ({ showToast }) => {
                             (budget.percentage_used || 0) >= 100 ? '#dc2626' :
                             (budget.percentage_used || 0) >= 90 ? '#eab308' :
                             (budget.percentage_used || 0) >= 75 ? '#f59e0b' :
-                            '#22c55e'
+                            '#3b82f6'
                         }}
                       />
                     </div>

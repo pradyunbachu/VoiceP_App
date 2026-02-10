@@ -47,6 +47,32 @@
   background: var(--accent-primary-hover);
 }
 
+.export-pantry-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: transparent;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+}
+
+.export-pantry-button:hover:not(:disabled) {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.export-pantry-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Stats Cards */
 .pantry-stats {
   display: grid;

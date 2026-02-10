@@ -1,17 +1,25 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Camera, Upload, X, Loader2, CheckCircle, AlertCircle, RotateCcw } from "lucide-react";
-import Tesseract from "tesseract.js";
 import { useScanReceipt } from "../hooks";
 import "./ReceiptScanner.css";
+
+// Detect if device is mobile (phones/tablets) vs desktop/laptop
+const isMobileDevice = () => {
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent
+  );
+};
 
 const ReceiptScanner = ({ onClose, onSuccess }) => {
   const [mode, setMode] = useState("select"); // select, camera, preview, processing, result
   const [imageData, setImageData] = useState(null);
-  const [ocrProgress, setOcrProgress] = useState(0);
   const [ocrStatus, setOcrStatus] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
-  const [cameraFacing, setCameraFacing] = useState("environment"); // environment = back camera
+  // Mobile devices (iPhone, etc.) default to back camera; laptops default to front camera
+  const [cameraFacing, setCameraFacing] = useState(() =>
+    isMobileDevice() ? "environment" : "user"
+  );
 
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -124,35 +132,12 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
     if (!imageData) return;
 
     setMode("processing");
-    setOcrProgress(0);
-    setOcrStatus("Initializing OCR...");
+    setOcrStatus("Analyzing receipt...");
     setError("");
 
     try {
-      // Run OCR with Tesseract.js
-      const result = await Tesseract.recognize(imageData, "eng", {
-        logger: (m) => {
-          if (m.status === "recognizing text") {
-            setOcrProgress(Math.round(m.progress * 100));
-            setOcrStatus("Reading receipt...");
-          } else if (m.status === "loading language traineddata") {
-            setOcrStatus("Loading language data...");
-          } else if (m.status === "initializing api") {
-            setOcrStatus("Initializing...");
-          }
-        },
-      });
-
-      const ocrText = result.data.text;
-
-      if (!ocrText || ocrText.trim().length < 10) {
-        throw new Error("Could not read text from the image. Please try a clearer photo.");
-      }
-
-      setOcrStatus("Parsing receipt data...");
-
-      // Send OCR text to backend for parsing
-      const expenseResult = await scanReceiptMutation.mutateAsync(ocrText);
+      // Send image directly to backend for vision-based parsing
+      const expenseResult = await scanReceiptMutation.mutateAsync(imageData);
 
       setResult(expenseResult);
       setMode("result");
@@ -163,13 +148,12 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
     } catch (err) {
       console.error("Receipt processing error:", err);
       setError(err.message || "Failed to process receipt");
-      setMode("preview"); // Go back to preview to allow retry
+      setMode("preview");
     }
   };
 
   const resetScanner = () => {
     setImageData(null);
-    setOcrProgress(0);
     setOcrStatus("");
     setError("");
     setResult(null);
@@ -304,15 +288,6 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
             <div className="processing-indicator">
               <Loader2 className="spinner" size={48} />
               <p className="processing-status">{ocrStatus}</p>
-              {ocrProgress > 0 && (
-                <div className="progress-bar">
-                  <div
-                    className="progress-fill"
-                    style={{ width: `${ocrProgress}%` }}
-                  />
-                </div>
-              )}
-              <p className="progress-text">{ocrProgress}%</p>
             </div>
           </div>
         )}

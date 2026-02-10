@@ -1,4 +1,4 @@
-# Backend Dockerfile for VoxAlyze
+# Backend Dockerfile for voxal
 FROM python:3.11-slim
 
 # Set working directory

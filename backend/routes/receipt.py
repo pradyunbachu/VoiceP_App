@@ -9,7 +9,7 @@ from slowapi.util import get_remote_address
 from config import supabase
 from auth import get_current_user_dependency
 from schemas import ReceiptScanRequest, ReceiptScanResponse
-from services.receipt_parsing import parse_receipt_with_groq, fallback_receipt_parsing
+from services.receipt_parsing import parse_receipt_with_vision
 
 router = APIRouter()
 limiter = Limiter(key_func=get_remote_address)
@@ -23,29 +23,18 @@ async def scan_receipt(
     current_user: dict = Depends(get_current_user_dependency)
 ):
     """
-    Parse OCR text from a receipt and create an expense.
-
-    The OCR is performed client-side using Tesseract.js, and this endpoint
-    receives the extracted text and uses Groq LLM to parse it into
-    structured expense data.
+    Parse a receipt image using Groq Vision API and create an expense.
     """
-    user_id = current_user.get("sub")
+    user_id = current_user.get("id")
     if not user_id:
         raise HTTPException(status_code=401, detail="User ID not found in token")
 
-    ocr_text = scan_request.ocr_text.strip()
-    if not ocr_text:
-        raise HTTPException(status_code=400, detail="OCR text is required")
+    image_base64 = scan_request.image_base64.strip()
+    if not image_base64:
+        raise HTTPException(status_code=400, detail="Image data is required")
 
-    if len(ocr_text) < 10:
-        raise HTTPException(status_code=400, detail="OCR text too short - receipt may not be readable")
-
-    # Try Groq parsing first, fall back to regex-based parsing
-    parsed_data = parse_receipt_with_groq(ocr_text)
-
-    if not parsed_data:
-        # Try fallback parsing
-        parsed_data = fallback_receipt_parsing(ocr_text)
+    # Parse receipt using Groq Vision
+    parsed_data = parse_receipt_with_vision(image_base64)
 
     if not parsed_data:
         raise HTTPException(

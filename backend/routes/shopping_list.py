@@ -7,8 +7,9 @@ from slowapi.util import get_remote_address
 from datetime import datetime
 from typing import Optional
 
-from config import supabase
+from config import supabase, groq_client
 from auth import get_current_user_dependency
+import json
 from schemas import (
     ShoppingListItemCreate,
     ShoppingListItemUpdate,
@@ -274,3 +275,163 @@ async def remove_purchased_items(
         "deleted_items": deleted_names,
         "searched_items": parsed_items
     }
+
+
+# ============================================================================
+# SEMANTIC ITEM MATCHING WITH GROQ
+# ============================================================================
+
+ITEM_MATCHING_PROMPT = """You are a grocery item matcher. Given a list of shopping list items and pantry items, identify which shopping items match pantry items (they refer to the same product).
+
+Items match if they are the same product, even if:
+- Words are in different order ("Iceberg Lettuce" = "Lettuce Iceberg")
+- One is more specific ("Milk" matches "2% Milk" or "Whole Milk")
+- There are minor spelling variations
+- One has brand name and one doesn't
+
+DO NOT match items that are different products (e.g., "Lettuce" should NOT match "Tomatoes").
+
+Shopping List Items:
+{shopping_items}
+
+Pantry Items:
+{pantry_items}
+
+Return ONLY a JSON array of matches. Each match should have:
+- "shopping_id": the ID of the shopping list item
+- "pantry_id": the ID of the matching pantry item
+- "confidence": "high" or "medium" (high = exact same product, medium = likely same but less certain)
+
+If a shopping item has no match in the pantry, don't include it.
+
+Example response:
+[
+  {{"shopping_id": 1, "pantry_id": 5, "confidence": "high"}},
+  {{"shopping_id": 3, "pantry_id": 12, "confidence": "medium"}}
+]
+
+Return an empty array [] if there are no matches."""
+
+
+@router.post("/shopping-list/match-pantry")
+@limiter.limit("20/minute")
+async def match_shopping_to_pantry(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Use AI to semantically match shopping list items to pantry items.
+
+    Returns a mapping of shopping_item_id -> pantry_item for items that match.
+    This handles cases like "Iceberg Lettuce" matching "Lettuce Iceberg".
+    """
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    user_id = current_user["id"]
+
+    # Get shopping list items
+    shopping_response = supabase.table("shopping_list").select("id, name").eq("user_id", user_id).execute()
+    shopping_items = shopping_response.data if shopping_response.data else []
+
+    # Get pantry items
+    pantry_response = supabase.table("pantry_items").select("id, name, quantity, unit, stock_status").eq("user_id", user_id).execute()
+    pantry_items = pantry_response.data if pantry_response.data else []
+
+    if not shopping_items or not pantry_items:
+        return {"matches": {}, "method": "no_items"}
+
+    # First, try simple matching (exact match, case-insensitive)
+    simple_matches = {}
+    unmatched_shopping = []
+
+    for shop_item in shopping_items:
+        shop_name = shop_item["name"].lower().strip()
+        matched = False
+
+        for pantry_item in pantry_items:
+            pantry_name = pantry_item["name"].lower().strip()
+
+            # Exact match (case-insensitive)
+            if shop_name == pantry_name:
+                simple_matches[shop_item["id"]] = pantry_item
+                matched = True
+                break
+
+            # Check if one contains the other (for partial matches like "Milk" -> "2% Milk")
+            if shop_name in pantry_name or pantry_name in shop_name:
+                simple_matches[shop_item["id"]] = pantry_item
+                matched = True
+                break
+
+            # Check for word overlap (handles "Iceberg Lettuce" vs "Lettuce Iceberg")
+            shop_words = set(shop_name.split())
+            pantry_words = set(pantry_name.split())
+            if shop_words and pantry_words:
+                overlap = shop_words & pantry_words
+                # If significant overlap (more than half the words match)
+                min_words = min(len(shop_words), len(pantry_words))
+                if len(overlap) >= min_words * 0.5 and len(overlap) >= 1:
+                    simple_matches[shop_item["id"]] = pantry_item
+                    matched = True
+                    break
+
+        if not matched:
+            unmatched_shopping.append(shop_item)
+
+    # If all items matched with simple matching, return early
+    if not unmatched_shopping:
+        return {"matches": simple_matches, "method": "simple"}
+
+    # Use Groq for remaining unmatched items
+    if not groq_client:
+        return {"matches": simple_matches, "method": "simple_only"}
+
+    try:
+        # Format items for the prompt
+        shopping_str = "\n".join([f"- ID {item['id']}: {item['name']}" for item in unmatched_shopping])
+        pantry_str = "\n".join([f"- ID {item['id']}: {item['name']}" for item in pantry_items])
+
+        prompt = ITEM_MATCHING_PROMPT.format(
+            shopping_items=shopping_str,
+            pantry_items=pantry_str
+        )
+
+        response = groq_client.chat.completions.create(
+            model="llama-3.1-8b-instant",  # Fast model for quick matching
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant that matches grocery items. Always respond with valid JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.1
+        )
+
+        content = response.choices[0].message.content.strip()
+
+        # Clean up markdown code blocks if present
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        ai_matches = json.loads(content)
+
+        # Create a lookup for pantry items by ID
+        pantry_by_id = {item["id"]: item for item in pantry_items}
+
+        # Add AI matches to results
+        for match in ai_matches:
+            shopping_id = match.get("shopping_id")
+            pantry_id = match.get("pantry_id")
+
+            if shopping_id and pantry_id and pantry_id in pantry_by_id:
+                simple_matches[shopping_id] = pantry_by_id[pantry_id]
+
+        return {"matches": simple_matches, "method": "ai_enhanced"}
+
+    except Exception as e:
+        print(f"AI matching error: {e}")
+        # Return simple matches on error
+        return {"matches": simple_matches, "method": "simple_fallback"}
