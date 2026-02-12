@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, CalendarDays } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import "./Navigation.css";
 
@@ -146,15 +146,6 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
           )}
         </div>
 
-        {/* VoxCalendar Tab */}
-        <button
-          className={`nav-tab ${currentView === "calendar" ? "active" : ""}`}
-          onClick={() => onViewChange("calendar")}
-        >
-          <CalendarDays size={18} />
-          <span className="nav-label-full">VoxCalendar</span>
-          <span className="nav-label-short">Calendar</span>
-        </button>
       </div>
       <div className="nav-user">
         {user && <span className="nav-username">{user.username}</span>}

@@ -36,6 +36,31 @@ const VoiceRecorder = ({ showToast }) => {
   // Combined loading state
   const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
+  // Map technical errors to user-friendly messages
+  const getFriendlyError = (errorMessage) => {
+    if (!errorMessage) return "Something went wrong. Please try again.";
+    const msg = errorMessage.toLowerCase();
+    if (msg.includes("empty message") || msg.includes("empty")) {
+      return "We couldn't catch what you said. Could you try again?";
+    }
+    if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) {
+      return "We're getting a lot of requests right now. Please wait a moment and try again.";
+    }
+    if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("backend")) {
+      return "Having trouble connecting. Please check your internet and try again.";
+    }
+    if (msg.includes("transcription failed") || msg.includes("deepgram")) {
+      return "We couldn't catch what you said. Could you try speaking again?";
+    }
+    if (msg.includes("microphone") || msg.includes("permission")) {
+      return "Microphone access is needed. Please allow microphone permissions and try again.";
+    }
+    if (msg.includes("session expired") || msg.includes("401") || msg.includes("unauthorized")) {
+      return "Your session has expired. Please sign in again.";
+    }
+    return "Something went wrong. Please try again.";
+  };
+
   // Recording timer effect
   useEffect(() => {
     if (isRecording) {
@@ -85,10 +110,11 @@ const VoiceRecorder = ({ showToast }) => {
       }
     }
 
-    // Find the first grocery expense to add to pantry
+    // Find the first food-related expense to add to pantry
+    const foodCategories = ["groceries", "grocery", "dining", "restaurant", "food"];
     const groceryExpense = expenses.find(exp => {
       const category = (exp.category || "").toLowerCase();
-      return category.includes("groceries") || category.includes("grocery");
+      return foodCategories.some(cat => category.includes(cat));
     });
 
     if (groceryExpense) {
@@ -151,7 +177,7 @@ const VoiceRecorder = ({ showToast }) => {
       setError(""); // Clear any previous errors
     } catch (error) {
       console.error("Error accessing microphone:", error);
-      setError("Error accessing microphone. Please check permissions.");
+      setError(getFriendlyError("microphone permission"));
     }
   };
 
@@ -186,22 +212,18 @@ const VoiceRecorder = ({ showToast }) => {
     } catch (error) {
       console.error("Error processing transcript:", error);
       if (error.message?.includes("429") || error.message?.includes("quota")) {
-        setError("API quota exceeded. Using simple extraction instead.");
+        setError(getFriendlyError(error.message));
         await processExpenseSimple(transcriptText);
       } else if (error.message === "Failed to fetch") {
-        setError(
-          "Cannot connect to backend server. Make sure the backend is running."
-        );
+        setError(getFriendlyError(error.message));
       } else {
-        setError(`Error: ${error.message}`);
+        setError(getFriendlyError(error.message));
         // Try simple extraction as fallback
         try {
           await processExpenseSimple(transcriptText);
         } catch (simpleError) {
           console.error("Simple extraction also failed:", simpleError);
-          setError(
-            `Both extraction methods failed. Backend may be down. Error: ${error.message}`
-          );
+          setError("Something went wrong. Please try again or use manual input.");
         }
       }
     }
@@ -273,16 +295,23 @@ const VoiceRecorder = ({ showToast }) => {
       }
 
       const transcriptData = await transcriptResponse.json();
-      setTranscript(transcriptData.transcript);
+      const transcriptText = (transcriptData.transcript || "").trim();
+      setTranscript(transcriptText);
       setIsTranscribing(false);
 
+      // Guard: if transcript is empty, show a friendly message
+      if (!transcriptText) {
+        setError("We couldn't catch what you said. Could you try speaking again?");
+        return;
+      }
+
       // Step 2: Send to chat endpoint for intent detection
-      const chatResult = await chatMutation.mutateAsync(transcriptData.transcript);
+      const chatResult = await chatMutation.mutateAsync(transcriptText);
 
       // Step 3: Route based on intent
       if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
         // Process as expense input
-        const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
+        const expenseData = await createExpenseMutation.mutateAsync(transcriptText);
         setExtractedExpense(expenseData);
         handleExpenseCreated(expenseData);
       } else {
@@ -293,14 +322,8 @@ const VoiceRecorder = ({ showToast }) => {
       console.error("Error processing audio:", error);
       const errorMessage = error.message || "Unknown error occurred";
 
-      // Check if it's a quota error
-      if (errorMessage.includes("quota") || errorMessage.includes("429")) {
-        setError(
-          "Deepgram API quota exceeded. Please try again later or use manual text input."
-        );
-      } else {
-        setError(`Error: ${errorMessage}`);
-      }
+      // Show user-friendly error
+      setError(getFriendlyError(errorMessage));
     } finally {
       setIsTranscribing(false);
     }
@@ -335,13 +358,7 @@ const VoiceRecorder = ({ showToast }) => {
       setShowManualInput(false);
     } catch (error) {
       console.error("Error processing manual input:", error);
-      if (error.message?.includes("429") || error.message?.includes("quota")) {
-        setError(
-          "API quota exceeded. Please try again later."
-        );
-      } else {
-        setError(`Error: ${error.message}`);
-      }
+      setError(getFriendlyError(error.message));
     }
   };
 
@@ -350,10 +367,10 @@ const VoiceRecorder = ({ showToast }) => {
       <h2>VoxAssistant</h2>
       <p className="recorder-description">
         Click the microphone and speak naturally. Log expenses, check your pantry,
-        track spending, or get shopping suggestions.
+        track spending, get shopping suggestions, or discover meal ideas.
       </p>
       <p className="recorder-examples">
-        Try: "I spent $20 at Walmart", "How many eggs do I have?", or "What should I get from the store?"
+        Try: "I spent $20 at Walmart", "How many eggs do I have?", "What should I get from the store?", or "What can I cook?"
       </p>
 
       <div className="recorder-controls">
@@ -390,10 +407,6 @@ const VoiceRecorder = ({ showToast }) => {
       {error && (
         <div className="error-message">
           <p>{error}</p>
-          <p style={{ fontSize: "0.85rem", marginTop: "0.5rem" }}>
-            Check the browser console (F12) and backend terminal for more
-            details.
-          </p>
         </div>
       )}
 
@@ -404,7 +417,7 @@ const VoiceRecorder = ({ showToast }) => {
             className="manual-textarea"
             value={manualInput}
             onChange={(e) => setManualInput(e.target.value)}
-            placeholder="Examples: 'I spent $20 at Walmart on groceries', 'How many eggs do I have?', 'What should I get from the store?'"
+            placeholder="Examples: 'I spent $20 at Walmart', 'How many eggs do I have?', 'What can I cook?', 'What should I get from the store?'"
             rows={4}
             disabled={loading}
           />
@@ -472,11 +485,24 @@ const VoiceRecorder = ({ showToast }) => {
             </div>
           ))}
 
-          {/* Add to Pantry button for grocery expenses */}
+          {/* Add to Pantry button - auto-shown for food categories, manual for others */}
           {pendingPantryExpense && !showPantryModal && (
             <button
               className="add-to-pantry-button"
               onClick={() => setShowPantryModal(true)}
+            >
+              <Package size={18} />
+              <span>Add to Pantry</span>
+            </button>
+          )}
+          {!pendingPantryExpense && !showPantryModal && (
+            <button
+              className="add-to-pantry-button manual"
+              onClick={() => {
+                const firstExpense = extractedExpense.expenses[0];
+                setPendingPantryExpense(firstExpense.expense_id ? { ...firstExpense, id: firstExpense.expense_id } : firstExpense);
+                setShowPantryModal(true);
+              }}
             >
               <Package size={18} />
               <span>Add to Pantry</span>
@@ -516,9 +542,10 @@ const VoiceRecorder = ({ showToast }) => {
               count: 1,
               message: result.message
             });
-            // Check if it's a grocery expense for pantry prompt
+            // Check if it's a food-related expense for pantry prompt
             const category = (result.category || "").toLowerCase();
-            if (category.includes("groceries") || category.includes("grocery")) {
+            const foodCategories = ["groceries", "grocery", "dining", "restaurant", "food"];
+            if (foodCategories.some(cat => category.includes(cat))) {
               // Map expense_id to id for AddToPantryModal compatibility
               setPendingPantryExpense({
                 ...result,

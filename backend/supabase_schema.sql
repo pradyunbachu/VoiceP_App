@@ -138,38 +138,111 @@ CREATE POLICY "Users can delete their own shopping list items"
     USING (auth.uid() = user_id);
 
 -- ============================================================================
--- Google Calendar Tokens Table (for Supabase Auth)
+-- Shared Shopping List Groups (for Supabase Auth)
 -- ============================================================================
--- Stores OAuth tokens for Google Calendar integration
-CREATE TABLE IF NOT EXISTS google_calendar_tokens (
+
+-- Shopping list groups for shared lists
+CREATE TABLE IF NOT EXISTS shopping_list_groups (
     id BIGSERIAL PRIMARY KEY,
-    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-    access_token TEXT NOT NULL,
-    refresh_token TEXT NOT NULL,
-    token_expiry TIMESTAMPTZ NOT NULL,
-    google_email TEXT,
-    connected_at TIMESTAMPTZ DEFAULT NOW(),
-    UNIQUE(user_id)
+    name TEXT NOT NULL,
+    owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    invite_code TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(6), 'hex'),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
-CREATE INDEX IF NOT EXISTS idx_google_calendar_tokens_user_id ON google_calendar_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_groups_owner ON shopping_list_groups(owner_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_groups_invite ON shopping_list_groups(invite_code);
 
--- Enable RLS for google_calendar_tokens
-ALTER TABLE google_calendar_tokens ENABLE ROW LEVEL SECURITY;
+-- Shopping list group members
+CREATE TABLE IF NOT EXISTS shopping_list_members (
+    id BIGSERIAL PRIMARY KEY,
+    group_id BIGINT NOT NULL REFERENCES shopping_list_groups(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'editor' CHECK (role IN ('owner', 'editor')),
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(group_id, user_id)
+);
 
--- Policies for google_calendar_tokens
-CREATE POLICY "Users can view their own Google Calendar tokens"
-    ON google_calendar_tokens FOR SELECT
-    USING (auth.uid() = user_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_members_group ON shopping_list_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_shopping_list_members_user ON shopping_list_members(user_id);
 
-CREATE POLICY "Users can insert their own Google Calendar tokens"
-    ON google_calendar_tokens FOR INSERT
-    WITH CHECK (auth.uid() = user_id);
+-- Add group_id to shopping_list (nullable for backward compat)
+ALTER TABLE shopping_list ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES shopping_list_groups(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_shopping_list_group ON shopping_list(group_id);
 
-CREATE POLICY "Users can update their own Google Calendar tokens"
-    ON google_calendar_tokens FOR UPDATE
-    USING (auth.uid() = user_id);
+-- Enable RLS for new tables
+ALTER TABLE shopping_list_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shopping_list_members ENABLE ROW LEVEL SECURITY;
 
-CREATE POLICY "Users can delete their own Google Calendar tokens"
-    ON google_calendar_tokens FOR DELETE
-    USING (auth.uid() = user_id);
+-- Policies for shopping_list_groups
+CREATE POLICY "Group members can view their groups"
+    ON shopping_list_groups FOR SELECT
+    USING (
+        owner_id = auth.uid()
+        OR id IN (SELECT group_id FROM shopping_list_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Users can create groups"
+    ON shopping_list_groups FOR INSERT
+    WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY "Owners can update their groups"
+    ON shopping_list_groups FOR UPDATE
+    USING (owner_id = auth.uid());
+
+CREATE POLICY "Owners can delete their groups"
+    ON shopping_list_groups FOR DELETE
+    USING (owner_id = auth.uid());
+
+-- Policies for shopping_list_members
+CREATE POLICY "Group members can view members"
+    ON shopping_list_members FOR SELECT
+    USING (
+        group_id IN (SELECT id FROM shopping_list_groups WHERE owner_id = auth.uid())
+        OR group_id IN (SELECT group_id FROM shopping_list_members AS m WHERE m.user_id = auth.uid())
+    );
+
+CREATE POLICY "Group owners can manage members"
+    ON shopping_list_members FOR INSERT
+    WITH CHECK (
+        group_id IN (SELECT id FROM shopping_list_groups WHERE owner_id = auth.uid())
+        OR user_id = auth.uid()
+    );
+
+CREATE POLICY "Owners can remove members or members can leave"
+    ON shopping_list_members FOR DELETE
+    USING (
+        group_id IN (SELECT id FROM shopping_list_groups WHERE owner_id = auth.uid())
+        OR user_id = auth.uid()
+    );
+
+-- Update shopping_list policies to allow group member access
+CREATE POLICY "Group members can view group shopping items"
+    ON shopping_list FOR SELECT
+    USING (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM shopping_list_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Group members can add items to group lists"
+    ON shopping_list FOR INSERT
+    WITH CHECK (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM shopping_list_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Group members can update group items"
+    ON shopping_list FOR UPDATE
+    USING (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM shopping_list_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Group members can delete group items"
+    ON shopping_list FOR DELETE
+    USING (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM shopping_list_members WHERE user_id = auth.uid())
+    );
+

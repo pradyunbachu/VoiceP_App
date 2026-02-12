@@ -2,8 +2,6 @@
 # EXPENSE ROUTES
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 import json
@@ -11,6 +9,7 @@ import re
 
 from config import supabase, groq_client
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from schemas import TranscriptRequest, ExpenseCreate, ExpenseUpdate, BulkDeleteRequest
 from services.text_processing import parse_relative_date
 from services.expense_extraction import (
@@ -19,7 +18,6 @@ from services.expense_extraction import (
 )
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 # ----------------------------------------------------------------------------
 # Expense Extraction Endpoints
@@ -68,7 +66,8 @@ async def extract_expense_simple_endpoint(
             "message": "Expense saved successfully (using simple extraction)"
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Simple extraction error: {str(e)}")
+        print(f"Simple extraction error: {e}")
+        raise HTTPException(status_code=500, detail="Failed to extract expense from transcript")
 
 @router.post("/extract-expense")
 @limiter.limit("20/minute")
@@ -495,7 +494,8 @@ async def create_expense(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create expense: {str(e)}")
+        print(f"Failed to create expense: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create expense")
 
 @router.get("/expenses")
 @limiter.limit("60/minute")

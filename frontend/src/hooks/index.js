@@ -4,8 +4,8 @@ export { useAnalytics } from './queries/useAnalytics';
 export { useBudgets } from './queries/useBudgets';
 export { usePantryItems, usePantryStats } from './queries/usePantry';
 export { useShoppingList, useShoppingPantryMatches } from './queries/useShoppingList';
+export { useShoppingListGroups } from './queries/useShoppingListGroups';
 export { useSpendingInsights } from './queries/useSpendingInsights';
-export { useCalendarEvents } from './queries/useCalendarEvents';
 export { queryKeys } from './queries/queryKeys';
 
 // Expense mutations
@@ -51,21 +51,15 @@ export {
   useRemovePurchasedItems,
 } from './mutations/useShoppingListMutations';
 
-// Calendar mutations
+// Shopping List Group mutations
 export {
-  useCreateCalendarEvent,
-  useUpdateCalendarEvent,
-  useDeleteCalendarEvent,
-} from './mutations/useCalendarMutations';
+  useCreateShoppingListGroup,
+  useJoinShoppingListGroup,
+  useInviteToGroup,
+  useRemoveGroupMember,
+  useDeleteShoppingListGroup,
+} from './mutations/useShoppingListGroupMutations';
 
 // Grocery suggestions
 export { useGrocerySuggestions } from './useGrocerySuggestions';
 
-// Google Calendar hooks
-export {
-  useGoogleCalendarStatus,
-  useGoogleCalendarAuthUrl,
-  useGoogleCalendarCallback,
-  useImportGoogleCalendarEvents,
-  useDisconnectGoogleCalendar,
-} from './queries/useGoogleCalendar';

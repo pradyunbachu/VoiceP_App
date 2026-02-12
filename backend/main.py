@@ -6,13 +6,13 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.exceptions import RequestValidationError
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 
 from config import supabase
+from rate_limit import limiter
 from services.recurring import process_due_recurring_expenses
-from routes import transcription, expenses, analytics, budgets, recurring, pantry, chat, shopping_list, insights, receipt, calendar, google_calendar
+from routes import transcription, expenses, analytics, budgets, recurring, pantry, chat, shopping_list, shopping_list_sharing, insights, receipt
 from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
@@ -22,7 +22,6 @@ from middleware.csrf import CSRFMiddleware, get_csrf_token
 app = FastAPI(title="voxal API")
 
 # Rate limiting setup
-limiter = Limiter(key_func=get_remote_address)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
@@ -37,11 +36,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 # CORS MIDDLEWARE
 # ============================================================================
 
-# Get allowed origins from environment or use defaults for development
-ALLOWED_ORIGINS = os.getenv(
-    "ALLOWED_ORIGINS",
-    "http://localhost:3000,http://localhost:5173"
-).split(",")
+# Get allowed origins from environment
+# In production, ALLOWED_ORIGINS must be set explicitly (e.g. "https://yourdomain.com")
+# Localhost defaults are only used when ENVIRONMENT is not "production"
+_env = os.getenv("ENVIRONMENT", "development")
+_origins_env = os.getenv("ALLOWED_ORIGINS", "")
+if _origins_env:
+    ALLOWED_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+elif _env == "production":
+    ALLOWED_ORIGINS = []
+else:
+    ALLOWED_ORIGINS = ["http://localhost:3000", "http://localhost:5173"]
 
 app.add_middleware(
     CORSMiddleware,
@@ -76,11 +81,10 @@ app.include_router(budgets.router, prefix="/api", tags=["Budgets"])
 app.include_router(recurring.router, prefix="/api", tags=["Recurring"])
 app.include_router(pantry.router, prefix="/api", tags=["Pantry"])
 app.include_router(shopping_list.router, prefix="/api", tags=["Shopping List"])
+app.include_router(shopping_list_sharing.router, prefix="/api", tags=["Shopping List Sharing"])
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(receipt.router, prefix="/api", tags=["Receipt"])
-app.include_router(calendar.router, prefix="/api", tags=["Calendar"])
-app.include_router(google_calendar.router, prefix="/api", tags=["Google Calendar"])
 
 # ============================================================================
 # ROOT ENDPOINT

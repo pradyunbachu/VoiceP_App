@@ -3,22 +3,16 @@ import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
-export const useCalendarEvents = (month, year) => {
+export const useShoppingListGroups = () => {
   const { getToken } = useAuth();
 
   return useQuery({
-    queryKey: queryKeys.calendar.events({ month, year }),
+    queryKey: queryKeys.shoppingList.groups(),
     queryFn: async () => {
       const token = getToken();
       if (!token) throw new Error('No authentication token');
 
-      const params = new URLSearchParams();
-      if (month !== undefined && month !== null) params.append('month', month);
-      if (year !== undefined && year !== null) params.append('year', year);
-
-      const url = `${API_BASE_URL}/api/calendar${params.toString() ? `?${params.toString()}` : ''}`;
-
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -27,12 +21,14 @@ export const useCalendarEvents = (month, year) => {
       }
 
       if (!response.ok) {
-        throw new Error(`Failed to fetch calendar events: ${response.status}`);
+        throw new Error('Failed to fetch shopping list groups');
       }
 
       const data = await response.json();
-      return data.events || [];
+      return data.groups || [];
     },
     enabled: !!getToken(),
+    staleTime: 30000,
+    refetchOnMount: true,
   });
 };

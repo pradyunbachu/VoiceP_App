@@ -10,8 +10,6 @@ import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
 import ShoppingList from "./components/ShoppingList";
 import SpendingInsights from "./components/SpendingInsights";
-import Calendar from "./components/Calendar";
-import GoogleCalendarCallback from "./components/GoogleCalendarCallback";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
@@ -46,13 +44,6 @@ function AppContent() {
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
-
-  // Check for Google Calendar OAuth callback on mount
-  useEffect(() => {
-    if (window.location.pathname === "/auth/google-calendar/callback") {
-      setCurrentView("google-calendar-callback");
-    }
   }, []);
 
   // Sync auth state with Supabase session
@@ -130,22 +121,6 @@ function AppContent() {
   }
 
   const renderView = () => {
-    // Handle Google Calendar callback (needs to be accessible for OAuth flow)
-    if (currentView === "google-calendar-callback") {
-      return (
-        <div className="view-container" key="google-calendar-callback">
-          <GoogleCalendarCallback
-            showToast={showToast}
-            onComplete={() => {
-              // Clear URL parameters and navigate to calendar
-              window.history.replaceState({}, document.title, "/");
-              setCurrentView("calendar");
-            }}
-          />
-        </div>
-      );
-    }
-
     if (!isAuthenticated) {
       if (currentView === "landing") {
         return (
@@ -233,14 +208,6 @@ function AppContent() {
         return (
           <div className="view-container" key="shopping-list">
             <ShoppingList
-              showToast={showToast}
-            />
-          </div>
-        );
-      case "calendar":
-        return (
-          <div className="view-container" key="calendar">
-            <Calendar
               showToast={showToast}
             />
           </div>

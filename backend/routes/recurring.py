@@ -2,28 +2,26 @@
 # RECURRING EXPENSE ROUTES
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
-
 from config import supabase
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from services.recurring import process_due_recurring_expenses
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 @router.post("/recurring/process")
 @limiter.limit("5/minute")
 async def process_recurring(request: Request, current_user: dict = Depends(get_current_user_dependency)):
-    """Manually trigger processing of due recurring expenses"""
+    """Manually trigger processing of due recurring expenses for the current user"""
     try:
-        created = process_due_recurring_expenses()
+        created = process_due_recurring_expenses(user_id=current_user["id"])
         return {
             "message": "Processed recurring expenses",
             "created_count": created
         }
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error processing recurring expenses: {str(e)}")
+        print(f"Error processing recurring expenses: {e}")
+        raise HTTPException(status_code=500, detail="Error processing recurring expenses")
 
 @router.get("/recurring")
 @limiter.limit("60/minute")

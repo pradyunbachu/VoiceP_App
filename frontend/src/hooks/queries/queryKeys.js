@@ -31,6 +31,8 @@ export const queryKeys = {
     all: ['shoppingList'],
     items: (filters) => [...queryKeys.shoppingList.all, 'items', filters],
     pantryMatches: () => [...queryKeys.shoppingList.all, 'pantryMatches'],
+    groups: () => [...queryKeys.shoppingList.all, 'groups'],
+    groupDetail: (id) => [...queryKeys.shoppingList.all, 'group', id],
   },
 
   // Insights
@@ -39,15 +41,4 @@ export const queryKeys = {
     report: (timePeriod) => [...queryKeys.insights.all, 'report', timePeriod],
   },
 
-  // Calendar
-  calendar: {
-    all: ['calendar'],
-    events: (filters) => [...queryKeys.calendar.all, 'events', filters],
-  },
-
-  // Google Calendar
-  googleCalendar: {
-    all: ['googleCalendar'],
-    status: () => [...queryKeys.googleCalendar.all, 'status'],
-  },
 };

@@ -448,25 +448,50 @@ const Pantry = ({ showToast }) => {
       {stats && (
         <div className="pantry-stats">
           <div className="stat-card">
-            <span className="stat-value">{stats.total_items}</span>
-            <span className="stat-label">Total Items</span>
+            <div className="stat-icon" style={{ background: '#3b82f6' }}>
+              <Package size={20} />
+            </div>
+            <div className="stat-content">
+              <span className="stat-value">{stats.total_items}</span>
+              <span className="stat-label">Total Items</span>
+            </div>
           </div>
-          <div className="stat-card full">
-            <span className="stat-value">{stats.full_stock}</span>
-            <span className="stat-label">In Stock</span>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: '#22c55e' }}>
+              <CheckCircle size={20} />
+            </div>
+            <div className="stat-content">
+              <span className="stat-value">{stats.full_stock}</span>
+              <span className="stat-label">In Stock</span>
+            </div>
           </div>
-          <div className="stat-card low">
-            <span className="stat-value">{stats.low_stock}</span>
-            <span className="stat-label">Low Stock</span>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: '#f59e0b' }}>
+              <AlertTriangle size={20} />
+            </div>
+            <div className="stat-content">
+              <span className="stat-value">{stats.low_stock}</span>
+              <span className="stat-label">Low Stock</span>
+            </div>
           </div>
-          <div className="stat-card out">
-            <span className="stat-value">{stats.out_of_stock}</span>
-            <span className="stat-label">Out of Stock</span>
+          <div className="stat-card">
+            <div className="stat-icon" style={{ background: '#ef4444' }}>
+              <Circle size={20} />
+            </div>
+            <div className="stat-content">
+              <span className="stat-value">{stats.out_of_stock}</span>
+              <span className="stat-label">Out of Stock</span>
+            </div>
           </div>
           {stats.expiring_soon > 0 && (
-            <div className="stat-card expiring">
-              <span className="stat-value">{stats.expiring_soon}</span>
-              <span className="stat-label">Expiring Soon</span>
+            <div className="stat-card">
+              <div className="stat-icon" style={{ background: '#f97316' }}>
+                <Calendar size={20} />
+              </div>
+              <div className="stat-content">
+                <span className="stat-value">{stats.expiring_soon}</span>
+                <span className="stat-label">Expiring Soon</span>
+              </div>
             </div>
           )}
         </div>
@@ -654,9 +679,15 @@ const Pantry = ({ showToast }) => {
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state">
-          <Package size={48} />
+          <div className="empty-state-icon">
+            <Package size={48} />
+          </div>
           <h3>No items in your pantry</h3>
           <p>Add items manually or they will appear here when you log grocery expenses</p>
+          <button className="empty-state-cta" onClick={() => setShowAddForm(true)}>
+            <Plus size={18} />
+            <span>Add your first item</span>
+          </button>
         </div>
       ) : viewMode === 'shelf' ? (
         /* SHELF VIEW with drag and drop */
@@ -694,7 +725,7 @@ const Pantry = ({ showToast }) => {
           {filteredItems.map((item) => (
             <div
               key={item.id}
-              className={`pantry-card ${selectedItems.has(item.id) ? 'selected' : ''} ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring-soon' : ''}`}
+              className={`pantry-card ${item.stock_status} ${selectedItems.has(item.id) ? 'selected' : ''} ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring-soon' : ''}`}
             >
               {isSelectMode && (
                 <button

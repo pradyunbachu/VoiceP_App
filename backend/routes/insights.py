@@ -2,18 +2,16 @@
 # INSIGHTS ROUTES - AI-Powered Spending Analysis
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
 import json
 
 from config import supabase, groq_client
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from schemas import InsightsRequest, InsightsResponse
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 # ============================================================================
 # AI INSIGHTS GENERATION

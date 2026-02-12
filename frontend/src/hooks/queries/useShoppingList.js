@@ -5,7 +5,7 @@ import { queryKeys } from './queryKeys';
 
 export const useShoppingList = (filters = {}) => {
   const { getToken } = useAuth();
-  const { category, sort_by = 'created_at', sort_order = 'desc' } = filters;
+  const { category, group_id, sort_by = 'created_at', sort_order = 'desc' } = filters;
 
   return useQuery({
     queryKey: queryKeys.shoppingList.items(filters),
@@ -15,6 +15,7 @@ export const useShoppingList = (filters = {}) => {
 
       const params = new URLSearchParams();
       if (category) params.append('category', category);
+      if (group_id) params.append('group_id', group_id);
       params.append('sort_by', sort_by);
       params.append('sort_order', sort_order);
 

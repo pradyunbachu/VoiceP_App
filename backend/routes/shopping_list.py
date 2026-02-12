@@ -2,14 +2,13 @@
 # SHOPPING LIST ROUTES
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime
 from typing import Optional
+import json
 
 from config import supabase, groq_client
 from auth import get_current_user_dependency
-import json
+from rate_limit import limiter
 from schemas import (
     ShoppingListItemCreate,
     ShoppingListItemUpdate,
@@ -17,7 +16,12 @@ from schemas import (
 )
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
+
+
+def verify_group_membership(user_id: str, group_id: int) -> bool:
+    """Check if user is a member of the group."""
+    response = supabase.table("shopping_list_members").select("id").eq("group_id", group_id).eq("user_id", user_id).execute()
+    return bool(response.data)
 
 
 @router.get("/shopping-list")
@@ -26,14 +30,22 @@ async def get_shopping_list(
     request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     category: Optional[str] = None,
+    group_id: Optional[int] = None,
     sort_by: Optional[str] = "created_at",
     sort_order: Optional[str] = "desc"
 ):
-    """Get all shopping list items for the current user"""
+    """Get all shopping list items for the current user or a shared group"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    query = supabase.table("shopping_list").select("*").eq("user_id", current_user["id"])
+    if group_id:
+        # Verify membership
+        if not verify_group_membership(current_user["id"], group_id):
+            raise HTTPException(status_code=403, detail="Not a member of this group")
+        query = supabase.table("shopping_list").select("*").eq("group_id", group_id)
+    else:
+        # Personal list: user's items with no group
+        query = supabase.table("shopping_list").select("*").eq("user_id", current_user["id"]).is_("group_id", "null")
 
     if category:
         query = query.eq("category", category)
@@ -61,7 +73,7 @@ async def create_shopping_list_item(
 
     now = datetime.now().isoformat()
 
-    response = supabase.table("shopping_list").insert({
+    insert_data = {
         "user_id": current_user["id"],
         "name": item.name,
         "quantity": item.quantity or 1,
@@ -69,7 +81,15 @@ async def create_shopping_list_item(
         "category": item.category,
         "notes": item.notes,
         "created_at": now
-    }).execute()
+    }
+
+    if item.group_id:
+        # Verify membership before adding to group
+        if not verify_group_membership(current_user["id"], item.group_id):
+            raise HTTPException(status_code=403, detail="Not a member of this group")
+        insert_data["group_id"] = item.group_id
+
+    response = supabase.table("shopping_list").insert(insert_data).execute()
 
     if not response.data:
         raise HTTPException(status_code=500, detail="Failed to create shopping list item")

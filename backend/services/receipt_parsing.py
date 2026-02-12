@@ -23,7 +23,12 @@ OUTPUT: A single JSON object (no markdown, no explanation, just valid JSON) with
 
 RULES:
 - Store name is usually at top in larger text or stylized font
-- List ALL item names you can see, separated by commas
+- IMPORTANT: Consolidate line items into logical products or menu items. Do NOT list every individual component, modifier, topping, or add-on separately. For example:
+  - Subway receipt with "Italian Herbs & Cheese, Turkey, Lettuce, Tomato, Mayo" → "Turkey Sub"
+  - Starbucks receipt with "Iced, Oat Milk, Vanilla, Latte" → "Iced Vanilla Oat Milk Latte"
+  - Chipotle receipt with "Burrito, Chicken, Rice, Beans, Salsa, Guac" → "Chicken Burrito"
+  - Pizza receipt with "Large, Pepperoni, Extra Cheese, Mushrooms" → "Large Pepperoni Pizza"
+  - If there are separate standalone items (drinks, sides, desserts), list those as their own items
 - Use the TOTAL amount (not subtotal, not individual item prices)
 - If multiple totals, use the final/grand total
 - Extract date if visible (various formats)

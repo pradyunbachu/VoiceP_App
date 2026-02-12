@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle } from "lucide-react";
+import { ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle, UtensilsCrossed, Clock } from "lucide-react";
 import "./ChatResponseDisplay.css";
 
 const ChatResponseDisplay = ({ chatResponse }) => {
@@ -14,6 +14,8 @@ const ChatResponseDisplay = ({ chatResponse }) => {
         return <DollarSign size={24} />;
       case "suggestion":
         return <ShoppingCart size={24} />;
+      case "meal_suggestion":
+        return <UtensilsCrossed size={24} />;
       default:
         return <HelpCircle size={24} />;
     }
@@ -27,6 +29,8 @@ const ChatResponseDisplay = ({ chatResponse }) => {
         return "Spending";
       case "suggestion":
         return "Shopping List";
+      case "meal_suggestion":
+        return "Meal Ideas";
       default:
         return "Help";
     }
@@ -120,6 +124,50 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  const renderMealSuggestions = () => {
+    if (!data?.meals || data.meals.length === 0) return null;
+
+    return (
+      <div className="chat-data-list meal-suggestions">
+        {data.expiring_items && data.expiring_items.length > 0 && (
+          <div className="expiring-notice">
+            <AlertTriangle size={16} />
+            <span>Items expiring soon: {data.expiring_items.join(", ")}</span>
+          </div>
+        )}
+        {data.meals.map((meal, index) => (
+          <div key={index} className="meal-card">
+            <div className="meal-header">
+              <span className="meal-name">{meal.name}</span>
+              <div className="meal-badges">
+                {meal.time_minutes && (
+                  <span className="meal-time-badge">
+                    <Clock size={12} />
+                    {meal.time_minutes} min
+                  </span>
+                )}
+                {meal.uses_expiring && (
+                  <span className="meal-expiring-badge">Uses expiring</span>
+                )}
+              </div>
+            </div>
+            <div className="meal-ingredients">
+              {meal.ingredients_used && meal.ingredients_used.map((ing, i) => (
+                <span key={i} className="ingredient-chip have">{ing}</span>
+              ))}
+              {meal.ingredients_needed && meal.ingredients_needed.map((ing, i) => (
+                <span key={`need-${i}`} className="ingredient-chip need">{ing}</span>
+              ))}
+            </div>
+            {meal.instructions && (
+              <p className="meal-instructions">{meal.instructions}</p>
+            )}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderData = () => {
     switch (intent) {
       case "pantry_query":
@@ -128,6 +176,8 @@ const ChatResponseDisplay = ({ chatResponse }) => {
         return renderExpenseData();
       case "suggestion":
         return renderSuggestionData();
+      case "meal_suggestion":
+        return renderMealSuggestions();
       default:
         return null;
     }

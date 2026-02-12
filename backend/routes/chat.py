@@ -2,18 +2,16 @@
 # CHAT ROUTES - Conversational Voice Assistant
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 import json
 
 from config import supabase, groq_client
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from schemas import ChatRequest, ChatResponse
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 # ============================================================================
 # INTENT DETECTION AND RESPONSE GENERATION
@@ -26,6 +24,7 @@ Analyze the user message and classify it into ONE of these intents:
 - pantry_query: User asks about pantry/inventory (e.g., "How many eggs do I have?", "What's running low?", "What's expiring soon?")
 - expense_query: User asks about spending (e.g., "How much did I spend this month?", "What did I spend on groceries?")
 - suggestion: User wants shopping suggestions (e.g., "What should I get from the store?", "Give me a shopping list")
+- meal_suggestion: User wants meal ideas or recipes based on what they have (e.g., "What can I cook?", "Suggest a meal", "Dinner ideas", "What can I make with what I have?")
 - shopping_complete: User indicates they finished shopping and bought items (e.g., "I bought milk and eggs", "Just got back from the store, got bread and butter", "Picked up the groceries")
 - general: General questions or greetings (e.g., "Hello", "What can you do?", "Help")
 
@@ -33,6 +32,7 @@ Also determine the sub_intent where applicable:
 - For pantry_query: item_quantity, low_stock, out_of_stock, expiring, list_all
 - For expense_query: total_spending, by_category, by_store, by_date_range
 - For suggestion: shopping_list
+- For meal_suggestion: quick_meals, use_expiring
 - For shopping_complete: items_purchased
 
 Extract any relevant entities:
@@ -44,7 +44,7 @@ Extract any relevant entities:
 
 Respond ONLY with a JSON object in this format:
 {
-  "intent": "one of: expense_input, pantry_query, expense_query, suggestion, shopping_complete, general",
+  "intent": "one of: expense_input, pantry_query, expense_query, suggestion, meal_suggestion, shopping_complete, general",
   "sub_intent": "sub-intent or null",
   "entities": {
     "item_name": "extracted item name or null",
@@ -114,6 +114,11 @@ def simple_intent_detection(message: str) -> dict:
     if "spent" in message_lower and ("on" in message_lower or "at" in message_lower):
         if not any(kw in message_lower for kw in ["i spent", "just spent"]):
             return {"intent": "expense_query", "sub_intent": "total_spending", "entities": {}}
+
+    # Check for meal suggestions
+    meal_keywords = ["cook", "recipe", "meal idea", "what can i make", "dinner idea", "suggest a meal", "lunch idea", "what can i cook", "what should i cook", "meal suggestion"]
+    if any(kw in message_lower for kw in meal_keywords):
+        return {"intent": "meal_suggestion", "sub_intent": "quick_meals", "entities": {}}
 
     # Check for suggestions
     suggestion_keywords = ["should i get", "shopping list", "need to buy", "what to buy", "should i buy", "from the store"]
@@ -299,6 +304,113 @@ async def handle_suggestion(user_id: str, sub_intent: str, entities: dict) -> di
     }
 
 
+async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict) -> dict:
+    """Generate meal suggestions based on pantry contents."""
+    if supabase is None:
+        return {"meals": [], "message": "Database not configured"}
+
+    # Get all pantry items
+    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_items = pantry_response.data if pantry_response.data else []
+
+    if not pantry_items:
+        return {
+            "meals": [],
+            "pantry_count": 0,
+            "expiring_count": 0,
+            "query_type": "meal_suggestion",
+            "message": "Your pantry is empty. Add some items first!"
+        }
+
+    # Separate items by status
+    full_items = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]
+    low_items = [i for i in pantry_items if i.get("stock_status") == "low"]
+
+    # Identify expiring items (within 5 days)
+    today = datetime.now().date()
+    five_days = today + timedelta(days=5)
+    expiring_items = []
+    for item in pantry_items:
+        if item.get("expiration_date"):
+            try:
+                exp_date = datetime.strptime(item["expiration_date"], "%Y-%m-%d").date()
+                if today <= exp_date <= five_days:
+                    expiring_items.append(item)
+            except:
+                pass
+
+    # Build ingredient list
+    ingredient_names = [i["name"] for i in full_items]
+    ingredient_list = ", ".join(ingredient_names)
+
+    expiring_names = [i["name"] for i in expiring_items]
+    expiring_list = ", ".join(expiring_names) if expiring_names else "none"
+
+    if not groq_client:
+        return {
+            "meals": [],
+            "pantry_count": len(full_items),
+            "expiring_count": len(expiring_items),
+            "query_type": "meal_suggestion",
+            "message": "AI service not available for meal suggestions"
+        }
+
+    meal_prompt = f"""Based on these available ingredients, suggest 3 practical meals.
+
+Available ingredients: {ingredient_list}
+Expiring soon (use first): {expiring_list}
+
+Return ONLY a JSON array of 3 meals. Each meal:
+{{
+  "name": "Meal Name",
+  "ingredients_used": ["ingredient1", "ingredient2"],
+  "ingredients_needed": ["any extra ingredient not in pantry"],
+  "instructions": "Brief 2-3 sentence cooking instructions",
+  "time_minutes": 30,
+  "uses_expiring": true/false
+}}
+
+Prioritize meals that use expiring ingredients. Keep it practical and simple."""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a helpful meal planning assistant. Always respond with valid JSON only."},
+                {"role": "user", "content": meal_prompt}
+            ],
+            temperature=0.7
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        meals = json.loads(content)
+
+        return {
+            "meals": meals,
+            "pantry_count": len(full_items),
+            "expiring_count": len(expiring_items),
+            "expiring_items": expiring_names,
+            "query_type": "meal_suggestion"
+        }
+    except Exception as e:
+        print(f"Meal suggestion error: {e}")
+        return {
+            "meals": [],
+            "pantry_count": len(full_items),
+            "expiring_count": len(expiring_items),
+            "query_type": "meal_suggestion",
+            "message": "Could not generate meal suggestions. Please try again."
+        }
+
+
 async def handle_shopping_complete(user_id: str, entities: dict, original_message: str) -> dict:
     """Handle when user indicates they finished shopping and bought items."""
     if supabase is None:
@@ -480,6 +592,26 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
 
         return "\n\n".join(parts)
 
+    elif intent == "meal_suggestion":
+        meals = data.get("meals", [])
+        message = data.get("message")
+
+        if message:
+            return message
+
+        if not meals:
+            return "I couldn't generate meal suggestions. Please try again."
+
+        expiring_items = data.get("expiring_items", [])
+        parts = []
+        if expiring_items:
+            parts.append(f"Using up expiring items: {', '.join(expiring_items)}")
+        parts.append(f"Here are 3 meal ideas based on your {data.get('pantry_count', 0)} pantry items:")
+        for i, meal in enumerate(meals, 1):
+            time_str = f" ({meal.get('time_minutes', '?')} min)" if meal.get('time_minutes') else ""
+            parts.append(f"{i}. {meal['name']}{time_str}")
+        return "\n".join(parts)
+
     elif intent == "shopping_complete":
         removed_items = data.get("removed_items", [])
         removed_count = data.get("removed_count", 0)
@@ -498,7 +630,8 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
                 "- Log expenses: 'I spent $20 at Walmart'\n"
                 "- Check pantry: 'How many eggs do I have?'\n"
                 "- Track spending: 'How much did I spend this month?'\n"
-                "- Get suggestions: 'What should I get from the store?'")
+                "- Get suggestions: 'What should I get from the store?'\n"
+                "- Meal ideas: 'What can I cook with what I have?'")
 
     return "I'm not sure how to help with that. Try asking about expenses, pantry items, or shopping suggestions."
 
@@ -550,6 +683,9 @@ async def chat(
 
     elif intent == "suggestion":
         data = await handle_suggestion(user_id, sub_intent, entities)
+
+    elif intent == "meal_suggestion":
+        data = await handle_meal_suggestion(user_id, sub_intent, entities)
 
     elif intent == "shopping_complete":
         data = await handle_shopping_complete(user_id, entities, message)

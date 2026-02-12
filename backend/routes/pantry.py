@@ -2,13 +2,12 @@
 # PANTRY ROUTES
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 
 from config import supabase
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from schemas import (
     PantryItemCreate,
     PantryItemUpdate,
@@ -17,7 +16,6 @@ from schemas import (
 )
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/pantry")
 @limiter.limit("60/minute")

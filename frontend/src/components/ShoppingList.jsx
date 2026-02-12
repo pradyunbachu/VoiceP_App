@@ -18,6 +18,7 @@ import {
   usePantryItems,
   useGrocerySuggestions,
 } from "../hooks";
+import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
 import LoadingSkeleton from "./LoadingSkeleton";
 import "./ShoppingList.css";
 
@@ -26,12 +27,15 @@ const ShoppingList = ({ showToast }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editText, setEditText] = useState("");
+  const [selectedGroupId, setSelectedGroupId] = useState(null);
   const inputRef = useRef(null);
   const editInputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
   // React Query hooks
-  const { data: shoppingItems = [], isLoading: loading } = useShoppingList();
+  const { data: shoppingItems = [], isLoading: loading } = useShoppingList(
+    selectedGroupId ? { group_id: selectedGroupId } : {}
+  );
   const { data: pantryItems = [] } = usePantryItems({});
 
   // Semantic matching of shopping items to pantry items (uses AI)
@@ -110,13 +114,17 @@ const ShoppingList = ({ showToast }) => {
     }
 
     try {
-      await createMutation.mutateAsync({
+      const itemData = {
         name: name,
         quantity: quantity,
         unit: unit,
         category: "",
         notes: "",
-      });
+      };
+      if (selectedGroupId) {
+        itemData.group_id = selectedGroupId;
+      }
+      await createMutation.mutateAsync(itemData);
       setNewItemText("");
       if (inputRef.current) {
         inputRef.current.focus();
@@ -276,6 +284,13 @@ const ShoppingList = ({ showToast }) => {
           </button>
         )}
       </div>
+
+      {/* Group Selector */}
+      <ShoppingListGroupSelector
+        selectedGroupId={selectedGroupId}
+        onSelectGroup={setSelectedGroupId}
+        showToast={showToast}
+      />
 
       {/* Modern List Card */}
       <div className="list-card">

@@ -4,11 +4,12 @@
 from datetime import datetime, timedelta
 from config import supabase
 
-def process_due_recurring_expenses():
+def process_due_recurring_expenses(user_id=None):
     """Check for recurring expenses that are due and create new entries.
 
     This function should be called periodically (e.g., on app startup, daily cron job).
     It looks at all recurring expenses and creates new entries for any that are due.
+    When user_id is provided, only processes that user's recurring expenses.
     """
     if supabase is None:
         print("Supabase not configured, skipping recurring expense processing")
@@ -17,8 +18,11 @@ def process_due_recurring_expenses():
     today = datetime.now().date()
     today_str = today.strftime("%Y-%m-%d")
 
-    # Get all recurring expenses (parent expenses only - no parent_recurring_id)
-    response = supabase.table("expenses").select("*").eq("is_recurring", 1).is_("parent_recurring_id", "null").execute()
+    # Get recurring expenses (parent expenses only - no parent_recurring_id)
+    query = supabase.table("expenses").select("*").eq("is_recurring", 1).is_("parent_recurring_id", "null")
+    if user_id:
+        query = query.eq("user_id", user_id)
+    response = query.execute()
     recurring_expenses = response.data if response.data else []
 
     created_count = 0

@@ -2,17 +2,15 @@
 # BUDGET ROUTES
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 from datetime import datetime, timedelta
 from typing import Optional
 
 from config import supabase
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from schemas import BudgetCreate, BudgetUpdate
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/budgets")
 @limiter.limit("60/minute")
@@ -139,7 +137,8 @@ async def create_budget(
     except HTTPException:
         raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create budget: {str(e)}")
+        print(f"Failed to create budget: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create budget")
 
 @router.put("/budgets/{budget_id}")
 @limiter.limit("30/minute")

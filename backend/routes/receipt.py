@@ -3,16 +3,14 @@
 # ============================================================================
 from datetime import datetime
 from fastapi import APIRouter, HTTPException, Depends, Request
-from slowapi import Limiter
-from slowapi.util import get_remote_address
 
 from config import supabase
 from auth import get_current_user_dependency
+from rate_limit import limiter
 from schemas import ReceiptScanRequest, ReceiptScanResponse
 from services.receipt_parsing import parse_receipt_with_vision
 
 router = APIRouter()
-limiter = Limiter(key_func=get_remote_address)
 
 
 @router.post("/scan-receipt", response_model=ReceiptScanResponse)
@@ -77,4 +75,4 @@ async def scan_receipt(
         raise
     except Exception as e:
         print(f"Error saving receipt expense: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to save expense: {str(e)}")
+        raise HTTPException(status_code=500, detail="Failed to save expense from receipt")
