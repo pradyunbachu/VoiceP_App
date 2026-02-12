@@ -1,4 +1,5 @@
 // Common grocery items for fuzzy-match autocomplete suggestions
+// Source of truth: backend/data/grocery_categories.json — keep in sync
 // Categories match pantryCategories.js
 
 export const GROCERY_ITEMS = [

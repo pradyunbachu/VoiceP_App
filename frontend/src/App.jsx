@@ -15,7 +15,7 @@ import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { useExpenses, useAnalytics, useClearAllExpenses } from "./hooks";
+import { useAnalytics, useClearAllExpenses } from "./hooks";
 import "./App.css";
 
 function AppContent() {
@@ -29,12 +29,11 @@ function AppContent() {
   const [toasts, setToasts] = useState([]);
 
   // React Query hooks for data fetching
-  const { data: expenses = [], isLoading: expensesLoading } = useExpenses();
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const clearAllMutation = useClearAllExpenses();
 
-  // Combined loading state
-  const loading = expensesLoading || analyticsLoading;
+  // Loading state
+  const loading = analyticsLoading;
 
   // Toast notification helper
   const showToast = useCallback((message, type = "info", duration = 5000) => {
@@ -58,7 +57,7 @@ function AppContent() {
       });
       setIsAuthenticated(true);
       if (currentView === "landing" || currentView === "login") {
-        setCurrentView("dashboard");
+        setCurrentView("record");
       }
     } else if (!authLoading && !session) {
       setToken(null);
@@ -92,7 +91,7 @@ function AppContent() {
     setToken(newToken);
     setUser(userData);
     setIsAuthenticated(true);
-    setCurrentView("dashboard");
+    setCurrentView("record");
     showToast(`Welcome, ${userData.username}!`, "success");
   };
 
@@ -138,7 +137,7 @@ function AppContent() {
         return (
           <div className="view-container" key="landing">
             <LandingPage
-              onGetStarted={() => setCurrentView("dashboard")}
+              onGetStarted={() => setCurrentView("record")}
               isAuthenticated={true}
             />
           </div>
@@ -175,7 +174,6 @@ function AppContent() {
         return (
           <div className="view-container" key="expenses">
             <ExpenseList
-              expenses={expenses}
               showToast={showToast}
             />
           </div>

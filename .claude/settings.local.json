@@ -21,7 +21,8 @@
       "Bash(curl:*)",
       "Bash(npx vite build)",
       "Bash(git check-ignore:*)",
-      "Bash(python -c:*)"
+      "Bash(python -c:*)",
+      "Bash(done)"
     ]
   }
 }

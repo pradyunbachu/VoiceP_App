@@ -1,0 +1,92 @@
+{
+  "categories": [
+    "Dairy",
+    "Produce",
+    "Meat & Seafood",
+    "Bakery",
+    "Frozen",
+    "Canned Goods",
+    "Snacks",
+    "Beverages",
+    "Condiments",
+    "Grains & Pasta",
+    "Other"
+  ],
+  "items": {
+    "Dairy": [
+      "milk", "whole milk", "skim milk", "oat milk", "almond milk",
+      "cheese", "cheddar cheese", "mozzarella cheese", "parmesan cheese",
+      "cream cheese", "cottage cheese", "yogurt", "greek yogurt",
+      "butter", "cream", "heavy cream", "half and half", "whipped cream",
+      "egg", "eggs", "sour cream", "creamer"
+    ],
+    "Produce": [
+      "apple", "apples", "banana", "bananas", "orange", "oranges",
+      "grape", "grapes", "strawberry", "strawberries", "blueberry", "blueberries",
+      "raspberry", "raspberries", "lemon", "lemons", "lime", "limes",
+      "mango", "peaches", "watermelon", "pineapple",
+      "avocado", "tomato", "tomatoes", "potato", "potatoes", "sweet potatoes",
+      "onion", "onions", "garlic", "ginger", "carrot", "carrots",
+      "celery", "lettuce", "romaine lettuce", "spinach", "kale",
+      "broccoli", "cauliflower", "pepper", "bell pepper", "jalapeno",
+      "cucumber", "zucchini", "corn", "mushroom", "mushrooms",
+      "cabbage", "green beans", "asparagus",
+      "cilantro", "parsley", "basil", "mint", "green onions"
+    ],
+    "Meat & Seafood": [
+      "chicken", "chicken breast", "chicken thighs", "whole chicken",
+      "beef", "ground beef", "steak", "pork", "pork chops", "pork tenderloin",
+      "turkey", "ground turkey", "lamb", "bacon", "sausage", "ham",
+      "deli meat", "hot dogs", "meat",
+      "fish", "salmon", "tuna", "shrimp", "crab", "seafood", "tilapia", "cod"
+    ],
+    "Bakery": [
+      "bread", "whole wheat bread", "sourdough bread",
+      "bagel", "bagels", "english muffins", "muffin", "muffins",
+      "croissant", "croissants", "donut", "donuts",
+      "roll", "bun", "hamburger buns", "hot dog buns",
+      "cake", "pie", "cookie", "cookies",
+      "tortilla", "tortillas", "pita", "pita bread", "naan", "wrap"
+    ],
+    "Beverages": [
+      "water", "sparkling water", "juice", "orange juice", "apple juice",
+      "soda", "coffee", "tea", "green tea",
+      "beer", "wine", "drink", "lemonade", "kombucha", "energy drinks"
+    ],
+    "Condiments": [
+      "ketchup", "mustard", "mayo", "mayonnaise", "sauce", "bbq sauce",
+      "dressing", "ranch dressing", "salad dressing",
+      "vinegar", "oil", "olive oil", "vegetable oil",
+      "soy sauce", "hot sauce", "salsa",
+      "jam", "jelly", "honey", "syrup", "maple syrup",
+      "peanut butter",
+      "salt", "pepper", "sugar", "spice",
+      "cinnamon", "paprika", "cumin", "oregano", "thyme", "rosemary",
+      "garlic powder", "onion powder", "chili powder", "italian seasoning"
+    ],
+    "Grains & Pasta": [
+      "pasta", "spaghetti", "penne", "noodle", "macaroni", "ramen",
+      "rice", "brown rice", "quinoa", "couscous", "barley", "grain",
+      "oat", "oats", "oatmeal", "cereal", "granola",
+      "flour", "pancake mix", "baking powder", "baking soda",
+      "cornstarch", "breadcrumbs"
+    ],
+    "Snacks": [
+      "chip", "chips", "tortilla chips", "pretzel", "pretzels",
+      "popcorn", "cracker", "crackers", "granola bars", "trail mix",
+      "candy", "chocolate", "cookies",
+      "nut", "nuts", "almond", "almonds", "cashew", "peanut", "peanuts", "walnut"
+    ],
+    "Canned Goods": [
+      "canned", "canned tomatoes", "tomato sauce", "tomato paste",
+      "can of", "soup", "broth", "chicken broth", "vegetable broth", "stock",
+      "beans", "canned beans", "black beans", "kidney beans", "chickpeas",
+      "canned corn", "canned tuna", "coconut milk"
+    ],
+    "Frozen": [
+      "frozen", "frozen pizza", "ice cream",
+      "frozen vegetables", "frozen fruit", "frozen waffles",
+      "frozen chicken nuggets", "frozen fries", "frozen burritos"
+    ]
+  }
+}

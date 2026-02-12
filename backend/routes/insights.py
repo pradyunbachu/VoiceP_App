@@ -10,6 +10,7 @@ from config import supabase, groq_client
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from schemas import InsightsRequest, InsightsResponse
+from cache import api_cache, make_cache_key
 
 router = APIRouter()
 
@@ -171,7 +172,7 @@ def calculate_store_trends(current_expenses: list, previous_expenses: list) -> d
 # MAIN INSIGHTS ENDPOINT
 # ============================================================================
 
-@router.post("/insights", response_model=InsightsResponse)
+@router.post("/insights")
 @limiter.limit("10/minute")
 async def get_insights(
     request: Request,
@@ -187,6 +188,11 @@ async def get_insights(
 
     user_id = current_user["id"]
     time_period = insights_request.time_period
+
+    cache_key = make_cache_key(user_id, "insights", time_period=time_period)
+    cached = api_cache.get(cache_key)
+    if cached is not None:
+        return cached
 
     # Calculate date ranges
     start_date, end_date, period_days = get_date_range(time_period)
@@ -314,31 +320,33 @@ async def get_insights(
     # Generate AI insights
     ai_insights = generate_ai_insights(ai_data)
 
-    # Build response
-    return InsightsResponse(
-        period={
+    # Build response as dict for caching
+    result = {
+        "period": {
             "name": time_period,
             "days": period_days,
             "start_date": start_date.strftime("%Y-%m-%d"),
             "end_date": end_date.strftime("%Y-%m-%d")
         },
-        summary={
+        "summary": {
             "total_spent": round(current_total, 2),
             "transaction_count": current_count,
             "daily_average": round(current_daily_avg, 2),
             "unique_stores": len(current_by_store),
             "unique_categories": len(current_by_cat)
         },
-        comparisons={
+        "comparisons": {
             "spending_change": round(spending_change, 1),
             "transaction_change": round(transaction_change, 1),
             "daily_avg_change": round(daily_avg_change, 1),
             "previous_total": round(previous_total, 2),
             "previous_count": previous_count
         },
-        top_categories=top_categories,
-        top_stores=top_stores,
-        budget_status=budget_status if budget_status else None,
-        ai_insights=ai_insights,
-        generated_at=datetime.now().isoformat()
-    )
+        "top_categories": top_categories,
+        "top_stores": top_stores,
+        "budget_status": budget_status if budget_status else None,
+        "ai_insights": ai_insights,
+        "generated_at": datetime.now().isoformat()
+    }
+    api_cache.set(cache_key, result, ttl=300)
+    return result

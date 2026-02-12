@@ -101,15 +101,13 @@
   top: calc(100% + var(--space-2));
   left: 0;
   min-width: 160px;
-  background: var(--bg-card);
+  background: var(--bg-primary);
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: var(--space-1);
   z-index: 9999;
   animation: dropdownFadeIn 0.15s ease-out;
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
 }
 
 @keyframes dropdownFadeIn {

@@ -1219,6 +1219,47 @@
   background: rgba(55, 40, 40, 0.95);
 }
 
+/* Pantry Pagination */
+.pantry-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  margin-top: var(--space-6);
+  padding: var(--space-4) 0;
+}
+
+.pantry-pagination .pagination-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.pantry-pagination .pagination-button:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+}
+
+.pantry-pagination .pagination-button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pantry-pagination .pagination-info {
+  color: var(--text-tertiary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .pantry {

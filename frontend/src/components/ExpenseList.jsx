@@ -1,20 +1,64 @@
-import { useState, useMemo } from "react";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download } from "lucide-react";
-import { useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems } from "../hooks";
+import { useState, useEffect } from "react";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download, ChevronLeft, ChevronRight } from "lucide-react";
+import { useExpenses, useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems } from "../hooks";
 import { exportExpensesCsv } from "../lib/csvExport";
+import { useAuth } from "../context/AuthContext";
+import { API_BASE_URL } from "../config/api";
 import AddToPantryModal from "./AddToPantryModal";
+import LoadingSkeleton from "./LoadingSkeleton";
 import "./ExpenseList.css";
 
-const ExpenseList = ({ expenses, showToast }) => {
+const SORT_MAP = {
+  recent: { sortBy: "date", sortOrder: "desc" },
+  expensive: { sortBy: "amount", sortOrder: "desc" },
+  name: { sortBy: "store", sortOrder: "asc" },
+};
+
+const ExpenseList = ({ showToast }) => {
+  const { getToken } = useAuth();
   const [editingId, setEditingId] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [sortBy, setSortBy] = useState("recent");
   const [selectedExpenses, setSelectedExpenses] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [pantryModalExpense, setPantryModalExpense] = useState(null);
   const [addedToPantry, setAddedToPantry] = useState(new Set());
+  const [page, setPage] = useState(1);
+
+  // Debounce search input
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1); // Reset to first page on search change
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page when category or sort changes
+  useEffect(() => {
+    setPage(1);
+  }, [categoryFilter, sortBy]);
+
+  const { sortBy: sortField, sortOrder } = SORT_MAP[sortBy] || SORT_MAP.recent;
+
+  // Fetch expenses with pagination and server-side filtering
+  const { data: expenseData, isLoading } = useExpenses({
+    page,
+    pageSize: 20,
+    search: debouncedSearch || undefined,
+    category: categoryFilter || undefined,
+    sortBy: sortField,
+    sortOrder,
+  });
+
+  const expenses = expenseData?.expenses || [];
+  const totalCount = expenseData?.total_count ?? 0;
+  const totalPages = expenseData?.total_pages ?? 1;
+  const hasNext = expenseData?.has_next ?? false;
+  const hasPrev = expenseData?.has_prev ?? false;
 
   // React Query mutations
   const updateMutation = useUpdateExpense();
@@ -23,12 +67,11 @@ const ExpenseList = ({ expenses, showToast }) => {
   // Fetch pantry items to check if expense items are already in pantry
   const { data: pantryItems = [] } = usePantryItems();
 
-  // Check if an expense's items are already in the pantry (by source_expense_id or recently added)
+  // Check if an expense's items are already in the pantry
   const isExpenseInPantry = (expenseId) => {
     return addedToPantry.has(expenseId) || pantryItems.some(item => item.source_expense_id === expenseId);
   };
 
-  // Open Add to Pantry modal for an expense
   const handleAddToPantry = (expense) => {
     if (addedToPantry.has(expense.id)) return;
     setPantryModalExpense(expense);
@@ -49,14 +92,10 @@ const ExpenseList = ({ expenses, showToast }) => {
     try {
       await updateMutation.mutateAsync({ id, data: editForm });
       setEditingId(null);
-      if (showToast) {
-        showToast("Expense updated successfully", "success");
-      }
+      if (showToast) showToast("Expense updated successfully", "success");
     } catch (error) {
       console.error("Error updating expense:", error);
-      if (showToast) {
-        showToast(`Failed to update expense: ${error.message || "Unknown error"}`, "error");
-      }
+      if (showToast) showToast(`Failed to update expense: ${error.message || "Unknown error"}`, "error");
     }
   };
 
@@ -66,77 +105,18 @@ const ExpenseList = ({ expenses, showToast }) => {
   };
 
   const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this expense?")) {
-      return;
-    }
-
+    if (!window.confirm("Are you sure you want to delete this expense?")) return;
     try {
       await deleteMutation.mutateAsync(id);
-      if (showToast) {
-        showToast("Expense deleted successfully", "success");
-      }
+      if (showToast) showToast("Expense deleted successfully", "success");
     } catch (error) {
       console.error("Error deleting expense:", error);
-      if (showToast) {
-        showToast("Error deleting expense", "error");
-      }
+      if (showToast) showToast("Error deleting expense", "error");
     }
   };
 
-  // Filter and sort expenses based on search, category, and sort option
-  const sortedExpenses = useMemo(() => {
-    let filtered = [...expenses];
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(expense =>
-        (expense.store || "").toLowerCase().includes(query) ||
-        (expense.items || "").toLowerCase().includes(query) ||
-        (expense.category || "").toLowerCase().includes(query)
-      );
-    }
-
-    // Filter by category
-    if (categoryFilter) {
-      filtered = filtered.filter(expense =>
-        (expense.category || "").toLowerCase().includes(categoryFilter.toLowerCase())
-      );
-    }
-
-    switch (sortBy) {
-      case "recent":
-        return filtered.sort((a, b) => {
-          const dateA = new Date(a.date);
-          const dateB = new Date(b.date);
-          return dateB - dateA;
-        });
-
-      case "expensive":
-        return filtered.sort((a, b) => {
-          const amountA = parseFloat(a.amount) || 0;
-          const amountB = parseFloat(b.amount) || 0;
-          return amountB - amountA;
-        });
-
-      case "name":
-        return filtered.sort((a, b) => {
-          const nameA = (a.store || "").toLowerCase();
-          const nameB = (b.store || "").toLowerCase();
-          return nameA.localeCompare(nameB);
-        });
-
-      default:
-        return filtered;
-    }
-  }, [expenses, sortBy, searchQuery, categoryFilter]);
-
   const handleCategoryClick = (category) => {
-    if (categoryFilter === category) {
-      setCategoryFilter(null);
-    } else {
-      setCategoryFilter(category);
-    }
+    setCategoryFilter(prev => prev === category ? null : category);
   };
 
   const clearFilters = () => {
@@ -160,67 +140,83 @@ const ExpenseList = ({ expenses, showToast }) => {
   };
 
   const toggleSelectAll = () => {
-    if (selectedExpenses.size === sortedExpenses.length) {
+    if (selectedExpenses.size === expenses.length) {
       setSelectedExpenses(new Set());
     } else {
-      setSelectedExpenses(new Set(sortedExpenses.map(e => e.id)));
+      setSelectedExpenses(new Set(expenses.map(e => e.id)));
     }
   };
 
   const handleBulkDelete = async () => {
     if (selectedExpenses.size === 0) {
-      if (showToast) {
-        showToast("Please select expenses to delete", "warning");
-      }
+      if (showToast) showToast("Please select expenses to delete", "warning");
       return;
     }
-
-    if (!window.confirm(`Are you sure you want to delete ${selectedExpenses.size} expense(s)?`)) {
-      return;
-    }
-
+    if (!window.confirm(`Are you sure you want to delete ${selectedExpenses.size} expense(s)?`)) return;
     try {
       const result = await bulkDeleteMutation.mutateAsync(Array.from(selectedExpenses));
       setSelectedExpenses(new Set());
       setIsSelectMode(false);
-      if (showToast) {
-        showToast(`${result.deleted_count || selectedExpenses.size} expense(s) deleted successfully`, "success");
-      }
+      if (showToast) showToast(`${result.deleted_count || selectedExpenses.size} expense(s) deleted successfully`, "success");
     } catch (error) {
       console.error("Error deleting expenses:", error);
-      if (showToast) {
-        showToast(`Failed to delete expenses: ${error.message || "Unknown error"}`, "error");
-      }
+      if (showToast) showToast(`Failed to delete expenses: ${error.message || "Unknown error"}`, "error");
     }
   };
 
   const handleBulkEdit = () => {
     if (selectedExpenses.size === 0) {
-      if (showToast) {
-        showToast("Please select expenses to edit", "warning");
-      }
+      if (showToast) showToast("Please select expenses to edit", "warning");
       return;
     }
-
     if (selectedExpenses.size === 1) {
       const expenseId = Array.from(selectedExpenses)[0];
-      const expense = sortedExpenses.find(e => e.id === expenseId);
+      const expense = expenses.find(e => e.id === expenseId);
       if (expense) {
         handleEdit(expense);
         setIsSelectMode(false);
         setSelectedExpenses(new Set());
       }
     } else {
-      if (showToast) {
-        showToast("Please select only one expense to edit at a time", "warning");
-      }
+      if (showToast) showToast("Please select only one expense to edit at a time", "warning");
     }
   };
 
-  const allSelected = sortedExpenses.length > 0 && selectedExpenses.size === sortedExpenses.length;
-  const someSelected = selectedExpenses.size > 0 && selectedExpenses.size < sortedExpenses.length;
+  const handleExportCsv = async () => {
+    try {
+      const token = getToken();
+      const urlParams = new URLSearchParams();
+      urlParams.append('export', 'true');
+      if (debouncedSearch) urlParams.append('search', debouncedSearch);
+      if (categoryFilter) urlParams.append('category', categoryFilter);
+      urlParams.append('sort_by', sortField);
+      urlParams.append('sort_order', sortOrder);
 
-  if (expenses.length === 0) {
+      const response = await fetch(`${API_BASE_URL}/api/expenses?${urlParams.toString()}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!response.ok) throw new Error('Failed to fetch expenses for export');
+      const data = await response.json();
+      exportExpensesCsv(data.expenses || []);
+    } catch (error) {
+      console.error("Export error:", error);
+      if (showToast) showToast("Failed to export expenses", "error");
+    }
+  };
+
+  const allSelected = expenses.length > 0 && selectedExpenses.size === expenses.length;
+  const someSelected = selectedExpenses.size > 0 && selectedExpenses.size < expenses.length;
+
+  if (isLoading && !expenseData) {
+    return (
+      <div className="expense-list">
+        <h2>Recent Expenses</h2>
+        <LoadingSkeleton type="card" count={3} />
+      </div>
+    );
+  }
+
+  if (totalCount === 0 && !debouncedSearch && !categoryFilter) {
     return (
       <div className="expense-list">
         <h2>Recent Expenses</h2>
@@ -299,8 +295,8 @@ const ExpenseList = ({ expenses, showToast }) => {
               </button>
               <button
                 className="select-mode-button export-button"
-                onClick={() => exportExpensesCsv(sortedExpenses)}
-                disabled={sortedExpenses.length === 0}
+                onClick={handleExportCsv}
+                disabled={totalCount === 0}
                 title="Export filtered expenses to CSV"
               >
                 <Download size={18} />
@@ -335,7 +331,7 @@ const ExpenseList = ({ expenses, showToast }) => {
         </div>
       )}
       <div className="expenses-container">
-        {sortedExpenses.map((expense) => (
+        {expenses.map((expense) => (
           <div key={expense.id} className={`expense-card ${selectedExpenses.has(expense.id) ? 'selected' : ''}`}>
             {isSelectMode && (
               <div className="expense-checkbox">
@@ -488,6 +484,39 @@ const ExpenseList = ({ expenses, showToast }) => {
           </div>
         ))}
       </div>
+
+      {/* Pagination Controls */}
+      {totalPages > 1 && (
+        <div className="pagination-controls">
+          <button
+            className="pagination-button"
+            onClick={() => setPage(p => Math.max(1, p - 1))}
+            disabled={!hasPrev}
+          >
+            <ChevronLeft size={18} />
+            <span>Prev</span>
+          </button>
+          <span className="pagination-info">
+            Page {page} of {totalPages}
+          </span>
+          <button
+            className="pagination-button"
+            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+            disabled={!hasNext}
+          >
+            <span>Next</span>
+            <ChevronRight size={18} />
+          </button>
+        </div>
+      )}
+
+      {/* Empty state for search/filter with no results */}
+      {expenses.length === 0 && (debouncedSearch || categoryFilter) && (
+        <div className="empty-state">
+          <p>No expenses match your search. Try different keywords or clear filters.</p>
+          <button className="clear-filters-button" onClick={clearFilters}>Clear Filters</button>
+        </div>
+      )}
 
       {pantryModalExpense && (
         <AddToPantryModal

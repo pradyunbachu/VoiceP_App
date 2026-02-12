@@ -6,6 +6,7 @@ export { usePantryItems, usePantryStats } from './queries/usePantry';
 export { useShoppingList, useShoppingPantryMatches } from './queries/useShoppingList';
 export { useShoppingListGroups } from './queries/useShoppingListGroups';
 export { useSpendingInsights } from './queries/useSpendingInsights';
+export { useDailyRecs } from './queries/useDailyRecs';
 export { queryKeys } from './queries/queryKeys';
 
 // Expense mutations
@@ -59,6 +60,9 @@ export {
   useRemoveGroupMember,
   useDeleteShoppingListGroup,
 } from './mutations/useShoppingListGroupMutations';
+
+// Audio recording
+export { default as useAudioRecorder } from './useAudioRecorder';
 
 // Grocery suggestions
 export { useGrocerySuggestions } from './useGrocerySuggestions';

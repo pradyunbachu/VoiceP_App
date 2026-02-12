@@ -12,7 +12,7 @@ from slowapi.errors import RateLimitExceeded
 from config import supabase
 from rate_limit import limiter
 from services.recurring import process_due_recurring_expenses
-from routes import transcription, expenses, analytics, budgets, recurring, pantry, chat, shopping_list, shopping_list_sharing, insights, receipt
+from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs
 from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
@@ -76,6 +76,7 @@ if os.getenv("DISABLE_CSRF", "false").lower() != "true":
 
 app.include_router(transcription.router, prefix="/api", tags=["Transcription"])
 app.include_router(expenses.router, prefix="/api", tags=["Expenses"])
+app.include_router(expense_extraction.router, prefix="/api", tags=["Expense Extraction"])
 app.include_router(analytics.router, prefix="/api", tags=["Analytics"])
 app.include_router(budgets.router, prefix="/api", tags=["Budgets"])
 app.include_router(recurring.router, prefix="/api", tags=["Recurring"])
@@ -85,6 +86,7 @@ app.include_router(shopping_list_sharing.router, prefix="/api", tags=["Shopping 
 app.include_router(chat.router, prefix="/api", tags=["Chat"])
 app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(receipt.router, prefix="/api", tags=["Receipt"])
+app.include_router(daily_recs.router, prefix="/api", tags=["Daily Recs"])
 
 # ============================================================================
 # ROOT ENDPOINT

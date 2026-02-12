@@ -33,6 +33,10 @@ export const useChat = () => {
       if (data.intent === 'shopping_complete' || data.intent === 'suggestion') {
         queryClient.invalidateQueries({ queryKey: queryKeys.shoppingList.all });
       }
+      // Invalidate pantry cache when items are added via voice
+      if (data.intent === 'pantry_add') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
+      }
     },
   });
 };

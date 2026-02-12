@@ -9,6 +9,7 @@ from auth import get_current_user_dependency
 from rate_limit import limiter
 from schemas import ReceiptScanRequest, ReceiptScanResponse
 from services.receipt_parsing import parse_receipt_with_vision
+from cache import api_cache
 
 router = APIRouter()
 
@@ -60,6 +61,9 @@ async def scan_receipt(
             raise HTTPException(status_code=500, detail="Failed to save expense")
 
         saved_expense = result.data[0]
+
+        api_cache.invalidate_prefix(f"analytics:{user_id}")
+        api_cache.invalidate_prefix(f"insights:{user_id}")
 
         return ReceiptScanResponse(
             store=saved_expense["store"],

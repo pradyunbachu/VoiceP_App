@@ -1,4 +1,4 @@
-import { ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle, UtensilsCrossed, Clock } from "lucide-react";
+import { ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle, UtensilsCrossed, Clock, CheckCircle } from "lucide-react";
 import "./ChatResponseDisplay.css";
 
 const ChatResponseDisplay = ({ chatResponse }) => {
@@ -10,6 +10,8 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     switch (intent) {
       case "pantry_query":
         return <Package size={24} />;
+      case "pantry_add":
+        return <CheckCircle size={24} />;
       case "expense_query":
         return <DollarSign size={24} />;
       case "suggestion":
@@ -21,16 +23,24 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     }
   };
 
+  const getMealTypeLabel = () => {
+    const mealType = data?.meal_type;
+    if (!mealType) return "Meal Ideas";
+    return `${mealType.charAt(0).toUpperCase() + mealType.slice(1)} Ideas`;
+  };
+
   const getTitle = () => {
     switch (intent) {
       case "pantry_query":
         return "Pantry";
+      case "pantry_add":
+        return "Pantry Updated";
       case "expense_query":
         return "Spending";
       case "suggestion":
         return "Shopping List";
       case "meal_suggestion":
-        return "Meal Ideas";
+        return getMealTypeLabel();
       default:
         return "Help";
     }
@@ -124,6 +134,21 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  const renderPantryAdd = () => {
+    if (!data?.added_items || data.added_items.length === 0) return null;
+
+    return (
+      <div className="chat-data-list pantry-add-list">
+        {data.added_items.map((item, index) => (
+          <div key={item.id || index} className="chat-data-item pantry-add-item">
+            <span className="item-name">{item.name}</span>
+            <span className="item-category-badge">{item.category}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderMealSuggestions = () => {
     if (!data?.meals || data.meals.length === 0) return null;
 
@@ -160,7 +185,18 @@ const ChatResponseDisplay = ({ chatResponse }) => {
               ))}
             </div>
             {meal.instructions && (
-              <p className="meal-instructions">{meal.instructions}</p>
+              <div className="meal-instructions">
+                <span className="instructions-label">Instructions</span>
+                <ol className="instructions-steps">
+                  {Array.isArray(meal.instructions) ? (
+                    meal.instructions.map((step, i) => (
+                      <li key={i} className="instruction-step">{step}</li>
+                    ))
+                  ) : (
+                    <li className="instruction-step">{meal.instructions}</li>
+                  )}
+                </ol>
+              </div>
             )}
           </div>
         ))}
@@ -172,6 +208,8 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     switch (intent) {
       case "pantry_query":
         return renderPantryData();
+      case "pantry_add":
+        return renderPantryAdd();
       case "expense_query":
         return renderExpenseData();
       case "suggestion":

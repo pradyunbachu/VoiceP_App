@@ -8,6 +8,7 @@ from typing import Optional
 from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
+from cache import api_cache, make_cache_key
 
 router = APIRouter()
 
@@ -26,7 +27,13 @@ async def get_analytics(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    query = supabase.table("expenses").select("*").eq("user_id", current_user["id"])
+    user_id = current_user["id"]
+    cache_key = make_cache_key(user_id, "analytics", category=category, month=month, year=year, start_date=start_date, end_date=end_date)
+    cached = api_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    query = supabase.table("expenses").select("*").eq("user_id", user_id)
 
     # Apply filters
     if category:
@@ -93,7 +100,7 @@ async def get_analytics(
     # Recent expenses (last 10)
     recent_expenses = expenses[:10]
 
-    return {
+    result = {
         "total_expenses": total_expenses,
         "expense_count": expense_count,
         "expenses_by_store": expenses_by_store,
@@ -101,3 +108,5 @@ async def get_analytics(
         "expenses_by_date": expenses_by_date_list,
         "recent_expenses": recent_expenses
     }
+    api_cache.set(cache_key, result, ttl=60)
+    return result

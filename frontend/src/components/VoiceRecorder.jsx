@@ -1,97 +1,53 @@
-import { useState, useRef, useEffect } from "react";
-import { Mic, Square, Loader2, Type, Package, Camera } from "lucide-react";
+import { useState } from "react";
+import { Mic, Square, Loader2, Type, Camera } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ChatResponseDisplay from "./ChatResponseDisplay";
 import ReceiptScanner from "./ReceiptScanner";
+import ExpenseResult from "./ExpenseResult";
+import ManualInput from "./ManualInput";
+import RecordingIndicator from "./RecordingIndicator";
+import DailyRecs from "./DailyRecs";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "../hooks";
+import useAudioRecorder from "../hooks/useAudioRecorder";
 import { API_BASE_URL } from "../config/api";
 import "./VoiceRecorder.css";
 
+const getFriendlyError = (errorMessage) => {
+  if (!errorMessage) return "Something went wrong. Please try again.";
+  const msg = errorMessage.toLowerCase();
+  if (msg.includes("empty message") || msg.includes("empty")) return "We couldn't catch what you said. Could you try again?";
+  if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) return "We're getting a lot of requests right now. Please wait a moment and try again.";
+  if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("backend")) return "Having trouble connecting. Please check your internet and try again.";
+  if (msg.includes("transcription failed") || msg.includes("deepgram")) return "We couldn't catch what you said. Could you try speaking again?";
+  if (msg.includes("microphone") || msg.includes("permission")) return "Microphone access is needed. Please allow microphone permissions and try again.";
+  if (msg.includes("session expired") || msg.includes("401") || msg.includes("unauthorized")) return "Your session has expired. Please sign in again.";
+  return "Something went wrong. Please try again.";
+};
+
 const VoiceRecorder = ({ showToast }) => {
   const { getToken } = useAuth();
-  const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState("");
   const [extractedExpense, setExtractedExpense] = useState(null);
   const [chatResponse, setChatResponse] = useState(null);
   const [manualInput, setManualInput] = useState("");
   const [showManualInput, setShowManualInput] = useState(false);
   const [error, setError] = useState("");
-  const [recordingTime, setRecordingTime] = useState(0);
   const [showPantryModal, setShowPantryModal] = useState(false);
   const [pendingPantryExpense, setPendingPantryExpense] = useState(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [showReceiptScanner, setShowReceiptScanner] = useState(false);
-  const mediaRecorderRef = useRef(null);
-  const audioChunksRef = useRef([]);
-  const streamRef = useRef(null);
-  const timerRef = useRef(null);
 
-  // React Query mutations
+  const { isRecording, recordingTime, startRecording, stopRecording, formatTime } = useAudioRecorder();
+
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
   const chatMutation = useChat();
   const removePurchasedMutation = useRemovePurchasedItems();
 
-  // Combined loading state
   const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
-  // Map technical errors to user-friendly messages
-  const getFriendlyError = (errorMessage) => {
-    if (!errorMessage) return "Something went wrong. Please try again.";
-    const msg = errorMessage.toLowerCase();
-    if (msg.includes("empty message") || msg.includes("empty")) {
-      return "We couldn't catch what you said. Could you try again?";
-    }
-    if (msg.includes("429") || msg.includes("quota") || msg.includes("rate limit")) {
-      return "We're getting a lot of requests right now. Please wait a moment and try again.";
-    }
-    if (msg.includes("failed to fetch") || msg.includes("network") || msg.includes("backend")) {
-      return "Having trouble connecting. Please check your internet and try again.";
-    }
-    if (msg.includes("transcription failed") || msg.includes("deepgram")) {
-      return "We couldn't catch what you said. Could you try speaking again?";
-    }
-    if (msg.includes("microphone") || msg.includes("permission")) {
-      return "Microphone access is needed. Please allow microphone permissions and try again.";
-    }
-    if (msg.includes("session expired") || msg.includes("401") || msg.includes("unauthorized")) {
-      return "Your session has expired. Please sign in again.";
-    }
-    return "Something went wrong. Please try again.";
-  };
-
-  // Recording timer effect
-  useEffect(() => {
-    if (isRecording) {
-      setRecordingTime(0);
-      timerRef.current = setInterval(() => {
-        setRecordingTime(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
-    }
-
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-    };
-  }, [isRecording]);
-
-  // Format seconds to MM:SS
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-  };
-
-  // Handle side effects after expense is created
   const handleExpenseCreated = async (expenseData) => {
-    // Handle both single expense and array of expenses
     let expenses = [];
     if (expenseData.expenses) {
       expenses = expenseData.expenses;
@@ -99,18 +55,15 @@ const VoiceRecorder = ({ showToast }) => {
       expenses = [expenseData];
     }
 
-    // Collect all items from the expenses to remove from shopping list
     const allItems = expenses.map(exp => exp.items).filter(Boolean).join(', ');
     if (allItems) {
       try {
         await removePurchasedMutation.mutateAsync(allItems);
       } catch (error) {
-        // Silently fail - not critical if shopping list removal fails
         console.log('Note: Could not remove items from shopping list:', error);
       }
     }
 
-    // Find the first food-related expense to add to pantry
     const foodCategories = ["groceries", "grocery", "dining", "restaurant", "food"];
     const groceryExpense = expenses.find(exp => {
       const category = (exp.category || "").toLowerCase();
@@ -122,134 +75,44 @@ const VoiceRecorder = ({ showToast }) => {
     }
   };
 
-  const startRecording = async () => {
+  const processExpenseSimple = async (transcriptText) => {
     try {
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        throw new Error("MediaRecorder is not available in this browser");
+      const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptText);
+      if (expenseData.expenses) {
+        setExtractedExpense(expenseData);
+        handleExpenseCreated(expenseData);
+      } else {
+        setExtractedExpense({ expenses: [expenseData], count: 1, message: expenseData.message });
+        handleExpenseCreated(expenseData);
       }
-
-      const stream = await navigator.mediaDevices.getUserMedia({
-        audio: true,
-      });
-
-      streamRef.current = stream;
-
-      // Try to find a supported audio format
-      let mimeType = "audio/webm";
-      if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
-        mimeType = "audio/webm;codecs=opus";
-      } else if (MediaRecorder.isTypeSupported("audio/webm")) {
-        mimeType = "audio/webm";
-      } else if (MediaRecorder.isTypeSupported("audio/mp4")) {
-        mimeType = "audio/mp4";
-      } else if (MediaRecorder.isTypeSupported("audio/ogg")) {
-        mimeType = "audio/ogg";
-      }
-
-      const mediaRecorder = new MediaRecorder(stream, {
-        mimeType: mimeType,
-      });
-
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-
-      mediaRecorder.ondataavailable = (event) => {
-        if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
-        }
-      };
-
-      mediaRecorder.onstop = async () => {
-        const blobType = mediaRecorder.mimeType || "audio/webm";
-        const audioBlob = new Blob(audioChunksRef.current, {
-          type: blobType,
-        });
-        await processAudio(audioBlob, blobType);
-        if (streamRef.current) {
-          streamRef.current.getTracks().forEach((track) => track.stop());
-          streamRef.current = null;
-        }
-      };
-
-      mediaRecorder.start();
-      setIsRecording(true);
-      setTranscript(""); // Clear any previous transcript
-      setError(""); // Clear any previous errors
     } catch (error) {
-      console.error("Error accessing microphone:", error);
-      setError(getFriendlyError("microphone permission"));
-    }
-  };
-
-  const stopRecording = async () => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+      console.error("Error with simple extraction:", error);
+      setError("Could not extract expense information. Please try the manual input.");
     }
   };
 
   const processTranscript = async (transcriptText) => {
     setError("");
     setExtractedExpense(null);
-
     try {
-      console.log("Processing transcript:", transcriptText);
       const expenseData = await createExpenseMutation.mutateAsync(transcriptText);
-      console.log("Expense data received:", expenseData);
-
-      // Handle both old format (single expense) and new format (array of expenses)
       if (expenseData.expenses) {
         setExtractedExpense(expenseData);
         handleExpenseCreated(expenseData);
       } else {
-        setExtractedExpense({
-          expenses: [expenseData],
-          count: 1,
-          message: expenseData.message
-        });
+        setExtractedExpense({ expenses: [expenseData], count: 1, message: expenseData.message });
         handleExpenseCreated(expenseData);
       }
     } catch (error) {
       console.error("Error processing transcript:", error);
+      setError(getFriendlyError(error.message));
       if (error.message?.includes("429") || error.message?.includes("quota")) {
-        setError(getFriendlyError(error.message));
         await processExpenseSimple(transcriptText);
-      } else if (error.message === "Failed to fetch") {
-        setError(getFriendlyError(error.message));
-      } else {
-        setError(getFriendlyError(error.message));
-        // Try simple extraction as fallback
-        try {
-          await processExpenseSimple(transcriptText);
-        } catch (simpleError) {
-          console.error("Simple extraction also failed:", simpleError);
+      } else if (error.message !== "Failed to fetch") {
+        try { await processExpenseSimple(transcriptText); } catch (e) {
           setError("Something went wrong. Please try again or use manual input.");
         }
       }
-    }
-  };
-
-  const processExpenseSimple = async (transcriptText) => {
-    try {
-      const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptText);
-
-      // Handle both old format (single expense) and new format (array of expenses)
-      if (expenseData.expenses) {
-        setExtractedExpense(expenseData);
-        handleExpenseCreated(expenseData);
-      } else {
-        setExtractedExpense({
-          expenses: [expenseData],
-          count: 1,
-          message: expenseData.message
-        });
-        handleExpenseCreated(expenseData);
-      }
-    } catch (error) {
-      console.error("Error with simple extraction:", error);
-      setError(
-        "Could not extract expense information. Please try the manual input."
-      );
     }
   };
 
@@ -261,37 +124,25 @@ const VoiceRecorder = ({ showToast }) => {
 
     try {
       const token = getToken();
-
-      // Step 1: Transcribe audio using Deepgram API (via backend)
       const formData = new FormData();
-      // Determine file extension based on mime type
       let extension = "webm";
       if (mimeType.includes("mp4")) extension = "mp4";
       else if (mimeType.includes("ogg")) extension = "ogg";
-      else if (mimeType.includes("webm")) extension = "webm";
-
       formData.append("audio", audioBlob, `recording.${extension}`);
 
       const transcribeHeaders = {};
-      if (token) {
-        transcribeHeaders["Authorization"] = `Bearer ${token}`;
-      }
+      if (token) transcribeHeaders["Authorization"] = `Bearer ${token}`;
 
-      const transcriptResponse = await fetch(
-        `${API_BASE_URL}/api/transcribe`,
-        {
-          method: "POST",
-          headers: transcribeHeaders,
-          credentials: "include",
-          body: formData,
-        }
-      );
+      const transcriptResponse = await fetch(`${API_BASE_URL}/api/transcribe`, {
+        method: "POST",
+        headers: transcribeHeaders,
+        credentials: "include",
+        body: formData,
+      });
 
       if (!transcriptResponse.ok) {
         const errorText = await transcriptResponse.text();
-        throw new Error(
-          `Deepgram transcription failed: ${transcriptResponse.status} - ${errorText}`
-        );
+        throw new Error(`Deepgram transcription failed: ${transcriptResponse.status} - ${errorText}`);
       }
 
       const transcriptData = await transcriptResponse.json();
@@ -299,59 +150,39 @@ const VoiceRecorder = ({ showToast }) => {
       setTranscript(transcriptText);
       setIsTranscribing(false);
 
-      // Guard: if transcript is empty, show a friendly message
       if (!transcriptText) {
         setError("We couldn't catch what you said. Could you try speaking again?");
         return;
       }
 
-      // Step 2: Send to chat endpoint for intent detection
       const chatResult = await chatMutation.mutateAsync(transcriptText);
 
-      // Step 3: Route based on intent
       if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
-        // Process as expense input
         const expenseData = await createExpenseMutation.mutateAsync(transcriptText);
         setExtractedExpense(expenseData);
         handleExpenseCreated(expenseData);
       } else {
-        // Display chat response for queries/suggestions
         setChatResponse(chatResult);
       }
     } catch (error) {
       console.error("Error processing audio:", error);
-      const errorMessage = error.message || "Unknown error occurred";
-
-      // Show user-friendly error
-      setError(getFriendlyError(errorMessage));
+      setError(getFriendlyError(error.message || "Unknown error occurred"));
     } finally {
       setIsTranscribing(false);
     }
   };
 
   const handleManualSubmit = async () => {
-    if (!manualInput.trim()) {
-      setError("Please enter your message");
-      return;
-    }
-
-    setError("");
-    setTranscript("");
-    setExtractedExpense(null);
-    setChatResponse(null);
+    if (!manualInput.trim()) { setError("Please enter your message"); return; }
+    setError(""); setTranscript(""); setExtractedExpense(null); setChatResponse(null);
 
     try {
-      // First, detect intent via chat endpoint
       const chatResult = await chatMutation.mutateAsync(manualInput);
-
-      // Route based on intent
       if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
-        // Process as expense input
         const expenseData = await createExpenseMutation.mutateAsync(manualInput);
         setExtractedExpense(expenseData);
         handleExpenseCreated(expenseData);
       } else {
-        // Display chat response for queries/suggestions
         setChatResponse(chatResult);
       }
       setManualInput("");
@@ -362,23 +193,30 @@ const VoiceRecorder = ({ showToast }) => {
     }
   };
 
+  const handleStartRecording = async () => {
+    try {
+      setTranscript("");
+      setError("");
+      await startRecording(processAudio);
+    } catch (error) {
+      console.error("Error accessing microphone:", error);
+      setError(getFriendlyError("microphone permission"));
+    }
+  };
+
   return (
     <div className="voice-recorder">
-      <h2>VoxAssistant</h2>
-      <p className="recorder-description">
-        Click the microphone and speak naturally. Log expenses, check your pantry,
-        track spending, get shopping suggestions, or discover meal ideas.
-      </p>
+      <h2>Voxy</h2>
+      <p className="recorder-description">Your personal voice powered assistant</p>
       <p className="recorder-examples">
-        Try: "I spent $20 at Walmart", "How many eggs do I have?", "What should I get from the store?", or "What can I cook?"
+        Try: "I spent $20 at Walmart", "What can I cook for breakfast?", "I have flour, oil, and salt", or "What should I get from the store?"
       </p>
+
+      <DailyRecs />
 
       <div className="recorder-controls">
         {!isRecording ? (
-          <button
-            className="record-button"
-            onClick={startRecording}
-            disabled={loading}>
+          <button className="record-button" onClick={handleStartRecording} disabled={loading}>
             <Mic size={32} />
             <span>Start Recording</span>
           </button>
@@ -388,46 +226,25 @@ const VoiceRecorder = ({ showToast }) => {
             <span>Stop Recording</span>
           </button>
         )}
-        <button
-          className="manual-button"
-          onClick={() => setShowManualInput(!showManualInput)}
-          disabled={loading}>
+        <button className="manual-button" onClick={() => setShowManualInput(!showManualInput)} disabled={loading}>
           <Type size={20} />
           <span>{showManualInput ? "Hide" : "Type"} Manual Entry</span>
         </button>
-        <button
-          className="receipt-button"
-          onClick={() => setShowReceiptScanner(true)}
-          disabled={loading}>
+        <button className="receipt-button" onClick={() => setShowReceiptScanner(true)} disabled={loading}>
           <Camera size={20} />
           <span>Scan Receipt</span>
         </button>
       </div>
 
-      {error && (
-        <div className="error-message">
-          <p>{error}</p>
-        </div>
-      )}
+      {error && <div className="error-message"><p>{error}</p></div>}
 
       {showManualInput && (
-        <div className="manual-input-section">
-          <h3>Type Your Message</h3>
-          <textarea
-            className="manual-textarea"
-            value={manualInput}
-            onChange={(e) => setManualInput(e.target.value)}
-            placeholder="Examples: 'I spent $20 at Walmart', 'How many eggs do I have?', 'What can I cook?', 'What should I get from the store?'"
-            rows={4}
-            disabled={loading}
-          />
-          <button
-            className="submit-manual-button"
-            onClick={handleManualSubmit}
-            disabled={loading || !manualInput.trim()}>
-            {loading ? "Processing..." : "Submit"}
-          </button>
-        </div>
+        <ManualInput
+          manualInput={manualInput}
+          onInputChange={setManualInput}
+          onSubmit={handleManualSubmit}
+          loading={loading}
+        />
       )}
 
       {loading && (
@@ -437,17 +254,7 @@ const VoiceRecorder = ({ showToast }) => {
         </div>
       )}
 
-      {isRecording && (
-        <div className="recording-indicator">
-          <div className="recording-timer">{formatTime(recordingTime)}</div>
-          <div className="recording-dots">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-          <p className="recording-text">Recording... Speak now</p>
-        </div>
-      )}
+      {isRecording && <RecordingIndicator recordingTime={recordingTime} formatTime={formatTime} />}
 
       {transcript && !isRecording && (
         <div className="transcript-section">
@@ -456,101 +263,33 @@ const VoiceRecorder = ({ showToast }) => {
         </div>
       )}
 
-      {extractedExpense && extractedExpense.expenses && (
-        <div className="expense-result">
-          <h3>{extractedExpense.count > 1 ? `${extractedExpense.count} Expenses Saved` : 'Expense Saved'}</h3>
-          {extractedExpense.expenses.map((expense, index) => (
-            <div key={expense.id || index} className="expense-details" style={{marginBottom: extractedExpense.count > 1 ? '15px' : '0', paddingBottom: extractedExpense.count > 1 ? '15px' : '0', borderBottom: index < extractedExpense.count - 1 ? '1px solid #eee' : 'none'}}>
-              {extractedExpense.count > 1 && <h4 style={{marginTop: '0', color: '#666'}}>Item {index + 1}</h4>}
-              <p>
-                <strong>Store:</strong> {expense.store}
-              </p>
-              <p>
-                <strong>Items:</strong> {expense.items}
-              </p>
-              {expense.category && (
-                <p>
-                  <strong>Category:</strong>{" "}
-                  {expense.category}
-                </p>
-              )}
-              {expense.amount && (
-                <p>
-                  <strong>Amount:</strong> ${expense.amount.toFixed(2)}
-                </p>
-              )}
-              <p>
-                <strong>Date:</strong> {expense.date}
-              </p>
-            </div>
-          ))}
+      <ExpenseResult
+        extractedExpense={extractedExpense}
+        pendingPantryExpense={pendingPantryExpense}
+        showPantryModal={showPantryModal}
+        onShowPantryModal={() => setShowPantryModal(true)}
+        onSetPendingExpense={(expense) => { setPendingPantryExpense(expense); setShowPantryModal(true); }}
+      />
 
-          {/* Add to Pantry button - auto-shown for food categories, manual for others */}
-          {pendingPantryExpense && !showPantryModal && (
-            <button
-              className="add-to-pantry-button"
-              onClick={() => setShowPantryModal(true)}
-            >
-              <Package size={18} />
-              <span>Add to Pantry</span>
-            </button>
-          )}
-          {!pendingPantryExpense && !showPantryModal && (
-            <button
-              className="add-to-pantry-button manual"
-              onClick={() => {
-                const firstExpense = extractedExpense.expenses[0];
-                setPendingPantryExpense(firstExpense.expense_id ? { ...firstExpense, id: firstExpense.expense_id } : firstExpense);
-                setShowPantryModal(true);
-              }}
-            >
-              <Package size={18} />
-              <span>Add to Pantry</span>
-            </button>
-          )}
-        </div>
-      )}
+      {chatResponse && !extractedExpense && <ChatResponseDisplay chatResponse={chatResponse} />}
 
-      {/* Chat Response Display for queries */}
-      {chatResponse && !extractedExpense && (
-        <ChatResponseDisplay chatResponse={chatResponse} />
-      )}
-
-      {/* Add to Pantry Modal for grocery expenses */}
       {showPantryModal && pendingPantryExpense && (
         <AddToPantryModal
           expense={pendingPantryExpense}
-          onClose={() => {
-            setShowPantryModal(false);
-            setPendingPantryExpense(null);
-          }}
-          onSuccess={() => {
-            setShowPantryModal(false);
-            setPendingPantryExpense(null);
-          }}
+          onClose={() => { setShowPantryModal(false); setPendingPantryExpense(null); }}
+          onSuccess={() => { setShowPantryModal(false); setPendingPantryExpense(null); }}
         />
       )}
 
-      {/* Receipt Scanner Modal */}
       {showReceiptScanner && (
         <ReceiptScanner
           onClose={() => setShowReceiptScanner(false)}
           onSuccess={(result) => {
-            // Show the expense result
-            setExtractedExpense({
-              expenses: [result],
-              count: 1,
-              message: result.message
-            });
-            // Check if it's a food-related expense for pantry prompt
+            setExtractedExpense({ expenses: [result], count: 1, message: result.message });
             const category = (result.category || "").toLowerCase();
             const foodCategories = ["groceries", "grocery", "dining", "restaurant", "food"];
             if (foodCategories.some(cat => category.includes(cat))) {
-              // Map expense_id to id for AddToPantryModal compatibility
-              setPendingPantryExpense({
-                ...result,
-                id: result.expense_id
-              });
+              setPendingPantryExpense({ ...result, id: result.expense_id });
             }
             setShowReceiptScanner(false);
           }}

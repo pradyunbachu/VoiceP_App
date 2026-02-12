@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import {
   Package,
   Plus,
@@ -19,6 +19,8 @@ import {
   LayoutGrid,
   List,
   Download,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import {
   DndContext,
@@ -165,22 +167,58 @@ const Pantry = ({ showToast }) => {
 
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
+  const [listPage, setListPage] = useState(1);
 
   // Selection state (for bulk operations)
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
 
-  // React Query hooks
-  const { data: items = [], isLoading: loading } = usePantryItems({
+  // Debounce search
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setListPage(1);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset page on filter changes
+  useEffect(() => {
+    setListPage(1);
+  }, [categoryFilter, statusFilter, sortBy, sortOrder]);
+
+  // Shelf view: fetch all items (no pagination) for drag-and-drop
+  const { data: shelfItems = [], isLoading: shelfLoading } = usePantryItems({
     category: categoryFilter || undefined,
     stock_status: statusFilter || undefined,
+    search: debouncedSearch || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
   });
+
+  // List view: paginated fetch
+  const { data: listData, isLoading: listLoading } = usePantryItems({
+    category: categoryFilter || undefined,
+    stock_status: statusFilter || undefined,
+    search: debouncedSearch || undefined,
+    sort_by: sortBy,
+    sort_order: sortOrder,
+    paginate: true,
+    page: listPage,
+    page_size: 20,
+  });
+
+  const items = viewMode === 'shelf' ? shelfItems : (listData?.items || []);
+  const loading = viewMode === 'shelf' ? shelfLoading : listLoading;
+  const listTotalPages = listData?.total_pages ?? 1;
+  const listHasNext = listData?.has_next ?? false;
+  const listHasPrev = listData?.has_prev ?? false;
+
   const { data: stats } = usePantryStats();
 
   // Mutations
@@ -190,16 +228,8 @@ const Pantry = ({ showToast }) => {
   const deleteMutation = useDeletePantryItem();
   const bulkDeleteMutation = useBulkDeletePantryItems();
 
-  // Filtered items based on search
-  const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return items;
-    const query = searchQuery.toLowerCase();
-    return items.filter(item =>
-      item.name.toLowerCase().includes(query) ||
-      (item.category || "").toLowerCase().includes(query) ||
-      (item.notes || "").toLowerCase().includes(query)
-    );
-  }, [items, searchQuery]);
+  // For shelf view, use items directly (server handles search now)
+  const filteredItems = items;
 
   // Group items by category for shelf view - show ALL categories
   const itemsByCategory = useMemo(() => {
@@ -877,6 +907,31 @@ const Pantry = ({ showToast }) => {
               )}
             </div>
           ))}
+        </div>
+      )}
+
+      {/* List View Pagination */}
+      {viewMode === 'list' && listTotalPages > 1 && (
+        <div className="pantry-pagination">
+          <button
+            className="pagination-button"
+            onClick={() => setListPage(p => Math.max(1, p - 1))}
+            disabled={!listHasPrev}
+          >
+            <ChevronLeft size={18} />
+            <span>Prev</span>
+          </button>
+          <span className="pagination-info">
+            Page {listPage} of {listTotalPages}
+          </span>
+          <button
+            className="pagination-button"
+            onClick={() => setListPage(p => Math.min(listTotalPages, p + 1))}
+            disabled={!listHasNext}
+          >
+            <span>Next</span>
+            <ChevronRight size={18} />
+          </button>
         </div>
       )}
 

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Camera, Upload, X, Loader2, CheckCircle, AlertCircle, RotateCcw } from "lucide-react";
 import { useScanReceipt } from "../hooks";
+import { compressImage } from "../lib/imageCompression";
 import "./ReceiptScanner.css";
 
 // Detect if device is mobile (phones/tablets) vs desktop/laptop
@@ -76,7 +77,7 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
     }
   }, []);
 
-  const captureImage = () => {
+  const captureImage = async () => {
     if (!videoRef.current || !canvasRef.current) return;
 
     const video = videoRef.current;
@@ -92,7 +93,14 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
 
     // Get image data URL
     const imageDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-    setImageData(imageDataUrl);
+
+    // Compress the captured image
+    try {
+      const compressed = await compressImage(imageDataUrl);
+      setImageData(compressed);
+    } catch {
+      setImageData(imageDataUrl);
+    }
 
     // Stop camera
     stopCamera();
@@ -109,17 +117,23 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
       return;
     }
 
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError("Image too large. Please select an image under 10MB.");
+    // Validate file size (max 20MB — compression will reduce it)
+    if (file.size > 20 * 1024 * 1024) {
+      setError("Image too large. Please select an image under 20MB.");
       return;
     }
 
     setError("");
 
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setImageData(e.target.result);
+    reader.onload = async (e) => {
+      const rawDataUrl = e.target.result;
+      try {
+        const compressed = await compressImage(rawDataUrl);
+        setImageData(compressed);
+      } catch {
+        setImageData(rawDataUrl);
+      }
       setMode("preview");
     };
     reader.onerror = () => {

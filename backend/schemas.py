@@ -3,6 +3,8 @@
 # ============================================================================
 from pydantic import BaseModel, Field
 from typing import List, Optional
+import json
+import os
 
 # ============================================================================
 # EXPENSE MODELS
@@ -66,10 +68,11 @@ class BudgetUpdate(BaseModel):
 # PANTRY MODELS
 # ============================================================================
 
-PANTRY_CATEGORIES = [
-    "Dairy", "Produce", "Meat & Seafood", "Bakery", "Frozen",
-    "Canned Goods", "Snacks", "Beverages", "Condiments", "Grains & Pasta", "Other"
-]
+# Load categories from shared JSON (source of truth: backend/data/grocery_categories.json)
+_data_path = os.path.join(os.path.dirname(__file__), "data", "grocery_categories.json")
+with open(_data_path, "r") as _f:
+    _grocery_data = json.load(_f)
+PANTRY_CATEGORIES = _grocery_data["categories"]
 
 class PantryItemCreate(BaseModel):
     name: str = Field(max_length=200)

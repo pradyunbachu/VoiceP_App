@@ -89,23 +89,6 @@ export const useUpdateExpense = () => {
 
       return response.json();
     },
-    onMutate: async ({ id, data }) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.expenses.list() });
-      const previousExpenses = queryClient.getQueryData(queryKeys.expenses.list());
-
-      queryClient.setQueryData(queryKeys.expenses.list(), (old) =>
-        old?.map((expense) =>
-          expense.id === id ? { ...expense, ...data } : expense
-        )
-      );
-
-      return { previousExpenses };
-    },
-    onError: (err, variables, context) => {
-      if (context?.previousExpenses) {
-        queryClient.setQueryData(queryKeys.expenses.list(), context.previousExpenses);
-      }
-    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
@@ -131,21 +114,6 @@ export const useDeleteExpense = () => {
       }
 
       return response.json();
-    },
-    onMutate: async (id) => {
-      await queryClient.cancelQueries({ queryKey: queryKeys.expenses.list() });
-      const previousExpenses = queryClient.getQueryData(queryKeys.expenses.list());
-
-      queryClient.setQueryData(queryKeys.expenses.list(), (old) =>
-        old?.filter((expense) => expense.id !== id)
-      );
-
-      return { previousExpenses };
-    },
-    onError: (err, id, context) => {
-      if (context?.previousExpenses) {
-        queryClient.setQueryData(queryKeys.expenses.list(), context.previousExpenses);
-      }
     },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
@@ -206,7 +174,7 @@ export const useClearAllExpenses = () => {
       return response.json();
     },
     onSuccess: () => {
-      queryClient.setQueryData(queryKeys.expenses.list(), []);
+      queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
     },
   });

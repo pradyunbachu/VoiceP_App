@@ -41,7 +41,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
   return (
     <nav className="navigation">
       <div className="nav-left">
-        <div className="nav-logo" onClick={() => onViewChange("dashboard")}>
+        <div className="nav-logo" onClick={() => onViewChange("record")}>
           <Mic size={20} />
           <span>voxal</span>
         </div>
@@ -60,7 +60,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
           onClick={() => onViewChange("record")}
         >
           <Mic size={18} />
-          <span className="nav-label-full">VoxAssistant</span>
+          <span className="nav-label-full">Voxy</span>
           <span className="nav-label-short">Assist</span>
         </button>
 
@@ -74,8 +74,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
             }}
           >
             <DollarSign size={18} />
-            <span className="nav-label-full">VoxFinance</span>
-            <span className="nav-label-short">Finance</span>
+            <span className="nav-label-full">Finance</span>
             <ChevronDown size={14} className={`dropdown-arrow ${financeOpen ? "open" : ""}`} />
           </button>
           {financeOpen && (
@@ -122,8 +121,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
             }}
           >
             <UtensilsCrossed size={18} />
-            <span className="nav-label-full">VoxKitchen</span>
-            <span className="nav-label-short">Kitchen</span>
+            <span className="nav-label-full">Kitchen</span>
             <ChevronDown size={14} className={`dropdown-arrow ${kitchenOpen ? "open" : ""}`} />
           </button>
           {kitchenOpen && (

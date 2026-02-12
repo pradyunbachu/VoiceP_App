@@ -5,7 +5,7 @@ import { queryKeys } from './queryKeys';
 
 export const usePantryItems = (filters = {}) => {
   const { getToken } = useAuth();
-  const { category, stock_status, sort_by = 'name', sort_order = 'asc' } = filters;
+  const { category, stock_status, sort_by = 'name', sort_order = 'asc', search, page, page_size, paginate } = filters;
 
   return useQuery({
     queryKey: queryKeys.pantry.items(filters),
@@ -16,6 +16,10 @@ export const usePantryItems = (filters = {}) => {
       const params = new URLSearchParams();
       if (category) params.append('category', category);
       if (stock_status) params.append('stock_status', stock_status);
+      if (search) params.append('search', search);
+      if (paginate) params.append('paginate', 'true');
+      if (page) params.append('page', page);
+      if (page_size) params.append('page_size', page_size);
       params.append('sort_by', sort_by);
       params.append('sort_order', sort_order);
 
@@ -32,6 +36,9 @@ export const usePantryItems = (filters = {}) => {
       }
 
       const data = await response.json();
+      if (paginate) {
+        return data;
+      }
       return data.items || [];
     },
     enabled: !!getToken(),

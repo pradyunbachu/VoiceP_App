@@ -202,6 +202,30 @@
   font-size: 0.8rem;
 }
 
+/* Pantry add styling */
+.chat-pantry_add .chat-response-header svg {
+  color: #22c55e; /* Green for pantry add */
+}
+
+.pantry-add-list {
+  gap: 0.4rem;
+}
+
+.pantry-add-item {
+  background: rgba(34, 197, 94, 0.05);
+  border-color: rgba(34, 197, 94, 0.2);
+}
+
+.item-category-badge {
+  display: inline-block;
+  padding: 0.2rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
 /* Meal suggestion styling */
 .meal-suggestions {
   gap: 1rem;
@@ -301,6 +325,33 @@
   font-size: 0.85rem;
   color: var(--text-secondary);
   line-height: 1.5;
+}
+
+.instructions-label {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-tertiary);
+  margin-bottom: 0.4rem;
+}
+
+.instructions-steps {
+  margin: 0;
+  padding-left: 1.4rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.instruction-step {
+  padding-left: 0.25rem;
+}
+
+.instruction-step::marker {
+  color: var(--accent-primary, #3b82f6);
+  font-weight: 600;
 }
 
 /* Responsive adjustments */

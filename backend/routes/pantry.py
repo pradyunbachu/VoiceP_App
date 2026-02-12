@@ -5,6 +5,8 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from datetime import datetime, timedelta
 from typing import Optional
 
+import math as pantry_math
+
 from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
@@ -27,13 +29,19 @@ async def get_pantry_items(
     search: Optional[str] = None,
     expiring_within_days: Optional[int] = None,
     sort_by: Optional[str] = "name",
-    sort_order: Optional[str] = "asc"
+    sort_order: Optional[str] = "asc",
+    page: int = 1,
+    page_size: int = 20,
+    paginate: bool = False
 ):
-    """Get pantry items for the current user with filtering and sorting"""
+    """Get pantry items for the current user with filtering, sorting, and optional pagination"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    query = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"])
+    if paginate:
+        query = supabase.table("pantry_items").select("*", count="exact").eq("user_id", current_user["id"])
+    else:
+        query = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"])
 
     if category:
         query = query.eq("category", category)
@@ -41,20 +49,20 @@ async def get_pantry_items(
     if stock_status:
         query = query.eq("stock_status", stock_status)
 
+    if search:
+        query = query.or_(f"name.ilike.%{search}%,category.ilike.%{search}%,notes.ilike.%{search}%")
+
     valid_sort_fields = {"name", "category", "expiration_date", "purchase_date", "stock_status", "created_at"}
     sort_field = sort_by if sort_by in valid_sort_fields else "name"
     query = query.order(sort_field, desc=(sort_order.lower() == "desc"))
 
+    if paginate:
+        start = (page - 1) * page_size
+        end = start + page_size - 1
+        query = query.range(start, end)
+
     response = query.execute()
     items = response.data if response.data else []
-
-    # Apply search filter in Python (Supabase ilike can be inconsistent)
-    if search:
-        search_lower = search.lower()
-        items = [item for item in items if
-                 search_lower in item.get("name", "").lower() or
-                 search_lower in (item.get("category") or "").lower() or
-                 search_lower in (item.get("notes") or "").lower()]
 
     # Apply expiring_within_days filter
     if expiring_within_days is not None:
@@ -62,6 +70,19 @@ async def get_pantry_items(
         items = [item for item in items if
                  item.get("expiration_date") and
                  datetime.strptime(item["expiration_date"], "%Y-%m-%d").date() <= future_date]
+
+    if paginate:
+        total_count = response.count if response.count is not None else len(items)
+        total_pages = pantry_math.ceil(total_count / page_size) if page_size > 0 else 1
+        return {
+            "items": items,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size,
+            "total_pages": total_pages,
+            "has_next": page < total_pages,
+            "has_prev": page > 1,
+        }
 
     return {"items": items, "count": len(items)}
 

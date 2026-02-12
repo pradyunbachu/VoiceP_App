@@ -3,7 +3,7 @@ export const queryKeys = {
   // Expenses
   expenses: {
     all: ['expenses'],
-    list: () => [...queryKeys.expenses.all, 'list'],
+    list: (filters = {}) => [...queryKeys.expenses.all, 'list', filters],
   },
 
   // Analytics
@@ -39,6 +39,11 @@ export const queryKeys = {
   insights: {
     all: ['insights'],
     report: (timePeriod) => [...queryKeys.insights.all, 'report', timePeriod],
+  },
+
+  // Daily Recs
+  dailyRecs: {
+    all: ['dailyRecs'],
   },
 
 };
