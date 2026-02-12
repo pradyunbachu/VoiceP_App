@@ -1,26 +1,11 @@
 import { useState, useEffect } from 'react';
-import { X, Sparkles, ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader } from 'lucide-react';
 import { useDailyRecs } from '../hooks';
 import './DailyRecs.css';
 
-const DISMISS_KEY = 'voxy_daily_recs_dismissed';
-
-const isDismissedToday = () => {
-  const dismissed = localStorage.getItem(DISMISS_KEY);
-  if (!dismissed) return false;
-  const dismissedDate = new Date(dismissed).toDateString();
-  const today = new Date().toDateString();
-  return dismissedDate === today;
-};
-
 const DailyRecs = () => {
-  const [dismissed, setDismissed] = useState(isDismissedToday);
   const [open, setOpen] = useState(false);
   const { data, isLoading, isError } = useDailyRecs();
-
-  useEffect(() => {
-    setDismissed(isDismissedToday());
-  }, []);
 
   // Close on Escape key
   useEffect(() => {
@@ -32,20 +17,12 @@ const DailyRecs = () => {
     return () => document.removeEventListener('keydown', handleKey);
   }, [open]);
 
-  if (dismissed) return null;
-
   const meals = data?.meals || [];
   const low_stock = data?.low_stock || [];
   const expiring = data?.expiring || [];
   const pantry_count = data?.pantry_count || 0;
   const greeting = data?.greeting || '';
   const hasContent = meals.length > 0 || low_stock.length > 0 || expiring.length > 0;
-
-  const handleDismiss = () => {
-    localStorage.setItem(DISMISS_KEY, new Date().toISOString());
-    setOpen(false);
-    setDismissed(true);
-  };
 
   const renderPanelContent = () => {
     if (isLoading) {
@@ -163,26 +140,28 @@ const DailyRecs = () => {
       </button>
 
       {open && (
-        <div className="daily-recs-backdrop" onClick={() => setOpen(false)} />
-      )}
+        <>
+          <div className="daily-recs-backdrop" onClick={() => setOpen(false)} />
 
-      <button
-        className={`daily-recs-toggle close ${open ? '' : 'hidden'}`}
-        onClick={() => setOpen(false)}
-        aria-label="Close daily recommendations"
-      >
-        <ChevronRight size={18} />
-      </button>
+          <button
+            className="daily-recs-toggle close"
+            onClick={() => setOpen(false)}
+            aria-label="Close daily recommendations"
+          >
+            <ChevronRight size={18} />
+          </button>
 
-      <div className={`daily-recs-panel ${open ? 'open' : ''}`}>
-        <div className="daily-recs-panel-header">
-          <div className="daily-recs-title">
-            <span>Voxy's Recommendations</span>
+          <div className="daily-recs-panel open">
+            <div className="daily-recs-panel-header">
+              <div className="daily-recs-title">
+                <span>Voxy's Recommendations</span>
+              </div>
+            </div>
+
+            {renderPanelContent()}
           </div>
-        </div>
-
-        {renderPanelContent()}
-      </div>
+        </>
+      )}
     </>
   );
 };

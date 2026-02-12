@@ -18,8 +18,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
-  animation: togglePulse 3s ease-in-out infinite;
+  transition: width 0.2s ease, background 0.2s ease;
 }
 
 .daily-recs-toggle:hover {

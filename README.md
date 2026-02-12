@@ -1,307 +1,201 @@
-# voxal - Voice Powered Personal Assistant
+# Voxal
 
-A modern expense tracking application that lets you record expenses using your voice. Speak about your purchase, and the app extracts store name, items, amount, date, and categories, then displays everything in an analytics dashboard.
+An AI-powered voice personal assistant for expense tracking, pantry management, and meal planning. Speak naturally to log expenses, manage your kitchen inventory, get meal recommendations, and analyze spending habits.
 
 ## Features
 
-- Voice Recording: Record expenses using your microphone with MediaRecorder API (browser-based audio capture)
-- AI-Powered Transcription: Converts speech to text using Deepgram API (Flux model)
-- AI-Powered Extraction: Automatically extracts store, items, amount, date, and categories from voice transcripts using Groq LLM
-- Analytics Dashboard: Visualize spending with interactive charts including line, bar, and pie charts
-- Expense History: View and manage all recorded expenses with delete functionality
-- Modern Dark UI: Black theme with glassmorphism effects and neon accents
-- Responsive Design: Works on desktop and mobile devices
-- Smart Fallbacks: Automatically falls back to regex-based extraction if AI services are unavailable
-- Manual Entry: Type expenses manually if voice recording isn't available
-- Category Support: Automatically categorizes expenses (Electronics, Groceries, Dining, etc.) with support for multiple categories per expense
+### Voice Assistant (Voxy)
+- **Voice recording** with Deepgram speech-to-text transcription (nova-2 model)
+- **Multi-intent understanding** - automatically detects whether you're logging an expense, updating your pantry, asking for meal ideas, or querying spending
+- **Manual text entry** as an alternative to voice
+- **Receipt scanning** with camera capture and Groq Vision OCR (llama-4-scout-17b)
+- **Smart fallbacks** - regex-based extraction when AI services are unavailable
+
+### Finance
+- **Expense tracking** - AI-powered extraction of amount, store, category, and date from natural language
+- **Analytics dashboard** - line charts (spending over time), bar charts (top stores), pie charts (by category and store)
+- **Budget management** - monthly budgets by category with visual progress bars and overspend alerts
+- **Spending insights** - AI-generated analysis of spending patterns, trends, and personalized recommendations
+- **Recurring expenses** - automated tracking of recurring charges
+- **CSV export** for expenses and budgets
+
+### Kitchen
+- **Pantry management** - drag-and-drop shelf UI with stock status tracking, expiration alerts, quantity/unit support, and category organization
+- **Shopping lists** - autocomplete with 1000+ grocery items, fuzzy search, semantic pantry matching, and shared group lists with real-time collaboration
+- **Daily recommendations** - slide-out side panel with AI-generated meal suggestions based on pantry contents, prioritizing expiring items, plus low stock alerts
 
 ## Tech Stack
 
-### Backend
-
-- FastAPI - Python web framework for building REST APIs
-  - Handles CORS, request validation, and error handling
-  - Provides endpoints for transcription, expense extraction, analytics, and CRUD operations
-- Deepgram API - Speech-to-text transcription service
-  - Uses flux-general-en model for conversational speech recognition
-  - High accuracy transcription of voice recordings
-  - REST API integration via httpx
-- Groq LLM - AI inference engine for expense extraction
-  - Uses llama-3.1-70b-versatile model for JSON extraction
-  - Free tier available with generous rate limits
-  - Primary method for extracting structured expense data from voice transcripts
-- Simple Regex Extraction - Fallback extraction method
-  - Pattern-based extraction when Groq is unavailable
-  - Handles common expense formats (dollars, cents, store names, items)
-  - Ensures app works even without API keys
-- SQLite - Lightweight, file-based database
-
-  - Stores expenses locally in voxal.db
-  - Tracks: store, items, category, amount, date, and timestamps
-  - Provides analytics aggregation (totals, by store, by date, by category)
-
-- Python-dotenv - Environment variable management
-  - Securely loads API keys from .env file
-  - Prevents sensitive data from being committed to git
-
-### Frontend
-
-- React 18 - UI library for building interactive components
-  - Component-based architecture (VoiceRecorder, AnalyticsDashboard, ExpenseList, Navigation, LandingPage)
-  - State management with hooks (useState, useEffect)
-  - Efficient re-rendering and data flow
-- MediaRecorder API - Browser API for audio recording
-  - Captures audio from user's microphone
-  - Supports multiple audio formats (webm, mp4, ogg)
-  - Creates audio blobs for backend processing
-- Vite - Frontend build tool
-  - Fast development server with HMR (Hot Module Replacement)
-  - Optimized production builds
-  - Proxy configuration for API requests
-- Recharts - Charting library built on React
-  - Line charts for expense trends over time
-  - Bar charts for top stores comparison
-  - Pie charts for expense distribution by store and category
-  - Responsive and customizable with dark theme support
-- Lucide React - Icon library
-  - Consistent iconography throughout the app
-  - Lightweight and tree-shakeable
-- CSS3 - Modern styling with:
-  - Glassmorphism effects (backdrop-filter, blur)
-  - CSS Grid and Flexbox for responsive layouts
-  - CSS animations and transitions
-  - Dark theme with gradient accents
-  - Bricolage Grotesque font family
-
-## Architecture
-
-### Application Flow
-
-1. Voice Input: User clicks "Start Recording" → MediaRecorder API captures audio
-2. Transcription: Audio blob sent to backend → Deepgram API converts speech to text
-3. Expense Extraction: Transcript sent to Groq LLM → Extracts structured data including categories
-4. Data Storage: Extracted expense saved to SQLite database
-5. Analytics: Real-time dashboard updates with charts and statistics
-6. View Management: Navigation tabs switch between Landing, Record, Dashboard, and Expenses views
-
-### API Architecture
-
-- RESTful Design: Clean separation between frontend and backend
-- CORS Enabled: Allows frontend to communicate with backend
-- Error Handling: Graceful fallbacks at every layer
-- Data Validation: Pydantic models ensure type safety
+| Layer | Technologies |
+|-------|-------------|
+| **Frontend** | React 18, Vite, TanStack React Query, Recharts, Lucide React, @dnd-kit, Fuse.js, Supabase JS SDK |
+| **Backend** | Python FastAPI, Uvicorn, slowapi (rate limiting) |
+| **AI/ML** | Groq LLM (llama-3.3-70b-versatile), Groq Vision (llama-4-scout-17b), Deepgram (nova-2) |
+| **Database** | Supabase (PostgreSQL) with real-time subscriptions |
+| **Auth** | Supabase Auth with JWT (ES256 + HS256) |
 
 ## Project Structure
 
 ```
-voxal/
+VoiceP_App/
 ├── backend/
-│   ├── main.py              # FastAPI application with all endpoints
-│   ├── requirements.txt      # Python dependencies
-│   ├── .env                  # Environment variables (API keys) - NOT in git
-│   ├── .env.example          # Template for environment variables
-│   ├── voxal.db              # SQLite database - NOT in git
-│   └── venv/                 # Virtual environment - NOT in git
+│   ├── main.py                # FastAPI app entry point
+│   ├── auth.py                # JWT validation (ES256 + HS256)
+│   ├── config.py              # Supabase, Groq, Deepgram clients
+│   ├── cache.py               # In-memory API cache with TTL
+│   ├── rate_limit.py          # slowapi rate limiting
+│   ├── schemas.py             # Pydantic request/response models
+│   ├── routes/
+│   │   ├── analytics.py       # Spending analytics & aggregation
+│   │   ├── budgets.py         # Budget CRUD
+│   │   ├── chat.py            # Voice assistant intent routing
+│   │   ├── daily_recs.py      # AI meal recommendations
+│   │   ├── expense_extraction.py  # AI + regex expense parsing
+│   │   ├── expenses.py        # Expense CRUD
+│   │   ├── insights.py        # AI spending analysis
+│   │   ├── pantry.py          # Pantry CRUD with filtering/sorting
+│   │   ├── receipt.py         # Receipt OCR via Groq Vision
+│   │   ├── recurring.py       # Recurring expense management
+│   │   ├── shopping_list.py   # Shopping list CRUD
+│   │   ├── shopping_list_sharing.py  # Group shopping lists
+│   │   └── transcription.py   # Deepgram speech-to-text
+│   └── handlers/              # Chat intent detection & response handlers
 ├── frontend/
-│   ├── src/
-│   │   ├── components/
-│   │   │   ├── Navigation.jsx        # Top navigation bar with tabs
-│   │   │   ├── Navigation.css
-│   │   │   ├── LandingPage.jsx       # Landing page component
-│   │   │   ├── LandingPage.css
-│   │   │   ├── VoiceRecorder.jsx     # Voice recording and expense input
-│   │   │   ├── VoiceRecorder.css
-│   │   │   ├── AnalyticsDashboard.jsx # Analytics charts and stats
-│   │   │   ├── AnalyticsDashboard.css
-│   │   │   ├── ExpenseList.jsx       # Expense history list
-│   │   │   └── ExpenseList.css
-│   │   ├── App.jsx            # Main app component with routing
-│   │   ├── App.css            # Global app styles
-│   │   ├── main.jsx           # React entry point
-│   │   └── index.css           # Global CSS reset and base styles
-│   ├── index.html            # HTML template
-│   ├── package.json          # Node dependencies
-│   └── vite.config.js        # Vite configuration
-├── .gitignore                # Git ignore rules (protects .env, .db, etc.)
-└── README.md                 # This file
+│   └── src/
+│       ├── App.jsx            # Main app with view routing
+│       ├── index.css          # Global styles, CSS variables, theming
+│       ├── components/
+│       │   ├── VoiceRecorder.jsx       # Voice input, manual entry, receipt trigger
+│       │   ├── AnalyticsDashboard.jsx  # Charts & spending stats
+│       │   ├── ExpenseList.jsx         # Expense history with search/filter/sort
+│       │   ├── BudgetManagement.jsx    # Budget creation & tracking
+│       │   ├── SpendingInsights.jsx    # AI spending analysis
+│       │   ├── Pantry.jsx              # Drag-and-drop inventory management
+│       │   ├── ShoppingList.jsx        # Shopping items with autocomplete
+│       │   ├── ShoppingListGroupSelector.jsx  # Shared list management
+│       │   ├── DailyRecs.jsx           # Slide-out meal recommendations panel
+│       │   ├── ReceiptScanner.jsx      # Camera capture & image upload OCR
+│       │   ├── Navigation.jsx          # Top nav with Finance/Kitchen dropdowns
+│       │   ├── ChatResponseDisplay.jsx # Voice assistant response rendering
+│       │   ├── ExpenseResult.jsx       # Extracted expense display
+│       │   ├── ManualInput.jsx         # Manual expense form
+│       │   └── LandingPage.jsx         # Welcome screen
+│       ├── hooks/              # React Query hooks (queries + mutations)
+│       ├── context/            # Auth context (Supabase)
+│       ├── config/             # API base URL config
+│       ├── constants/          # Grocery items list, pantry categories
+│       └── lib/                # Utilities (image compression)
+└── Dockerfile
 ```
 
-## Security
-
-### Protected Files (in .gitignore)
-
-- `.env` - Contains API keys (Groq, Deepgram)
-- `*.db`, `*.sqlite` - Database files with user data
-- `venv/`, `node_modules/` - Dependencies
-- `__pycache__/` - Python cache files
-
-### Security Best Practices
-
-- API keys loaded from environment variables only
-- No hardcoded credentials in source code
-- Database stored locally (not in cloud)
-- CORS configured for specific origins only
-- Input validation on all API endpoints
-
-## Setup Instructions
+## Setup
 
 ### Prerequisites
+- Node.js 18+
+- Python 3.11+
+- A Supabase project with the required tables
+- API keys for Groq and Deepgram
 
-- Python 3.8+
-- Node.js 16+
-- Groq API key (free at https://console.groq.com/) - Optional but recommended
-- Deepgram API key (free at https://console.deepgram.com/) - Required for transcription
+### Environment Variables
 
-### Backend Setup
+Create `backend/.env`:
+```
+SUPABASE_URL=your_supabase_url
+SUPABASE_KEY=your_supabase_anon_key
+SUPABASE_JWT_SECRET=your_jwt_secret
+GROQ_API_KEY=your_groq_key
+DEEPGRAM_API_KEY=your_deepgram_key
+ALLOWED_ORIGINS=http://localhost:5173
+```
 
-1. Navigate to the backend directory:
+### Run Locally
 
+**Backend:**
 ```bash
 cd backend
-```
-
-2. Create a virtual environment:
-
-```bash
 python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-```
-
-3. Install dependencies:
-
-```bash
+source venv/bin/activate
 pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
 ```
 
-4. Create a `.env` file in the backend directory:
-
-```bash
-# Copy the example file (if it exists) or create new
-touch .env
-```
-
-5. Add your API keys to `.env`:
-
-```
-GROQ_API_KEY=your_groq_api_key_here
-DEEPGRAM_API_KEY=your_deepgram_api_key_here
-```
-
-Note: 
-- Get a free Groq API key at https://console.groq.com/. The app will work without it using simple regex extraction, but Groq provides better accuracy.
-- Get a free Deepgram API key at https://console.deepgram.com/. This is required for voice transcription.
-
-6. Run the backend server:
-
-```bash
-python main.py
-```
-
-The backend will be available at `http://localhost:8000`
-
-### Frontend Setup
-
-1. Navigate to the frontend directory:
-
+**Frontend:**
 ```bash
 cd frontend
-```
-
-2. Install dependencies:
-
-```bash
 npm install
-```
-
-3. Start the development server:
-
-```bash
 npm run dev
 ```
 
-The frontend will be available at `http://localhost:3000`
+The app runs at `http://localhost:5173` with the API at `http://localhost:8000`.
 
-## Usage
+## Navigation
 
-1. Start the Application:
+| Tab | Pages |
+|-----|-------|
+| **Voxy** | Voice recorder, manual entry, receipt scanner |
+| **Finance** | Dashboard (analytics), Expenses (history), Budgets, Insights |
+| **Kitchen** | Pantry, Shopping List |
 
-   - Start backend: `cd backend && python main.py`
-   - Start frontend: `cd frontend && npm run dev`
-
-2. Landing Page:
-
-   - Opens automatically at `http://localhost:3000`
-   - Click "Get Started" or use navigation tabs
-
-3. Record an Expense:
-
-   - Click "Record Expense" tab
-   - Click "Start Recording"
-   - Speak: "I bought groceries at Walmart for $45.50 - milk, bread, and eggs"
-   - Click "Stop Recording"
-   - Expense is automatically extracted and saved
-
-4. View Analytics:
-
-   - Click "Dashboard" tab
-   - See total expenses, purchase count, charts, and trends
-
-5. Manage Expenses:
-   - Click "Expenses" tab
-   - View all recorded expenses
-   - Delete expenses as needed
-   - Clear all expenses from the dashboard
+The Daily Recommendations panel is accessible via a toggle button on the right edge of the Voxy page.
 
 ## API Endpoints
 
-- `GET /` - API health check
-- `POST /api/transcribe` - Transcribe audio to text using Deepgram API
-- `POST /api/extract-expense` - Extract expense information from transcript (uses Groq or fallback)
-- `POST /api/extract-expense-simple` - Simple regex-based extraction (no API needed)
-- `GET /api/expenses` - Get all expenses
-- `GET /api/analytics` - Get analytics data (totals, by store, by date, by category)
-- `DELETE /api/expenses/{id}` - Delete an expense
-- `DELETE /api/expenses` - Delete all expenses
-- `GET /api/db-viewer` - View database contents in browser (development tool)
+### Transcription & Extraction
+- `POST /api/transcribe` - Speech-to-text via Deepgram
+- `POST /api/extract-expense` - AI expense extraction (Groq)
+- `POST /api/extract-expense-simple` - Regex fallback extraction
+- `POST /api/scan-receipt` - Receipt OCR via Groq Vision
 
-## UI/UX Features
+### Expenses
+- `GET /api/expenses` - List expenses (with filtering)
+- `POST /api/expenses` - Create expense
+- `PUT /api/expenses/{id}` - Update expense
+- `DELETE /api/expenses/{id}` - Delete expense
+- `DELETE /api/expenses` - Clear all expenses
 
-- Dark Theme: Black background with neon accent colors
-- Glassmorphism: Translucent cards with backdrop blur effects
-- Smooth Animations: Hover effects, transitions, and loading states
-- Responsive Design: Works on desktop, tablet, and mobile
-- Navigation: Fixed top bar with tab-based navigation
-- Landing Page: Introduction screen with animated logo
+### Analytics & Insights
+- `GET /api/analytics` - Aggregated spending data
+- `GET /api/insights` - AI-generated spending analysis
 
-## Fallback System
+### Budgets
+- `GET /api/budgets` - List budgets (with month/year filtering)
+- `POST /api/budgets` - Create budget
+- `PUT /api/budgets/{id}` - Update budget
+- `DELETE /api/budgets/{id}` - Delete budget
 
-The app has multiple layers of fallbacks to ensure it always works:
+### Pantry
+- `GET /api/pantry` - List pantry items (with filtering, sorting, pagination)
+- `POST /api/pantry` - Add pantry item
+- `PUT /api/pantry/{id}` - Update pantry item
+- `DELETE /api/pantry/{id}` - Delete pantry item
+- `POST /api/pantry/bulk-delete` - Bulk delete
 
-1. Transcription: Deepgram API → Error message if unavailable
-2. Extraction: Groq LLM → Simple regex extraction
-3. Data: Always saves to database, even with minimal extraction
+### Shopping Lists
+- `GET /api/shopping-list` - List items (personal or group)
+- `POST /api/shopping-list` - Add item
+- `DELETE /api/shopping-list/{id}` - Remove item
+- `POST /api/shopping-list/remove-purchased` - Clear purchased items
 
-## Notes
+### Shopping List Groups
+- `GET /api/shopping-list-groups` - List groups
+- `POST /api/shopping-list-groups` - Create group
+- `POST /api/shopping-list-groups/{id}/invite` - Invite member
+- `DELETE /api/shopping-list-groups/{id}/members/{user_id}` - Remove member
 
-- Microphone permissions required for voice recording
-- Works offline for viewing expenses (once data is loaded)
-- Database is stored locally - no cloud sync
-- All processing happens in real-time
-- No user accounts needed - simple local storage
+### Voice Assistant & Recommendations
+- `POST /api/chat` - Multi-intent voice assistant
+- `GET /api/daily-recs` - AI meal recommendations + pantry alerts
 
-## Troubleshooting
+## Security
 
-- "Failed to fetch" error: Make sure backend is running on port 8000
-- No transcription: Check browser microphone permissions and Deepgram API key
-- Poor extraction: Add Groq API key for better accuracy
-- Database errors: Check file permissions on `voxal.db`
+- JWT authentication on all protected endpoints
+- Rate limiting per endpoint (10-60 req/min)
+- CORS whitelisting
+- CSRF protection (configurable)
+- Input validation with Pydantic schemas
+- Request size limits (10MB for audio uploads)
+- Environment-based configuration (no hardcoded credentials)
 
 ## License
 
 MIT
-
-## Acknowledgments
-
-- Groq for fast, free AI inference
-- Deepgram for accurate speech-to-text transcription
-- FastAPI and React communities for excellent frameworks

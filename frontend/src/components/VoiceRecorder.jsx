@@ -6,7 +6,6 @@ import ReceiptScanner from "./ReceiptScanner";
 import ExpenseResult from "./ExpenseResult";
 import ManualInput from "./ManualInput";
 import RecordingIndicator from "./RecordingIndicator";
-import DailyRecs from "./DailyRecs";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "../hooks";
 import useAudioRecorder from "../hooks/useAudioRecorder";
@@ -212,7 +211,6 @@ const VoiceRecorder = ({ showToast }) => {
         Try: "I spent $20 at Walmart", "What can I cook for breakfast?", "I have flour, oil, and salt", or "What should I get from the store?"
       </p>
 
-      <DailyRecs />
 
       <div className="recorder-controls">
         {!isRecording ? (

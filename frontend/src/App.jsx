@@ -13,6 +13,7 @@ import SpendingInsights from "./components/SpendingInsights";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
+import DailyRecs from "./components/DailyRecs";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useAnalytics, useClearAllExpenses } from "./hooks";
@@ -234,6 +235,7 @@ function AppContent() {
         </>
       )}
       <main className="app-main">{renderView()}</main>
+      {currentView === "record" && <DailyRecs />}
     </div>
   );
 }
