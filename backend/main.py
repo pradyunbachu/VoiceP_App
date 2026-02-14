@@ -2,6 +2,7 @@
 # VOXAL API - MAIN ENTRY POINT
 # ============================================================================
 import os
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -16,10 +17,25 @@ from routes import transcription, expenses, expense_extraction, analytics, budge
 from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
+# LIFESPAN
+# ============================================================================
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Process due recurring expenses on app startup."""
+    try:
+        created = process_due_recurring_expenses()
+        if created and created > 0:
+            print(f"Startup: Created {created} recurring expense(s)")
+    except Exception as e:
+        print(f"Startup recurring check error: {e}")
+    yield
+
+# ============================================================================
 # APPLICATION INITIALIZATION
 # ============================================================================
 
-app = FastAPI(title="voxal API")
+app = FastAPI(title="voxal API", lifespan=lifespan)
 
 # Rate limiting setup
 app.state.limiter = limiter
@@ -101,20 +117,6 @@ async def root():
 async def csrf_token_endpoint(request: Request):
     """Get a CSRF token for state-changing requests."""
     return await get_csrf_token(request)
-
-# ============================================================================
-# STARTUP EVENT
-# ============================================================================
-
-@app.on_event("startup")
-async def startup_event():
-    """Process due recurring expenses on app startup"""
-    try:
-        created = process_due_recurring_expenses()
-        if created and created > 0:
-            print(f"Startup: Created {created} recurring expense(s)")
-    except Exception as e:
-        print(f"Startup recurring check error: {e}")
 
 # ============================================================================
 # APPLICATION ENTRY POINT

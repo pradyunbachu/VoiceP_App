@@ -5,6 +5,7 @@
 # Works alongside JWT authentication for defense in depth.
 # ============================================================================
 
+import os
 import secrets
 import hashlib
 from fastapi import Request, HTTPException
@@ -97,7 +98,7 @@ class CSRFMiddleware(BaseHTTPMiddleware):
                 max_age=CSRF_COOKIE_MAX_AGE,
                 httponly=False,  # Must be readable by JavaScript
                 samesite="strict",  # Prevent cross-site requests
-                secure=False,  # Set to True in production with HTTPS
+                secure=os.getenv("ENVIRONMENT") == "production",
                 path="/"
             )
 

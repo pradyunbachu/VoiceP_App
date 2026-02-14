@@ -1,0 +1,211 @@
+/* ============================================================================
+   RECIPE DETAIL - Slide-in Panel (sits to the right of the daily recs panel)
+   ============================================================================ */
+
+.recipe-panel {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  width: 380px;
+  height: calc(100% - 56px);
+  z-index: 901;
+  background: var(--bg-primary, #0f0f14);
+  border-left: 1px solid rgba(59, 130, 246, 0.2);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+
+.recipe-panel.open {
+  transform: translateX(0);
+}
+
+/* Header */
+.recipe-panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-3) var(--space-4);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.recipe-back-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+  font-family: 'Bricolage Grotesque', sans-serif;
+}
+
+.recipe-back-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.recipe-close-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.recipe-close-btn:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Body */
+.recipe-panel-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: var(--space-4) var(--space-5);
+}
+
+/* Loading / Error */
+.recipe-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-8, 48px) 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.recipe-spinner {
+  animation: spin 1.2s linear infinite;
+  color: var(--accent-primary);
+}
+
+.recipe-error {
+  text-align: center;
+  padding: var(--space-8, 48px) 0;
+  color: var(--accent-danger, #f87171);
+  font-size: 0.85rem;
+}
+
+/* Recipe name */
+.recipe-name {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+}
+
+/* Description */
+.recipe-description {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+  margin: 0 0 1rem 0;
+}
+
+/* Meta row */
+.recipe-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.recipe-meta-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full, 999px);
+  color: var(--text-secondary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Sections */
+.recipe-section {
+  margin-bottom: 1.25rem;
+}
+
+.recipe-section h4 {
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  margin: 0 0 0.5rem 0;
+}
+
+/* Ingredients */
+.recipe-ingredients {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.recipe-ingredients li {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+  padding: 0.3rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.ingredient-amount {
+  color: var(--accent-primary);
+  font-weight: 600;
+  white-space: nowrap;
+  min-width: 65px;
+}
+
+.ingredient-item {
+  color: var(--text-primary);
+}
+
+/* Instructions */
+.recipe-instructions {
+  padding: 0 0 0 1.25rem;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.recipe-instructions li {
+  color: var(--text-primary);
+  font-size: 0.825rem;
+  line-height: 1.5;
+  padding-left: 0.25rem;
+}
+
+.recipe-instructions li::marker {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* Responsive — stack panels on small screens */
+@media (max-width: 700px) {
+  .recipe-panel {
+    width: 100%;
+  }
+}

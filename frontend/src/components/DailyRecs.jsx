@@ -1,21 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader } from 'lucide-react';
-import { useDailyRecs } from '../hooks';
+import { useDailyRecs, useRecipeDetail } from '../hooks';
+import RecipeDetailPanel from './RecipeDetailModal';
 import './DailyRecs.css';
 
 const DailyRecs = () => {
   const [open, setOpen] = useState(false);
+  const [selectedMeal, setSelectedMeal] = useState(null);
+  const [cachedRecipe, setCachedRecipe] = useState(null);
+  const recipeCacheRef = useRef({});
   const { data, isLoading, isError } = useDailyRecs();
+  const recipeDetail = useRecipeDetail();
+
+  const recipeOpen = !!selectedMeal;
 
   // Close on Escape key
   useEffect(() => {
     if (!open) return;
     const handleKey = (e) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        if (recipeOpen) {
+          setSelectedMeal(null);
+          recipeDetail.reset();
+        } else {
+          setOpen(false);
+        }
+      }
     };
     document.addEventListener('keydown', handleKey);
     return () => document.removeEventListener('keydown', handleKey);
-  }, [open]);
+  }, [open, recipeOpen]);
 
   const meals = data?.meals || [];
   const low_stock = data?.low_stock || [];
@@ -23,6 +37,38 @@ const DailyRecs = () => {
   const pantry_count = data?.pantry_count || 0;
   const greeting = data?.greeting || '';
   const hasContent = meals.length > 0 || low_stock.length > 0 || expiring.length > 0;
+
+  const handleMealClick = (meal) => {
+    setSelectedMeal(meal);
+
+    const cached = recipeCacheRef.current[meal.name];
+    if (cached) {
+      setCachedRecipe(cached);
+      recipeDetail.reset();
+      return;
+    }
+
+    setCachedRecipe(null);
+    recipeDetail.reset();
+    recipeDetail.mutate(
+      {
+        meal_name: meal.name,
+        meal_description: meal.description,
+        available_ingredients: data?.available_ingredients || '',
+      },
+      {
+        onSuccess: (result) => {
+          recipeCacheRef.current[meal.name] = result;
+        },
+      }
+    );
+  };
+
+  const closeRecipePanel = () => {
+    setSelectedMeal(null);
+    setCachedRecipe(null);
+    recipeDetail.reset();
+  };
 
   const renderPanelContent = () => {
     if (isLoading) {
@@ -65,7 +111,7 @@ const DailyRecs = () => {
         {meals.length > 0 && (
           <div className="daily-recs-meals">
             {meals.map((meal, i) => (
-              <div key={i} className="meal-card">
+              <div key={i} className="meal-card" onClick={() => handleMealClick(meal)}>
                 <div className="meal-card-icon">
                   <UtensilsCrossed size={16} />
                 </div>
@@ -144,14 +190,14 @@ const DailyRecs = () => {
           <div className="daily-recs-backdrop" onClick={() => setOpen(false)} />
 
           <button
-            className="daily-recs-toggle close"
+            className={`daily-recs-toggle close ${recipeOpen ? 'recipe-shifted' : ''}`}
             onClick={() => setOpen(false)}
             aria-label="Close daily recommendations"
           >
             <ChevronRight size={18} />
           </button>
 
-          <div className="daily-recs-panel open">
+          <div className={`daily-recs-panel open ${recipeOpen ? 'recipe-shifted' : ''}`}>
             <div className="daily-recs-panel-header">
               <div className="daily-recs-title">
                 <span>Voxy's Recommendations</span>
@@ -159,6 +205,17 @@ const DailyRecs = () => {
             </div>
 
             {renderPanelContent()}
+          </div>
+
+          <div className={`recipe-panel ${recipeOpen ? 'open' : ''}`}>
+            {recipeOpen && (
+              <RecipeDetailPanel
+                recipe={cachedRecipe || recipeDetail.data}
+                isLoading={!cachedRecipe && recipeDetail.isPending}
+                error={!cachedRecipe && recipeDetail.isError}
+                onClose={closeRecipePanel}
+              />
+            )}
           </div>
         </>
       )}

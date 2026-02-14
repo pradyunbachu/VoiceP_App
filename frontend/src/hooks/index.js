@@ -42,6 +42,9 @@ export { useChat } from './mutations/useChatMutation';
 // Receipt mutations
 export { useScanReceipt } from './mutations/useReceiptMutation';
 
+// Recipe mutations
+export { useRecipeDetail } from './mutations/useRecipeMutation';
+
 // Shopping List mutations
 export {
   useCreateShoppingListItem,

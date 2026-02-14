@@ -208,7 +208,7 @@ const VoiceRecorder = ({ showToast }) => {
       <h2>Voxy</h2>
       <p className="recorder-description">Your personal voice powered assistant</p>
       <p className="recorder-examples">
-        Try: "I spent $20 at Walmart", "What can I cook for breakfast?", "I have flour, oil, and salt", or "What should I get from the store?"
+        Try: "I bought two apples for $3 at Walmart", "What can I cook for breakfast?", "I have flour, oil, and salt", or "What should I get from the store?"
       </p>
 
 

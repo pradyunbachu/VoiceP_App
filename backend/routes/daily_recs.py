@@ -2,6 +2,7 @@
 # DAILY RECS ROUTES - AI-Powered Daily Recommendations
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
+from pydantic import BaseModel
 from datetime import datetime, timedelta
 import json
 
@@ -18,7 +19,7 @@ def detect_meal_type() -> str:
     hour = datetime.now().hour
     if hour < 11:
         return "breakfast"
-    elif hour < 15:
+    elif hour < 16:
         return "lunch"
     elif hour < 21:
         return "dinner"
@@ -30,7 +31,7 @@ def get_greeting(meal_type: str) -> str:
     """Return a time-appropriate greeting."""
     greetings = {
         "breakfast": "Good morning! Here's what I'd suggest to start your day.",
-        "lunch": "Afternoon! Here are some lunch ideas based on your pantry.",
+        "lunch": "Good afternoon! Here are some lunch ideas based on your pantry.",
         "dinner": "Good evening! Here's what you could make for dinner tonight.",
         "snack": "Late night? Here are some quick bites you can whip up.",
     }
@@ -38,7 +39,7 @@ def get_greeting(meal_type: str) -> str:
 
 
 def generate_meal_recs(ingredient_list: str, expiring_list: str, meal_type: str):
-    """Call Groq for 2 quick meal suggestions."""
+    """Call Groq for 3 quick meal suggestions."""
     if not groq_client:
         return None
 
@@ -49,14 +50,14 @@ def generate_meal_recs(ingredient_list: str, expiring_list: str, meal_type: str)
         "snack": "snacks like dips, toast, trail mix, quick bites",
     }
 
-    prompt = f"""Suggest exactly 2 quick {meal_type} meals using these ingredients.
+    prompt = f"""Suggest exactly 3 quick {meal_type} meals using these ingredients.
 
 Available: {ingredient_list}
 Expiring soon (prioritize): {expiring_list}
 
 Think: {meal_hints.get(meal_type, "simple practical meals")}
 
-Return ONLY a JSON array of 2 objects:
+Return ONLY a JSON array of 3 objects:
 [{{"name": "Meal Name", "description": "One sentence about the dish", "time_minutes": 15, "uses_expiring": true}}]
 
 Keep it short and practical."""
@@ -101,7 +102,8 @@ async def get_daily_recs(
 
     user_id = current_user["id"]
 
-    cache_key = make_cache_key(user_id, "daily_recs")
+    meal_type = detect_meal_type()
+    cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}")
     cached = api_cache.get(cache_key)
     if cached is not None:
         return cached
@@ -112,8 +114,8 @@ async def get_daily_recs(
 
     if not pantry_items:
         result = {
-            "meal_type": detect_meal_type(),
-            "greeting": get_greeting(detect_meal_type()),
+            "meal_type": meal_type,
+            "greeting": get_greeting(meal_type),
             "meals": [],
             "low_stock": [],
             "expiring": [],
@@ -174,17 +176,85 @@ async def get_daily_recs(
     ingredient_list = ", ".join(i["name"] for i in available_items) or "none"
     expiring_list = ", ".join(i["name"] for i in expiring) or "none"
 
-    meal_type = detect_meal_type()
     meals = generate_meal_recs(ingredient_list, expiring_list, meal_type) or []
 
     result = {
         "meal_type": meal_type,
         "greeting": get_greeting(meal_type),
-        "meals": meals[:2],
+        "meals": meals[:3],
         "low_stock": low_stock[:5],
         "expiring": expiring[:5],
         "pantry_count": len(pantry_items),
+        "available_ingredients": ingredient_list,
     }
 
     api_cache.set(cache_key, result, ttl=1800)
     return result
+
+
+# ============================================================================
+# RECIPE DETAIL - Generate full recipe from a meal recommendation
+# ============================================================================
+
+class RecipeDetailRequest(BaseModel):
+    meal_name: str
+    meal_description: str
+    available_ingredients: str
+
+
+def generate_full_recipe(meal_name: str, meal_description: str, available_ingredients: str):
+    """Call Groq to generate a full recipe with ingredients and instructions."""
+    if not groq_client:
+        return None
+
+    prompt = f"""Generate a full recipe for: {meal_name}
+Description: {meal_description}
+Available ingredients: {available_ingredients}
+
+Return ONLY a JSON object with this exact structure:
+{{"name": "Recipe Name", "description": "Brief description", "servings": 2, "prep_minutes": 10, "cook_minutes": 20, "ingredients": [{{"item": "ingredient name", "amount": "1 cup"}}], "instructions": ["Step 1 text", "Step 2 text"]}}
+
+Use the available ingredients where possible. Keep it practical and clear."""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a helpful recipe assistant. Respond with valid JSON only."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.7
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        return json.loads(content)
+    except Exception as e:
+        print(f"Recipe detail generation error: {e}")
+        return None
+
+
+@router.post("/recipe-detail")
+@limiter.limit("10/minute")
+async def get_recipe_detail(
+    body: RecipeDetailRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Generate a full recipe for a given meal recommendation."""
+    if not groq_client:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+
+    recipe = generate_full_recipe(body.meal_name, body.meal_description, body.available_ingredients)
+
+    if not recipe:
+        raise HTTPException(status_code=500, detail="Failed to generate recipe")
+
+    return recipe

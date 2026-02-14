@@ -148,3 +148,7 @@ body {
 code {
   font-family: 'SF Mono', 'Fira Code', 'Fira Mono', 'Roboto Mono', monospace;
 }
+
+input, button, textarea, select {
+  font-family: inherit;
+}
