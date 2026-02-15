@@ -648,4 +648,10 @@
     width: 100%;
     justify-content: center;
   }
+
+  .search-input,
+  .sort-select,
+  .edit-form-group input {
+    font-size: 16px;
+  }
 }

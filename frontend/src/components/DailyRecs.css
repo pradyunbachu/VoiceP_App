@@ -91,9 +91,14 @@
 /* Panel Header */
 .daily-recs-panel-header {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   margin-bottom: var(--space-4);
+}
+
+/* Close button - hidden on desktop (external toggle used), shown on mobile */
+.daily-recs-mobile-close {
+  display: none;
 }
 
 .daily-recs-title {
@@ -342,6 +347,26 @@
 
   .daily-recs-toggle.close.recipe-shifted {
     display: none;
+  }
+
+  .daily-recs-mobile-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: var(--radius-md);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+  }
+
+  .daily-recs-mobile-close:hover {
+    background: rgba(255, 255, 255, 0.12);
+    color: var(--text-secondary);
   }
 
   .meal-card {

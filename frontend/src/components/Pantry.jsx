@@ -62,9 +62,9 @@ const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, on
   };
 
   const statusOptions = [
-    { value: 'full', label: 'In Stock', icon: <CheckCircle size={12} /> },
-    { value: 'low', label: 'Low', icon: <AlertTriangle size={12} /> },
-    { value: 'out_of_stock', label: 'Out', icon: <Circle size={12} /> },
+    { value: 'full', label: 'Full', icon: <CheckCircle size={11} /> },
+    { value: 'low', label: 'Low', icon: <AlertTriangle size={11} /> },
+    { value: 'out_of_stock', label: 'Out', icon: <Circle size={11} /> },
   ];
 
   return (
@@ -118,6 +118,7 @@ const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, on
             title={status.label}
           >
             {status.icon}
+            <span className="shelf-status-label">{status.label}</span>
           </button>
         ))}
       </div>

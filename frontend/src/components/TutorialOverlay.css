@@ -1,0 +1,198 @@
+/* Full-screen overlay container */
+.tutorial-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10001;
+}
+
+/* Solid backdrop for welcome/centered steps (no spotlight) */
+.tutorial-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.75);
+}
+
+/* Spotlight cutout — element is transparent, massive box-shadow creates the dimming */
+.tutorial-spotlight {
+  position: fixed;
+  border-radius: var(--radius-lg);
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
+  z-index: 10002;
+  pointer-events: none;
+  transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+}
+
+/* Card */
+.tutorial-card {
+  position: relative;
+  z-index: 10003;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-6);
+  max-width: 340px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  animation: tutorialFadeIn 0.25s ease-out;
+}
+
+.tutorial-card.centered {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+@keyframes tutorialFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Override animation for centered card to preserve centering transform */
+.tutorial-card.centered {
+  animation: tutorialFadeInCentered 0.25s ease-out;
+}
+
+@keyframes tutorialFadeInCentered {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -48%);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* Close button */
+.tutorial-close {
+  position: absolute;
+  top: var(--space-3);
+  right: var(--space-3);
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: var(--space-1);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.15s ease;
+}
+
+.tutorial-close:hover {
+  color: var(--text-primary);
+}
+
+/* Step label */
+.tutorial-step-label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--accent-primary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: var(--space-2);
+}
+
+/* Title */
+.tutorial-title {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 var(--space-2) 0;
+}
+
+/* Description */
+.tutorial-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+  margin: 0 0 var(--space-5) 0;
+}
+
+/* Footer: dots + nav buttons */
+.tutorial-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+/* Step dots */
+.tutorial-dots {
+  display: flex;
+  gap: 6px;
+}
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--border-primary);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-dot.active {
+  background: var(--accent-primary);
+  width: 20px;
+}
+
+/* Nav buttons */
+.tutorial-nav-buttons {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.tutorial-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-2) var(--space-4);
+  font-size: 0.8125rem;
+  font-weight: 500;
+  border-radius: var(--radius-md);
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tutorial-btn-primary {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.tutorial-btn-primary:hover {
+  background: var(--accent-primary-hover);
+}
+
+.tutorial-btn-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-primary);
+}
+
+.tutorial-btn-secondary:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+}
+
+/* Responsive: smaller screens get a narrower card */
+@media (max-width: 420px) {
+  .tutorial-card {
+    max-width: calc(100vw - 32px);
+    padding: var(--space-5);
+  }
+
+  .tutorial-card.centered {
+    width: calc(100vw - 32px);
+  }
+}

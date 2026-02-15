@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X } from 'lucide-react';
 import { useDailyRecs, useRecipeDetail } from '../hooks';
 import RecipeDetailPanel from './RecipeDetailModal';
 import './DailyRecs.css';
@@ -181,6 +181,7 @@ const DailyRecs = () => {
         className={`daily-recs-toggle ${open ? 'hidden' : ''}`}
         onClick={() => setOpen(true)}
         aria-label="Open daily recommendations"
+        data-tutorial="daily-recs-toggle"
       >
         <ChevronLeft size={18} />
       </button>
@@ -202,6 +203,9 @@ const DailyRecs = () => {
               <div className="daily-recs-title">
                 <span>Voxy's Recommendations</span>
               </div>
+              <button className="daily-recs-mobile-close" onClick={() => setOpen(false)} aria-label="Close recommendations">
+                <X size={18} />
+              </button>
             </div>
 
             {renderPanelContent()}

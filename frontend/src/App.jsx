@@ -14,6 +14,7 @@ import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
 import DailyRecs from "./components/DailyRecs";
+import TutorialOverlay from "./components/TutorialOverlay";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useAnalytics, useClearAllExpenses } from "./hooks";
@@ -28,6 +29,7 @@ function AppContent() {
   const [user, setUser] = useState(null);
   const [currentView, setCurrentView] = useState("landing");
   const [toasts, setToasts] = useState([]);
+  const [showTutorial, setShowTutorial] = useState(false);
 
   // React Query hooks for data fetching
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
@@ -66,6 +68,20 @@ function AppContent() {
       setIsAuthenticated(false);
     }
   }, [session, authUser, authLoading, getToken, currentView]);
+
+  // Auto-show tutorial for first-time users
+  useEffect(() => {
+    if (isAuthenticated && !localStorage.getItem("voxal_tutorial_seen")) {
+      // Small delay so the UI renders first and spotlight targets exist
+      const timer = setTimeout(() => setShowTutorial(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isAuthenticated]);
+
+  const handleTutorialClose = useCallback(() => {
+    setShowTutorial(false);
+    localStorage.setItem("voxal_tutorial_seen", "true");
+  }, []);
 
   const handleClearAll = async () => {
     if (
@@ -146,7 +162,7 @@ function AppContent() {
       case "record":
         return (
           <div className="view-container" key="record">
-            <VoiceRecorder showToast={showToast} />
+            <VoiceRecorder showToast={showToast} onShowTutorial={() => setShowTutorial(true)} />
           </div>
         );
       case "dashboard":
@@ -214,7 +230,7 @@ function AppContent() {
       default:
         return (
           <div className="view-container" key="default">
-            <VoiceRecorder showToast={showToast} />
+            <VoiceRecorder showToast={showToast} onShowTutorial={() => setShowTutorial(true)} />
           </div>
         );
     }
@@ -236,6 +252,7 @@ function AppContent() {
       )}
       <main className="app-main">{renderView()}</main>
       {currentView === "record" && <DailyRecs />}
+      <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
     </div>
   );
 }

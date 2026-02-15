@@ -885,8 +885,8 @@
   position: relative;
   z-index: 1;
   align-items: flex-end;
-  min-height: 55px;
-  padding-bottom: var(--space-1);
+  min-height: 70px;
+  padding-bottom: var(--space-2);
 }
 
 /* Individual item on shelf */
@@ -894,14 +894,14 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: var(--space-2) var(--space-2) var(--space-1);
+  padding: var(--space-3) var(--space-3) var(--space-2);
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-md);
-  min-width: 80px;
-  max-width: 110px;
+  min-width: 110px;
+  max-width: 150px;
   cursor: grab;
   transition: all 0.15s ease;
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
@@ -944,7 +944,7 @@
 /* Shelf Item Status Buttons */
 .shelf-item-status-buttons {
   display: flex;
-  gap: var(--space-1);
+  gap: 3px;
   margin-top: var(--space-2);
   width: 100%;
   justify-content: center;
@@ -954,13 +954,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: var(--space-1);
+  gap: 3px;
+  padding: 4px 0;
   border: 1px solid rgba(0, 0, 0, 0.06);
-  border-radius: 50%;
+  border-radius: var(--radius-full);
   background: rgba(255, 255, 255, 0.7);
   color: #888;
   cursor: pointer;
   transition: all 0.15s ease;
+  line-height: 1;
+  flex: 1;
+  min-width: 0;
+}
+
+.shelf-status-label {
+  font-size: 0.65rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .shelf-status-btn:hover {
@@ -1013,16 +1023,16 @@
 }
 
 .shelf-item-name {
-  font-size: 0.75rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: #333;
   text-align: center;
   word-break: break-word;
-  line-height: 1.2;
+  line-height: 1.3;
 }
 
 .shelf-item-qty {
-  font-size: 0.6rem;
+  font-size: 0.7rem;
   color: #666;
   margin-top: var(--space-1);
 }
@@ -1320,17 +1330,22 @@
   }
 
   .shelf-item {
-    min-width: 60px;
-    max-width: 85px;
-    padding: var(--space-1) var(--space-1) var(--space-1);
+    min-width: 90px;
+    max-width: 120px;
+    padding: var(--space-2) var(--space-2) var(--space-2);
   }
 
   .shelf-item-name {
-    font-size: 0.65rem;
+    font-size: 0.75rem;
   }
 
   .shelf-status-btn {
-    padding: var(--space-1);
+    padding: 3px 0;
+    gap: 2px;
+  }
+
+  .shelf-status-label {
+    font-size: 0.6rem;
   }
 
   .shelf-bracket.left {
@@ -1339,6 +1354,10 @@
 
   .shelf-bracket.right {
     right: 20px;
+  }
+
+  .shelf-item-remove {
+    opacity: 1;
   }
 
   .shelf-edit-content {
@@ -1352,5 +1371,12 @@
   .shelf-edit-content .form-actions button {
     width: 100%;
     justify-content: center;
+  }
+
+  .filter-controls select,
+  .sort-control select,
+  .form-group select,
+  .form-group input {
+    font-size: 16px;
   }
 }

@@ -449,4 +449,8 @@
     padding: 0.35rem 0.6rem;
     font-size: 0.8rem;
   }
+
+  .add-item-input {
+    font-size: 16px;
+  }
 }

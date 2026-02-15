@@ -35,6 +35,26 @@
   margin-right: auto;
 }
 
+.tutorial-replay-button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: var(--space-1) var(--space-3);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tutorial-replay-button:hover {
+  color: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
 .recorder-controls {
   margin: var(--space-8) 0;
   display: flex;
@@ -304,6 +324,32 @@
 .receipt-button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .voice-recorder {
+    padding-top: 4rem;
+  }
+
+  .recorder-controls {
+    gap: var(--space-3);
+  }
+
+  .record-button,
+  .stop-button {
+    padding: var(--space-3) var(--space-6);
+    font-size: 0.9rem;
+  }
+
+  .manual-button,
+  .receipt-button {
+    padding: var(--space-3) var(--space-5);
+    font-size: 0.85rem;
+  }
+
+  .manual-textarea {
+    font-size: 16px;
+  }
 }
 
 .error-message {

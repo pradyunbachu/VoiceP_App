@@ -395,4 +395,23 @@
     align-items: flex-start;
     gap: 1rem;
   }
+
+  .budget-header-actions {
+    width: 100%;
+  }
+
+  .add-budget-button,
+  .export-budget-button {
+    flex: 1;
+    justify-content: center;
+  }
+
+  .budget-filters select,
+  .budget-filters input,
+  .form-group select,
+  .form-group input,
+  .edit-form-group select,
+  .edit-form-group input {
+    font-size: 16px;
+  }
 }

@@ -53,7 +53,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
           {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
         </button>
       </div>
-      <div className="nav-tabs">
+      <div className="nav-tabs" data-tutorial="nav-tabs">
         {/* VoxAssistant Tab */}
         <button
           className={`nav-tab ${currentView === "record" ? "active" : ""}`}
@@ -72,6 +72,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
               setFinanceOpen(!financeOpen);
               setKitchenOpen(false);
             }}
+            data-tutorial="finance-tab"
           >
             <DollarSign size={18} />
             <span className="nav-label-full">Finance</span>
@@ -119,6 +120,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
               setKitchenOpen(!kitchenOpen);
               setFinanceOpen(false);
             }}
+            data-tutorial="kitchen-tab"
           >
             <UtensilsCrossed size={18} />
             <span className="nav-label-full">Kitchen</span>

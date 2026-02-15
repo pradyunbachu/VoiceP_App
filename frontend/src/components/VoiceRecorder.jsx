@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Mic, Square, Loader2, Type, Camera } from "lucide-react";
+import { Mic, Square, Loader2, Type, Camera, HelpCircle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ChatResponseDisplay from "./ChatResponseDisplay";
 import ReceiptScanner from "./ReceiptScanner";
@@ -24,7 +24,7 @@ const getFriendlyError = (errorMessage) => {
   return "Something went wrong. Please try again.";
 };
 
-const VoiceRecorder = ({ showToast }) => {
+const VoiceRecorder = ({ showToast, onShowTutorial }) => {
   const { getToken } = useAuth();
   const [transcript, setTranscript] = useState("");
   const [extractedExpense, setExtractedExpense] = useState(null);
@@ -211,10 +211,16 @@ const VoiceRecorder = ({ showToast }) => {
         Try: "I bought two apples for $3 at Walmart", "What can I cook for breakfast?", "I have flour, oil, and salt", or "What should I get from the store?"
       </p>
 
+      {onShowTutorial && (
+        <button className="tutorial-replay-button" onClick={onShowTutorial}>
+          <HelpCircle size={14} />
+          Tutorial
+        </button>
+      )}
 
       <div className="recorder-controls">
         {!isRecording ? (
-          <button className="record-button" onClick={handleStartRecording} disabled={loading}>
+          <button className="record-button" onClick={handleStartRecording} disabled={loading} data-tutorial="record-button">
             <Mic size={32} />
             <span>Start Recording</span>
           </button>
@@ -224,11 +230,11 @@ const VoiceRecorder = ({ showToast }) => {
             <span>Stop Recording</span>
           </button>
         )}
-        <button className="manual-button" onClick={() => setShowManualInput(!showManualInput)} disabled={loading}>
+        <button className="manual-button" onClick={() => setShowManualInput(!showManualInput)} disabled={loading} data-tutorial="manual-button">
           <Type size={20} />
           <span>{showManualInput ? "Hide" : "Type"} Manual Entry</span>
         </button>
-        <button className="receipt-button" onClick={() => setShowReceiptScanner(true)} disabled={loading}>
+        <button className="receipt-button" onClick={() => setShowReceiptScanner(true)} disabled={loading} data-tutorial="receipt-button">
           <Camera size={20} />
           <span>Scan Receipt</span>
         </button>
