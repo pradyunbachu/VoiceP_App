@@ -201,15 +201,23 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
     elif intent == "shopping_complete":
         removed_items = data.get("removed_items", [])
         removed_count = data.get("removed_count", 0)
+        pantry_added = data.get("pantry_added", [])
+        pantry_added_count = data.get("pantry_added_count", 0)
         message = data.get("message")
 
         if message:
             return message
 
-        if removed_count == 0:
+        parts = []
+        if removed_count > 0:
+            parts.append(f"Removed {removed_count} item(s) from your shopping list: {', '.join(removed_items)}")
+        if pantry_added_count > 0:
+            parts.append(f"Added {pantry_added_count} item(s) to your pantry: {', '.join(pantry_added)}")
+
+        if not parts:
             return "I didn't find any matching items in your shopping list to remove."
 
-        return f"Removed {removed_count} item(s) from your shopping list: {', '.join(removed_items)}"
+        return "\n".join(parts)
 
     elif intent == "shopping_list_add":
         message = data.get("message")

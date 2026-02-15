@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Camera, Upload, X, Loader2, CheckCircle, AlertCircle, RotateCcw } from "lucide-react";
 import { useScanReceipt } from "../hooks";
-import { compressImage } from "../lib/imageCompression";
+import { compressImage, isHeicFile, convertHeicToJpeg } from "../lib/imageCompression";
 import "./ReceiptScanner.css";
 
 // Detect if device is mobile (phones/tablets) vs desktop/laptop
@@ -11,12 +11,39 @@ const isMobileDevice = () => {
   );
 };
 
+/**
+ * Validate that a file is an acceptable image type (including HEIC/HEIF).
+ */
+const isValidImageFile = (file) => {
+  if (file.type.startsWith("image/")) return true;
+  // Some browsers don't set a MIME type for HEIC — check extension
+  const name = file.name?.toLowerCase() || "";
+  return name.endsWith(".heic") || name.endsWith(".heif");
+};
+
+/**
+ * Read a File into a data URL, converting HEIC first if needed.
+ */
+const readFileAsDataUrl = (file) => {
+  return new Promise((resolve, reject) => {
+    if (isHeicFile(file)) {
+      convertHeicToJpeg(file).then(resolve).catch(reject);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = () => reject(new Error("Failed to read file"));
+      reader.readAsDataURL(file);
+    }
+  });
+};
+
 const ReceiptScanner = ({ onClose, onSuccess }) => {
   const [mode, setMode] = useState("select"); // select, camera, preview, processing, result
   const [imageData, setImageData] = useState(null);
   const [ocrStatus, setOcrStatus] = useState("");
   const [error, setError] = useState("");
   const [result, setResult] = useState(null);
+  const [isDragging, setIsDragging] = useState(false);
   // Mobile devices (iPhone, etc.) default to back camera; laptops default to front camera
   const [cameraFacing, setCameraFacing] = useState(() =>
     isMobileDevice() ? "environment" : "user"
@@ -26,6 +53,7 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
   const canvasRef = useRef(null);
   const streamRef = useRef(null);
   const fileInputRef = useRef(null);
+  const dragCounterRef = useRef(0);
 
   const scanReceiptMutation = useScanReceipt();
 
@@ -107,17 +135,17 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
     setMode("preview");
   };
 
-  const handleFileUpload = (event) => {
-    const file = event.target.files?.[0];
+  /**
+   * Process a File object — shared by both file input and drag & drop.
+   */
+  const processFile = async (file) => {
     if (!file) return;
 
-    // Validate file type
-    if (!file.type.startsWith("image/")) {
-      setError("Please select an image file");
+    if (!isValidImageFile(file)) {
+      setError("Please select an image file (JPG, PNG, HEIC, etc.)");
       return;
     }
 
-    // Validate file size (max 20MB — compression will reduce it)
     if (file.size > 20 * 1024 * 1024) {
       setError("Image too large. Please select an image under 20MB.");
       return;
@@ -125,21 +153,69 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
 
     setError("");
 
-    const reader = new FileReader();
-    reader.onload = async (e) => {
-      const rawDataUrl = e.target.result;
+    try {
+      const isHeic = isHeicFile(file);
+      if (isHeic) {
+        setOcrStatus("Converting HEIC image...");
+        setMode("processing");
+      }
+
+      const rawDataUrl = await readFileAsDataUrl(file);
+
       try {
         const compressed = await compressImage(rawDataUrl);
         setImageData(compressed);
       } catch {
         setImageData(rawDataUrl);
       }
+      setOcrStatus("");
       setMode("preview");
-    };
-    reader.onerror = () => {
-      setError("Failed to read file");
-    };
-    reader.readAsDataURL(file);
+    } catch (err) {
+      console.error("File processing error:", err);
+      setError("Failed to read file. The format may not be supported.");
+      setMode("select");
+    }
+  };
+
+  const handleFileUpload = (event) => {
+    const file = event.target.files?.[0];
+    processFile(file);
+  };
+
+  // --- Drag & Drop handlers ---
+  const handleDragEnter = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current += 1;
+    if (e.dataTransfer?.items?.length > 0) {
+      setIsDragging(true);
+    }
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    dragCounterRef.current -= 1;
+    if (dragCounterRef.current === 0) {
+      setIsDragging(false);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+    dragCounterRef.current = 0;
+
+    const file = e.dataTransfer?.files?.[0];
+    if (file) {
+      processFile(file);
+    }
   };
 
   const processImage = async () => {
@@ -171,6 +247,8 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
     setOcrStatus("");
     setError("");
     setResult(null);
+    setIsDragging(false);
+    dragCounterRef.current = 0;
     setMode("select");
   };
 
@@ -204,37 +282,52 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
         )}
 
         {mode === "select" && (
-          <div className="receipt-scanner-content">
-            <p className="scanner-description">
-              Take a photo of your receipt or upload an image to automatically extract expense data.
-            </p>
+          <div
+            className={`receipt-scanner-content${isDragging ? " drag-active" : ""}`}
+            onDragEnter={handleDragEnter}
+            onDragLeave={handleDragLeave}
+            onDragOver={handleDragOver}
+            onDrop={handleDrop}
+          >
+            {isDragging ? (
+              <div className="drop-zone-overlay">
+                <Upload size={48} />
+                <p>Drop your receipt here</p>
+              </div>
+            ) : (
+              <>
+                <p className="scanner-description">
+                  Take a photo, upload, or drag & drop a receipt image to automatically extract expense data.
+                </p>
 
-            <div className="scanner-options">
-              <button className="scanner-option-button" onClick={startCamera}>
-                <Camera size={32} />
-                <span>Take Photo</span>
-              </button>
+                <div className="scanner-options">
+                  <button className="scanner-option-button" onClick={startCamera}>
+                    <Camera size={32} />
+                    <span>Take Photo</span>
+                  </button>
 
-              <button
-                className="scanner-option-button"
-                onClick={() => fileInputRef.current?.click()}
-              >
-                <Upload size={32} />
-                <span>Upload Image</span>
-              </button>
+                  <button
+                    className="scanner-option-button"
+                    onClick={() => fileInputRef.current?.click()}
+                  >
+                    <Upload size={32} />
+                    <span>Upload Image</span>
+                  </button>
 
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                onChange={handleFileUpload}
-                style={{ display: "none" }}
-              />
-            </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,.heic,.heif"
+                    onChange={handleFileUpload}
+                    style={{ display: "none" }}
+                  />
+                </div>
 
-            <p className="scanner-tips">
-              Tips: Use good lighting, avoid glare, and ensure the receipt is flat and fully visible.
-            </p>
+                <p className="scanner-tips">
+                  Tip: You can drag & drop a receipt image directly onto this window. Supports JPG, PNG, HEIC, and more.
+                </p>
+              </>
+            )}
           </div>
         )}
 

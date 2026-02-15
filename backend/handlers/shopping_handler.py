@@ -14,7 +14,12 @@ def parse_purchased_items(message: str) -> list:
     remove_phrases = [
         "i bought", "just bought", "i got", "just got", "picked up",
         "got back from the store", "finished shopping", "from the store",
-        "at the store", "today", "yesterday", "and", "some", "a few"
+        "at the store", "today", "yesterday", "and", "some", "a few",
+        "add these to the pantry", "add these to my pantry", "add them to the pantry",
+        "add them to my pantry", "add to the pantry", "add to my pantry",
+        "add to pantry", "put these in the pantry", "put these in my pantry",
+        "put them in the pantry", "put them in my pantry",
+        "stock the pantry", "stock my pantry"
     ]
 
     cleaned = message_lower
@@ -32,10 +37,27 @@ def parse_purchased_items(message: str) -> list:
     return parsed_items
 
 
+_ADD_TO_PANTRY_PHRASES = [
+    "add these to the pantry", "add these to my pantry", "add them to the pantry",
+    "add them to my pantry", "add to the pantry", "add to my pantry",
+    "add to pantry", "put these in the pantry", "put these in my pantry",
+    "put them in the pantry", "put them in my pantry",
+    "stock the pantry", "stock my pantry"
+]
+
+
+def _should_auto_add_to_pantry(message: str) -> bool:
+    """Check if the user wants purchased items auto-added to pantry."""
+    message_lower = message.lower()
+    return any(phrase in message_lower for phrase in _ADD_TO_PANTRY_PHRASES)
+
+
 async def handle_shopping_complete(user_id: str, entities: dict, original_message: str) -> dict:
     """Handle when user indicates they finished shopping and bought items."""
     if supabase is None:
         return {"removed_items": [], "message": "Database not configured"}
+
+    auto_add_pantry = _should_auto_add_to_pantry(original_message)
 
     purchased_items = entities.get("purchased_items", [])
 
@@ -71,10 +93,41 @@ async def handle_shopping_complete(user_id: str, entities: dict, original_messag
         if response.data:
             deleted_count += 1
 
+    # Auto-add purchased items to pantry if the user asked for it
+    pantry_added = []
+    if auto_add_pantry:
+        from handlers.pantry_handler import categorize_pantry_item
+
+        now = datetime.now().isoformat()
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        for item_name in purchased_items:
+            category = categorize_pantry_item(item_name)
+            try:
+                resp = supabase.table("pantry_items").insert({
+                    "user_id": user_id,
+                    "name": item_name.title(),
+                    "quantity": 1,
+                    "unit": None,
+                    "category": category,
+                    "expiration_date": None,
+                    "purchase_date": today,
+                    "stock_status": "full",
+                    "notes": "Auto-added from shopping trip",
+                    "created_at": now,
+                    "updated_at": now
+                }).execute()
+                if resp.data:
+                    pantry_added.append(item_name.title())
+            except Exception as e:
+                print(f"Error auto-adding '{item_name}' to pantry: {e}")
+
     return {
         "removed_items": removed_items,
         "removed_count": deleted_count,
         "purchased_items": purchased_items,
+        "pantry_added": pantry_added,
+        "pantry_added_count": len(pantry_added),
         "query_type": "shopping_complete"
     }
 

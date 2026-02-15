@@ -107,6 +107,30 @@
   font-style: italic;
 }
 
+/* Drag & Drop */
+.receipt-scanner-content.drag-active {
+  background: var(--bg-input-focus);
+  border: 2px dashed var(--accent-primary);
+  border-radius: var(--radius-lg);
+}
+
+.drop-zone-overlay {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-4);
+  padding: var(--space-10);
+  color: var(--accent-primary);
+  min-height: 200px;
+}
+
+.drop-zone-overlay p {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin: 0;
+}
+
 .receipt-error {
   display: flex;
   align-items: center;
