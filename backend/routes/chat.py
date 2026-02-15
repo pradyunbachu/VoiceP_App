@@ -67,7 +67,7 @@ async def chat(
         data = await handle_suggestion(user_id, sub_intent, entities)
 
     elif intent == "meal_suggestion":
-        data = await handle_meal_suggestion(user_id, sub_intent, entities)
+        data = await handle_meal_suggestion(user_id, sub_intent, entities, message)
 
     elif intent == "shopping_complete":
         data = await handle_shopping_complete(user_id, entities, message)

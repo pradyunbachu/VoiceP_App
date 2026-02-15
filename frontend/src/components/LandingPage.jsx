@@ -1,4 +1,4 @@
-import { Mic, BarChart3, List, Wallet, Sparkles, LogIn, Keyboard, Package, RefreshCw } from "lucide-react";
+import { Mic, BarChart3, Wallet, Sparkles, LogIn, Keyboard, Package, RefreshCw, Camera, ShoppingCart, Lightbulb, UtensilsCrossed } from "lucide-react";
 import "./LandingPage.css";
 
 const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
@@ -14,14 +14,34 @@ const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
       description: "Hold spacebar from any screen to instantly record an expense. Release to process and save."
     },
     {
+      icon: <Camera size={32} />,
+      title: "Receipt Scanner",
+      description: "Snap a photo or upload a receipt. AI reads and extracts all items and totals automatically via OCR."
+    },
+    {
       icon: <Package size={32} />,
       title: "Smart Pantry",
       description: "Track groceries with visual shelves. Drag and drop items between categories, monitor expiration dates and stock levels."
     },
     {
+      icon: <UtensilsCrossed size={32} />,
+      title: "Voxy's Meal Recommendations",
+      description: "Get AI-powered meal suggestions based on what's in your pantry. Prioritizes ingredients near expiration."
+    },
+    {
+      icon: <ShoppingCart size={32} />,
+      title: "Smart Shopping Lists",
+      description: "Build grocery lists with autocomplete and share them with groups. AI matches items to your pantry in real time."
+    },
+    {
       icon: <BarChart3 size={32} />,
       title: "Analytics Dashboard",
       description: "Visualize spending with interactive charts. See trends over time, top stores, and category breakdowns."
+    },
+    {
+      icon: <Lightbulb size={32} />,
+      title: "AI Spending Insights",
+      description: "Get AI-generated analysis of your spending patterns with personalized trends and recommendations."
     },
     {
       icon: <Wallet size={32} />,
@@ -47,10 +67,9 @@ const LandingPage = ({ onGetStarted, onLogin, isAuthenticated = false }) => {
         <div className="landing-logo">
           <Mic size={80} className="logo-icon" />
           <h1>voxal</h1>
-          <p className="landing-tagline">your Voice Powered Personal Assistant</p>
+          <p className="landing-tagline">Your Voice Powered Personal Assistant</p>
           <p className="landing-description">
-            Simply speak about your purchases and let AI extract all the details automatically.
-            Track your expenses effortlessly with voice commands and powerful analytics.
+            Voice-powered expense tracking, pantry management, meal planning, and smart shopping — all in one place.
           </p>
           {!isAuthenticated ? (
             <button className="get-started-button" onClick={onGetStarted}>

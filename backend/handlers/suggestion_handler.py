@@ -56,8 +56,8 @@ async def handle_suggestion(user_id: str, sub_intent: str, entities: dict) -> di
     }
 
 
-async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict) -> dict:
-    """Generate meal suggestions based on pantry contents."""
+async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict, message: str = None) -> dict:
+    """Generate meal suggestions based on pantry contents and user preferences."""
     if supabase is None:
         return {"meals": [], "message": "Database not configured"}
 
@@ -129,9 +129,13 @@ async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict) 
             meal_type_instruction = "\nIt's late evening - suggest quick and easy meals or snacks."
             meal_type = "snack"
 
+    user_request = ""
+    if message:
+        user_request = f"\nUser's request: \"{message}\"\nIMPORTANT: Pay close attention to what the user is asking for. If they want something sweet, suggest desserts or sweet dishes. If they want something spicy, healthy, quick, etc., tailor your suggestions accordingly.\n"
+
     meal_prompt = f"""Based on these available ingredients, suggest 3 practical meals.
 {meal_type_instruction}
-
+{user_request}
 Available ingredients: {ingredient_list}
 Expiring soon (use first): {expiring_list}
 
