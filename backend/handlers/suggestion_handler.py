@@ -190,3 +190,250 @@ Prioritize meals that use expiring ingredients. Keep it practical and simple."""
             "query_type": "meal_suggestion",
             "message": "Could not generate meal suggestions. Please try again."
         }
+
+
+async def handle_reminder_check(user_id: str, entities: dict, original_message: str) -> dict:
+    """Check on a specific item's expiration or stock status in the pantry."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    item_name = entities.get("item_name")
+    if not item_name:
+        import re
+        message_lower = original_message.lower()
+        remove_phrases = [
+            "remind me to use", "remind me about", "check on",
+            "when does", "when do", "expire", "the", "my"
+        ]
+        cleaned = message_lower
+        for phrase in remove_phrases:
+            cleaned = cleaned.replace(phrase, " ")
+        cleaned = cleaned.strip().strip(".")
+        if cleaned:
+            item_name = cleaned.strip()
+
+    if not item_name:
+        return {
+            "success": False,
+            "message": "I couldn't determine which item to check. Try 'Remind me to use the avocados'.",
+            "query_type": "reminder_check"
+        }
+
+    try:
+        response = (
+            supabase.table("pantry_items")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        items = response.data if response.data else []
+        matching = [i for i in items if item_name.lower() in i.get("name", "").lower()]
+
+        if not matching:
+            return {
+                "success": False,
+                "item_name": item_name,
+                "message": f"I don't see any {item_name} in your pantry.",
+                "query_type": "reminder_check"
+            }
+
+        item = matching[0]
+        today = datetime.now().date()
+        exp_date = None
+        days_until_expiry = None
+
+        if item.get("expiration_date"):
+            try:
+                exp_date = datetime.strptime(item["expiration_date"], "%Y-%m-%d").date()
+                days_until_expiry = (exp_date - today).days
+            except:
+                pass
+
+        return {
+            "success": True,
+            "item_name": item["name"],
+            "quantity": item.get("quantity", 1),
+            "unit": item.get("unit"),
+            "stock_status": item.get("stock_status", "full"),
+            "expiration_date": item.get("expiration_date"),
+            "days_until_expiry": days_until_expiry,
+            "purchase_date": item.get("purchase_date"),
+            "query_type": "reminder_check"
+        }
+    except Exception as e:
+        print(f"Reminder check error: {e}")
+        return {
+            "success": False,
+            "message": "Failed to check item. Please try again.",
+            "query_type": "reminder_check"
+        }
+
+
+async def handle_meal_plan_week(user_id: str, entities: dict) -> dict:
+    """Generate a 7-day meal plan based on pantry contents."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_items = pantry_response.data if pantry_response.data else []
+
+    full_items = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]
+    ingredient_names = [i["name"] for i in full_items]
+    ingredient_list = ", ".join(ingredient_names) if ingredient_names else "very limited ingredients"
+
+    if not groq_client:
+        return {
+            "meal_plan": [],
+            "message": "AI service not available for meal planning.",
+            "query_type": "meal_plan_week"
+        }
+
+    today = datetime.now().date()
+    five_days = today + timedelta(days=5)
+    expiring_names = []
+    for item in pantry_items:
+        if item.get("expiration_date"):
+            try:
+                exp_date = datetime.strptime(item["expiration_date"], "%Y-%m-%d").date()
+                if today <= exp_date <= five_days:
+                    expiring_names.append(item["name"])
+            except:
+                pass
+
+    expiring_list = ", ".join(expiring_names) if expiring_names else "none"
+
+    plan_prompt = f"""Create a 7-day meal plan (breakfast, lunch, dinner) using these available ingredients.
+
+Available ingredients: {ingredient_list}
+Expiring soon (prioritize): {expiring_list}
+
+Return ONLY a JSON array of 7 objects, one per day:
+[
+  {{
+    "day": "Monday",
+    "breakfast": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"]}},
+    "lunch": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"]}},
+    "dinner": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"]}}
+  }}
+]
+
+Keep meals practical, varied, and use up expiring items early in the week."""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a meal planning assistant. Respond with valid JSON only."},
+                {"role": "user", "content": plan_prompt}
+            ],
+            temperature=0.7
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        meal_plan = json.loads(content)
+
+        return {
+            "meal_plan": meal_plan,
+            "pantry_count": len(full_items),
+            "expiring_items": expiring_names,
+            "query_type": "meal_plan_week"
+        }
+    except Exception as e:
+        print(f"Meal plan week error: {e}")
+        return {
+            "meal_plan": [],
+            "message": "Could not generate weekly meal plan. Please try again.",
+            "query_type": "meal_plan_week"
+        }
+
+
+async def handle_budget_meal(user_id: str, entities: dict, original_message: str) -> dict:
+    """Suggest meals under a given price limit, considering pantry items."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    price_limit = entities.get("price_limit")
+    if price_limit is not None:
+        price_limit = float(price_limit)
+    else:
+        import re
+        match = re.search(r'\$\s*(\d+(?:\.\d{2})?)', original_message)
+        if match:
+            price_limit = float(match.group(1))
+
+    if not price_limit:
+        price_limit = 10.0
+
+    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_items = pantry_response.data if pantry_response.data else []
+
+    full_items = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]
+    ingredient_names = [i["name"] for i in full_items]
+    ingredient_list = ", ".join(ingredient_names) if ingredient_names else "no pantry items"
+
+    if not groq_client:
+        return {
+            "meals": [],
+            "message": "AI service not available for budget meal suggestions.",
+            "query_type": "budget_meal"
+        }
+
+    budget_prompt = f"""Suggest 3 meals that can be made for under ${price_limit:.2f} per serving.
+
+The user already has these ingredients (free): {ingredient_list}
+
+Return ONLY a JSON array of 3 meals:
+[
+  {{
+    "name": "Meal Name",
+    "estimated_cost": 5.00,
+    "ingredients_on_hand": ["item1", "item2"],
+    "ingredients_to_buy": ["item3"],
+    "buy_cost_estimate": 3.00
+  }}
+]
+
+Consider that pantry items are already available (no cost). Only estimate cost for items that need to be purchased. Keep it practical and budget-friendly."""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a budget-conscious meal planning assistant. Respond with valid JSON only."},
+                {"role": "user", "content": budget_prompt}
+            ],
+            temperature=0.7
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        meals = json.loads(content)
+
+        return {
+            "meals": meals,
+            "price_limit": price_limit,
+            "pantry_count": len(full_items),
+            "query_type": "budget_meal"
+        }
+    except Exception as e:
+        print(f"Budget meal error: {e}")
+        return {
+            "meals": [],
+            "message": "Could not generate budget meal suggestions. Please try again.",
+            "query_type": "budget_meal"
+        }

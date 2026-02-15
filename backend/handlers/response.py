@@ -48,7 +48,46 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
                 return "Your pantry is empty."
             return f"You have {count} items in your pantry."
 
+    elif intent == "pantry_remove":
+        message = data.get("message")
+        if message:
+            return message
+        removed = data.get("removed_items", [])
+        count = data.get("removed_count", 0)
+        if count == 0:
+            return "I couldn't find that item in your pantry."
+        return f"Removed {count} item(s) from your pantry: {', '.join(removed)}"
+
+    elif intent == "cooking_deduct":
+        message = data.get("message")
+        if message:
+            return message
+        recipe = data.get("recipe_name", "your recipe")
+        deducted = data.get("deducted_items", [])
+        count = data.get("deducted_count", 0)
+        if count == 0:
+            return f"I couldn't match any pantry items to '{recipe}'."
+        item_summaries = []
+        for d in deducted:
+            item_summaries.append(f"{d['name']} ({d['old_quantity']} -> {d['new_quantity']})")
+        return f"Cooking {recipe}! Updated {count} pantry item(s):\n" + "\n".join(f"- {s}" for s in item_summaries)
+
     elif intent == "expense_query":
+        query_type = data.get("query_type")
+
+        if query_type == "spending_comparison":
+            message = data.get("message")
+            if message:
+                return message
+            current = data.get("current_total", 0)
+            previous = data.get("previous_total", 0)
+            diff = data.get("difference", 0)
+            pct = data.get("percentage_change", 0)
+            direction = "more" if diff > 0 else "less"
+            return (f"This month: ${current:.2f} ({data.get('current_count', 0)} transactions)\n"
+                    f"Last month: ${previous:.2f} ({data.get('previous_count', 0)} transactions)\n"
+                    f"You're spending ${abs(diff):.2f} {direction} ({abs(pct):.1f}% {'increase' if diff > 0 else 'decrease'}).")
+
         total = data.get("total", 0)
         count = data.get("count", 0)
         time_period = data.get("time_period", "this period")
@@ -61,6 +100,28 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
             return f"You spent ${total:.2f} at {store} {time_period} ({count} transactions)."
         else:
             return f"You spent ${total:.2f} {time_period} ({count} transactions)."
+
+    elif intent == "store_trip":
+        message = data.get("message")
+        if message:
+            return message
+        store = data.get("store", "the store")
+        added = data.get("added_items", [])
+        count = data.get("added_count", 0)
+        amount = data.get("expense_amount")
+        if count > 0:
+            amount_str = f" (${amount})" if amount else ""
+            return f"Welcome back from {store}{amount_str}! Added {count} item(s) to your pantry: {', '.join(added)}"
+        return f"Welcome back from {store}! No items to add to your pantry."
+
+    elif intent == "mark_subscription":
+        message = data.get("message")
+        if message:
+            return message
+        name = data.get("expense_name", "expense")
+        amount = data.get("expense_amount")
+        amount_str = f" (${amount})" if amount else ""
+        return f"Marked '{name}'{amount_str} as a recurring subscription."
 
     elif intent == "suggestion":
         shopping_list_items = data.get("shopping_list_items", [])
@@ -150,13 +211,121 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
 
         return f"Removed {removed_count} item(s) from your shopping list: {', '.join(removed_items)}"
 
+    elif intent == "shopping_list_add":
+        message = data.get("message")
+        if message:
+            return message
+        added = data.get("added_items", [])
+        count = data.get("added_count", 0)
+        if count == 0:
+            return "I couldn't identify any items to add to your shopping list."
+        item_names = [item["name"] for item in added]
+        return f"Added {count} item(s) to your shopping list: {', '.join(item_names)}"
+
+    elif intent == "budget_set":
+        message = data.get("message")
+        if message:
+            return message
+        amount = data.get("amount", 0)
+        category = data.get("category", "groceries")
+        month = data.get("month", "")
+        updated = data.get("updated", False)
+        if updated:
+            old = data.get("old_amount", 0)
+            return f"Updated your {category} budget from ${old:.2f} to ${amount:.2f} for {month}."
+        return f"Budget set! ${amount:.2f} for {category} ({month})."
+
+    elif intent == "reminder_check":
+        message = data.get("message")
+        if message:
+            return message
+        name = data.get("item_name", "item")
+        qty = data.get("quantity", 1)
+        unit = data.get("unit") or ""
+        status = data.get("stock_status", "full")
+        exp = data.get("expiration_date")
+        days = data.get("days_until_expiry")
+
+        parts = [f"{name}: {qty} {unit} ({status} stock)"]
+        if exp and days is not None:
+            if days < 0:
+                parts.append(f"Expired {abs(days)} day(s) ago! Use it ASAP or discard.")
+            elif days == 0:
+                parts.append("Expires TODAY! Use it now.")
+            elif days <= 3:
+                parts.append(f"Expires in {days} day(s) — use it soon!")
+            else:
+                parts.append(f"Expires on {exp} ({days} days from now).")
+        elif not exp:
+            parts.append("No expiration date set.")
+        return "\n".join(parts)
+
+    elif intent == "share_list":
+        message = data.get("message")
+        if message:
+            return message
+        target = data.get("shared_with", "user")
+        return f"Shopping list shared with {target}! They can now view and edit the list."
+
+    elif intent == "meal_plan_week":
+        message = data.get("message")
+        if message:
+            return message
+        meal_plan = data.get("meal_plan", [])
+        if not meal_plan:
+            return "I couldn't generate a weekly meal plan. Please try again."
+        expiring = data.get("expiring_items", [])
+        parts = []
+        if expiring:
+            parts.append(f"Prioritizing expiring items: {', '.join(expiring)}")
+        parts.append(f"Here's your 7-day meal plan based on {data.get('pantry_count', 0)} pantry items:\n")
+        for day in meal_plan:
+            day_name = day.get("day", "Day")
+            b = day.get("breakfast", {}).get("name", "—")
+            l = day.get("lunch", {}).get("name", "—")
+            d = day.get("dinner", {}).get("name", "—")
+            parts.append(f"{day_name}: {b} / {l} / {d}")
+        return "\n".join(parts)
+
+    elif intent == "budget_meal":
+        message = data.get("message")
+        if message:
+            return message
+        meals = data.get("meals", [])
+        limit = data.get("price_limit", 10)
+        if not meals:
+            return "I couldn't generate budget meal suggestions. Please try again."
+        parts = [f"Here are 3 meals you can make for under ${limit:.2f}:"]
+        for i, meal in enumerate(meals, 1):
+            cost = meal.get("estimated_cost") or meal.get("buy_cost_estimate", "?")
+            cost_str = f"${cost:.2f}" if isinstance(cost, (int, float)) else f"${cost}"
+            parts.append(f"{i}. {meal['name']} (~{cost_str})")
+            on_hand = meal.get("ingredients_on_hand", [])
+            to_buy = meal.get("ingredients_to_buy", [])
+            if on_hand:
+                parts.append(f"   Have: {', '.join(on_hand)}")
+            if to_buy:
+                parts.append(f"   Need: {', '.join(to_buy)}")
+        return "\n".join(parts)
+
     elif intent == "general":
         return ("I can help you with:\n"
                 "- Log expenses: 'I spent $20 at Walmart'\n"
                 "- Check pantry: 'How many eggs do I have?'\n"
                 "- Add to pantry: 'I have flour, oil, and salt'\n"
+                "- Remove from pantry: 'Remove chicken from my pantry'\n"
                 "- Track spending: 'How much did I spend this month?'\n"
+                "- Compare spending: 'How does this month compare?'\n"
                 "- Get suggestions: 'What should I get from the store?'\n"
-                "- Meal ideas: 'What can I cook for breakfast?'")
+                "- Meal ideas: 'What can I cook for breakfast?'\n"
+                "- Add to shopping list: 'Add milk to my shopping list'\n"
+                "- Set budget: 'Set a $200 budget for groceries'\n"
+                "- Store trip: 'I just got back from Costco'\n"
+                "- Cook & deduct: 'I'm cooking the chicken stir-fry'\n"
+                "- Check items: 'Remind me to use the avocados'\n"
+                "- Share list: 'Share my shopping list with Sarah'\n"
+                "- Weekly plan: 'Plan my meals for the week'\n"
+                "- Budget meals: 'What can I make under $10?'\n"
+                "- Subscriptions: 'Log that as a subscription'")
 
     return "I'm not sure how to help with that. Try asking about expenses, pantry items, or shopping suggestions."

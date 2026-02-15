@@ -10,10 +10,20 @@ from handlers import (
     detect_intent,
     handle_pantry_query,
     handle_pantry_add,
+    handle_pantry_remove,
+    handle_cooking_deduct,
     handle_expense_query,
+    handle_store_trip,
+    handle_mark_subscription,
     handle_suggestion,
     handle_meal_suggestion,
+    handle_reminder_check,
+    handle_meal_plan_week,
+    handle_budget_meal,
     handle_shopping_complete,
+    handle_shopping_list_add,
+    handle_budget_set,
+    handle_share_list,
     generate_response,
 )
 
@@ -60,8 +70,20 @@ async def chat(
     elif intent == "pantry_add":
         data = await handle_pantry_add(user_id, entities, message)
 
+    elif intent == "pantry_remove":
+        data = await handle_pantry_remove(user_id, entities, message)
+
+    elif intent == "cooking_deduct":
+        data = await handle_cooking_deduct(user_id, entities, message)
+
     elif intent == "expense_query":
         data = await handle_expense_query(user_id, sub_intent, entities)
+
+    elif intent == "store_trip":
+        data = await handle_store_trip(user_id, entities, message)
+
+    elif intent == "mark_subscription":
+        data = await handle_mark_subscription(user_id, entities)
 
     elif intent == "suggestion":
         data = await handle_suggestion(user_id, sub_intent, entities)
@@ -69,8 +91,26 @@ async def chat(
     elif intent == "meal_suggestion":
         data = await handle_meal_suggestion(user_id, sub_intent, entities, message)
 
+    elif intent == "reminder_check":
+        data = await handle_reminder_check(user_id, entities, message)
+
+    elif intent == "meal_plan_week":
+        data = await handle_meal_plan_week(user_id, entities)
+
+    elif intent == "budget_meal":
+        data = await handle_budget_meal(user_id, entities, message)
+
     elif intent == "shopping_complete":
         data = await handle_shopping_complete(user_id, entities, message)
+
+    elif intent == "shopping_list_add":
+        data = await handle_shopping_list_add(user_id, entities, message)
+
+    elif intent == "budget_set":
+        data = await handle_budget_set(user_id, entities, message)
+
+    elif intent == "share_list":
+        data = await handle_share_list(user_id, entities, message)
 
     # Step 3: Generate response
     response_text = generate_response(intent, sub_intent, data, entities)

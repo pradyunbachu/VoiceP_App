@@ -6,7 +6,7 @@ import os
 import re
 from datetime import datetime, timedelta
 
-from config import supabase
+from config import supabase, groq_client
 
 # Load grocery categories from shared JSON
 _data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "grocery_categories.json")
@@ -167,3 +167,187 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
         "added_count": len(added_items),
         "query_type": "pantry_add"
     }
+
+
+async def handle_pantry_remove(user_id: str, entities: dict, original_message: str) -> dict:
+    """Handle removing items from the pantry."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    item_name = entities.get("item_name")
+    if not item_name:
+        message_lower = original_message.lower()
+        remove_phrases = [
+            "remove", "delete", "take out", "get rid of", "toss", "throw out",
+            "from my pantry", "from pantry", "from my inventory", "the", "my"
+        ]
+        cleaned = message_lower
+        for phrase in remove_phrases:
+            cleaned = cleaned.replace(phrase, " ")
+        cleaned = cleaned.strip().strip(".")
+        if cleaned:
+            item_name = cleaned.strip()
+
+    if not item_name:
+        return {
+            "success": False,
+            "removed_count": 0,
+            "message": "I couldn't determine which item to remove. Try 'Remove chicken from my pantry'.",
+            "query_type": "pantry_remove"
+        }
+
+    try:
+        response = (
+            supabase.table("pantry_items")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        items = response.data if response.data else []
+        matching = [i for i in items if item_name.lower() in i.get("name", "").lower()]
+
+        if not matching:
+            return {
+                "success": False,
+                "removed_count": 0,
+                "item_name": item_name,
+                "message": f"I couldn't find '{item_name}' in your pantry.",
+                "query_type": "pantry_remove"
+            }
+
+        removed_names = []
+        for item in matching:
+            supabase.table("pantry_items").delete().eq("id", item["id"]).eq("user_id", user_id).execute()
+            removed_names.append(item["name"])
+
+        return {
+            "success": True,
+            "removed_count": len(removed_names),
+            "removed_items": removed_names,
+            "query_type": "pantry_remove"
+        }
+    except Exception as e:
+        print(f"Pantry remove error: {e}")
+        return {
+            "success": False,
+            "removed_count": 0,
+            "message": "Failed to remove item. Please try again.",
+            "query_type": "pantry_remove"
+        }
+
+
+async def handle_cooking_deduct(user_id: str, entities: dict, original_message: str) -> dict:
+    """Handle deducting ingredients from pantry when user is cooking a recipe."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    recipe_name = entities.get("recipe_name")
+    if not recipe_name:
+        message_lower = original_message.lower()
+        cook_phrases = [
+            "i'm cooking", "im cooking", "i am cooking",
+            "i'm making", "im making", "i am making",
+            "i'm preparing", "im preparing", "i am preparing",
+            "cooking the", "making the", "preparing the"
+        ]
+        for phrase in cook_phrases:
+            if phrase in message_lower:
+                recipe_name = message_lower.split(phrase, 1)[1].strip().strip(".")
+                break
+
+    if not recipe_name:
+        return {
+            "success": False,
+            "message": "I couldn't determine what you're cooking. Try 'I'm cooking chicken stir-fry'.",
+            "query_type": "cooking_deduct"
+        }
+
+    try:
+        pantry_response = (
+            supabase.table("pantry_items")
+            .select("*")
+            .eq("user_id", user_id)
+            .execute()
+        )
+        pantry_items = pantry_response.data if pantry_response.data else []
+
+        if not pantry_items:
+            return {
+                "success": False,
+                "message": "Your pantry is empty, so I can't deduct ingredients.",
+                "query_type": "cooking_deduct"
+            }
+
+        ingredient_names = [i["name"] for i in pantry_items]
+        ingredient_list = ", ".join(ingredient_names)
+
+        if not groq_client:
+            return {
+                "success": False,
+                "message": "AI service not available to match recipe ingredients.",
+                "query_type": "cooking_deduct"
+            }
+
+        deduct_prompt = f"""The user is cooking "{recipe_name}".
+Their pantry contains: {ingredient_list}
+
+Which pantry items would be used in this recipe? Return ONLY a JSON array of item names that match.
+Example: ["chicken", "rice", "soy sauce"]
+Only include items that are actually in the pantry list above. Be practical about what the recipe needs."""
+
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a cooking assistant. Respond with valid JSON only."},
+                {"role": "user", "content": deduct_prompt}
+            ],
+            temperature=0.3
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        used_items = json.loads(content)
+
+        deducted = []
+        for used_name in used_items:
+            for pantry_item in pantry_items:
+                if used_name.lower() in pantry_item["name"].lower() or pantry_item["name"].lower() in used_name.lower():
+                    current_qty = pantry_item.get("quantity", 1)
+                    new_qty = max(0, current_qty - 1)
+                    new_status = "out_of_stock" if new_qty == 0 else ("low" if new_qty <= 1 else "full")
+
+                    supabase.table("pantry_items").update({
+                        "quantity": new_qty,
+                        "stock_status": new_status,
+                        "updated_at": datetime.now().isoformat()
+                    }).eq("id", pantry_item["id"]).execute()
+
+                    deducted.append({
+                        "name": pantry_item["name"],
+                        "old_quantity": current_qty,
+                        "new_quantity": new_qty,
+                        "new_status": new_status
+                    })
+                    break
+
+        return {
+            "success": True,
+            "recipe_name": recipe_name,
+            "deducted_items": deducted,
+            "deducted_count": len(deducted),
+            "query_type": "cooking_deduct"
+        }
+    except Exception as e:
+        print(f"Cooking deduct error: {e}")
+        return {
+            "success": False,
+            "message": "Failed to deduct ingredients. Please try again.",
+            "query_type": "cooking_deduct"
+        }
