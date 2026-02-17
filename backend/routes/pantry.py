@@ -144,7 +144,7 @@ async def create_pantry_item(
     expiration_predicted = False
     if not expiration_date:
         expiration_date = predict_expiration(item.name, item.category, purchase)
-        expiration_predicted = True
+        expiration_predicted = expiration_date is not None
 
     response = supabase.table("pantry_items").insert({
         "user_id": current_user["id"],
@@ -209,7 +209,7 @@ async def auto_populate_pantry_from_expense(
         exp_predicted = False
         if not item_expiration:
             item_expiration = predict_expiration(item_name, item_category, item_purchase)
-            exp_predicted = True
+            exp_predicted = item_expiration is not None
 
         response = supabase.table("pantry_items").insert({
             "user_id": current_user["id"],
@@ -398,4 +398,67 @@ async def get_pantry_stats(
         "out_of_stock": out_of_stock,
         "expiring_soon": expiring_soon,
         "by_category": by_category
+    }
+
+
+@router.post("/pantry/backfill-dates")
+@limiter.limit("10/minute")
+async def backfill_pantry_dates(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Backfill missing purchase_date and expiration_date on existing pantry items.
+    Also clears bogus expiration dates on non-food items."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    from shelf_life import _is_non_pantry
+
+    response = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"]).execute()
+    items = response.data if response.data else []
+
+    purchase_filled = 0
+    expiration_filled = 0
+    expiration_cleared = 0
+    now_iso = datetime.now().isoformat()
+
+    for item in items:
+        update_data = {}
+        is_non_food = _is_non_pantry(item["name"])
+
+        # Backfill purchase_date from created_at or today
+        if not item.get("purchase_date"):
+            created = item.get("created_at")
+            if created:
+                try:
+                    update_data["purchase_date"] = datetime.fromisoformat(created.replace("Z", "+00:00")).strftime("%Y-%m-%d")
+                except Exception:
+                    update_data["purchase_date"] = datetime.now().strftime("%Y-%m-%d")
+            else:
+                update_data["purchase_date"] = datetime.now().strftime("%Y-%m-%d")
+            purchase_filled += 1
+
+        # Clear expiration dates on non-food items (they don't expire)
+        if is_non_food and item.get("expiration_date"):
+            update_data["expiration_date"] = None
+            update_data["expiration_predicted"] = False
+            expiration_cleared += 1
+        # Backfill expiration_date for food items only
+        elif not is_non_food and not item.get("expiration_date"):
+            purchase = update_data.get("purchase_date") or item.get("purchase_date") or datetime.now().strftime("%Y-%m-%d")
+            predicted = predict_expiration(item["name"], item.get("category"), purchase)
+            if predicted:
+                update_data["expiration_date"] = predicted
+                update_data["expiration_predicted"] = True
+                expiration_filled += 1
+
+        if update_data:
+            update_data["updated_at"] = now_iso
+            supabase.table("pantry_items").update(update_data).eq("id", item["id"]).execute()
+
+    return {
+        "message": f"Backfilled dates for {purchase_filled + expiration_filled} item(s)",
+        "purchase_filled": purchase_filled,
+        "expiration_filled": expiration_filled,
+        "expiration_cleared": expiration_cleared
     }

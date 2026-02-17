@@ -32,10 +32,11 @@ import {
   useUpdatePantryStatus,
   useDeletePantryItem,
   useBulkDeletePantryItems,
+  useBackfillDates,
   useUndoDelete,
 } from "../hooks";
 import { exportPantryCsv } from "../lib/csvExport";
-import { detectCategory } from "../lib/categoryDetection";
+import { detectCategory, isPantryItem } from "../lib/categoryDetection";
 import LoadingSkeleton from "./LoadingSkeleton";
 import PantryFilters from "./PantryFilters";
 import PantryBulkActions from "./PantryBulkActions";
@@ -119,6 +120,7 @@ const Pantry = ({ showToast }) => {
   const statusMutation = useUpdatePantryStatus();
   const deleteMutation = useDeletePantryItem();
   const bulkDeleteMutation = useBulkDeletePantryItems();
+  const backfillDatesMutation = useBackfillDates();
   const { scheduleDelete } = useUndoDelete(showToast);
 
   // For shelf view, use items directly (server handles search now)
@@ -401,15 +403,38 @@ const Pantry = ({ showToast }) => {
       if (movedCount > 0) parts.push(`${movedCount} re-categorized`);
       if (mergedCount > 0) parts.push(`${mergedCount} merged`);
       if (showToast) showToast(`${total} item(s) updated: ${parts.join(", ")}`, "success");
-    } else {
-      if (showToast) showToast("No items to re-categorize or merge", "info");
     }
+
+    // Backfill missing dates and clear bogus expirations on non-food items
+    backfillDatesMutation.mutate(undefined, {
+      onSuccess: (result) => {
+        const filled = (result.purchase_filled || 0) + (result.expiration_filled || 0) + (result.expiration_cleared || 0);
+        if (filled > 0) {
+          const dateParts = [];
+          if (result.purchase_filled > 0) dateParts.push(`${result.purchase_filled} purchase date(s) added`);
+          if (result.expiration_filled > 0) dateParts.push(`${result.expiration_filled} expiration date(s) added`);
+          if (result.expiration_cleared > 0) dateParts.push(`${result.expiration_cleared} non-food expiration(s) cleared`);
+          if (showToast) showToast(dateParts.join(", "), "success");
+        } else if (total === 0) {
+          if (showToast) showToast("All items are up to date", "info");
+        }
+      },
+      onError: () => {
+        if (showToast) showToast("Error backfilling dates", "error");
+      },
+    });
   };
 
-  // Check if button should be enabled (Other items exist OR duplicates exist)
+  // Check if button should be enabled (Other items exist OR duplicates exist OR missing dates)
   const hasRecategorizeWork = useMemo(() => {
     const hasOther = shelfItems.some((item) => item.category === "Other");
     if (hasOther) return true;
+    const hasMissingDates = shelfItems.some((item) =>
+      !item.purchase_date ||
+      (!item.expiration_date && isPantryItem(item.name)) ||
+      (item.expiration_date && !isPantryItem(item.name))
+    );
+    if (hasMissingDates) return true;
     const seen = new Set();
     return shelfItems.some((item) => {
       const key = item.name.toLowerCase().trim();
@@ -776,16 +801,26 @@ const Pantry = ({ showToast }) => {
                   </select>
                 </div>
               </div>
-              <div className="form-group">
-                <label>
-                  Expiration Date
-                  {editForm.expiration_predicted && <span className="predicted-label">(estimated)</span>}
-                </label>
-                <input
-                  type="date"
-                  value={editForm.expiration_date}
-                  onChange={(e) => setEditForm({...editForm, expiration_date: e.target.value, expiration_predicted: false})}
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label>
+                    Expiration Date
+                    {editForm.expiration_predicted && <span className="predicted-label">(estimated)</span>}
+                  </label>
+                  <input
+                    type="date"
+                    value={editForm.expiration_date}
+                    onChange={(e) => setEditForm({...editForm, expiration_date: e.target.value, expiration_predicted: false})}
+                  />
+                </div>
+                <div className="form-group">
+                  <label>Purchase Date</label>
+                  <input
+                    type="date"
+                    value={editForm.purchase_date}
+                    onChange={(e) => setEditForm({...editForm, purchase_date: e.target.value})}
+                  />
+                </div>
               </div>
               <div className="form-group">
                 <label>Notes</label>

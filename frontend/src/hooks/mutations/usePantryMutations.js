@@ -224,6 +224,31 @@ export const useBulkDeletePantryItems = () => {
   });
 };
 
+export const useBackfillDates = () => {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation({
+    mutationFn: async () => {
+      const token = getToken();
+      const response = await fetch(`${API_BASE_URL}/api/pantry/backfill-dates`, {
+        method: 'POST',
+        headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to backfill dates');
+      }
+
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
+    },
+  });
+};
+
 export const useAddFromExpense = () => {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();

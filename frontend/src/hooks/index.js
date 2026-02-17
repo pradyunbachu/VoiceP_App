@@ -36,6 +36,7 @@ export {
   useUpdatePantryStatus,
   useDeletePantryItem,
   useBulkDeletePantryItems,
+  useBackfillDates,
   useAddFromExpense,
 } from './mutations/usePantryMutations';
 

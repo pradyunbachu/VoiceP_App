@@ -15,6 +15,20 @@ _CATEGORY_DEFAULTS = _shelf_life_data["category_defaults"]
 # Pre-sort keys by length descending for longest-substring-first matching
 _SORTED_KEYS = sorted(_ITEM_SHELF_LIFE.keys(), key=len, reverse=True)
 
+# Load non-pantry keywords — these items don't expire
+_grocery_path = os.path.join(os.path.dirname(__file__), "data", "grocery_categories.json")
+with open(_grocery_path, "r") as _gf:
+    _NON_PANTRY_KEYWORDS = json.load(_gf).get("non_pantry", [])
+
+
+def _is_non_pantry(name: str) -> bool:
+    """Return True if the item is a non-food household item that doesn't expire."""
+    name_lower = name.lower().strip()
+    for keyword in _NON_PANTRY_KEYWORDS:
+        if keyword in name_lower or name_lower in keyword:
+            return True
+    return False
+
 
 def _estimate_days(name: str, category: str | None) -> int:
     """Return estimated shelf life in days for a given item name + category."""
@@ -36,8 +50,8 @@ def _estimate_days(name: str, category: str | None) -> int:
     return _CATEGORY_DEFAULTS.get("Other", 30)
 
 
-def predict_expiration(name: str, category: str | None = None, purchase_date: str | None = None) -> str:
-    """Return a predicted expiration date string (YYYY-MM-DD).
+def predict_expiration(name: str, category: str | None = None, purchase_date: str | None = None) -> str | None:
+    """Return a predicted expiration date string (YYYY-MM-DD), or None for non-food items.
 
     Args:
         name: Item name (e.g. "organic chicken breast")
@@ -45,6 +59,9 @@ def predict_expiration(name: str, category: str | None = None, purchase_date: st
         purchase_date: ISO date string for when the item was purchased.
                        Defaults to today if not provided.
     """
+    if _is_non_pantry(name):
+        return None
+
     days = _estimate_days(name, category)
 
     if purchase_date:

@@ -53,6 +53,9 @@ const DraggableShelfItem = ({ item, onEdit, onRemove, onStatusChange }) => {
         {item.quantity && (
           <div className="shelf-item-qty">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</div>
         )}
+        {item.purchase_date && (
+          <div className="shelf-item-purchase">Purch: {new Date(item.purchase_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
+        )}
         {expiringSoon && !expired && (
           <div className="shelf-item-badge expiring">Exp Soon</div>
         )}

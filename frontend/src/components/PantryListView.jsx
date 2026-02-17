@@ -111,7 +111,16 @@ const PantryListView = ({
                             type="date"
                             value={editForm.expiration_date}
                             onChange={(e) => onEditFormChange({...editForm, expiration_date: e.target.value, expiration_predicted: false})}
+                            title="Expiration date"
                           />
+                          <input
+                            type="date"
+                            value={editForm.purchase_date}
+                            onChange={(e) => onEditFormChange({...editForm, purchase_date: e.target.value})}
+                            title="Purchase date"
+                          />
+                        </div>
+                        <div className="edit-row">
                           <select
                             value={editForm.stock_status}
                             onChange={(e) => onEditFormChange({...editForm, stock_status: e.target.value})}
@@ -196,14 +205,14 @@ const PantryListView = ({
                             <span className={`expiration ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring' : ''}`}>
                               <Calendar size={14} />
                               {isExpired(item.expiration_date) ? 'Expired: ' : 'Exp: '}
-                              {new Date(item.expiration_date).toLocaleDateString()}
+                              {new Date(item.expiration_date + 'T00:00:00').toLocaleDateString()}
                               {item.expiration_predicted && <span className="predicted-badge">est.</span>}
                             </span>
                           )}
                           {item.purchase_date && (
                             <span className="purchase-date">
                               <ShoppingCart size={14} />
-                              {new Date(item.purchase_date).toLocaleDateString()}
+                              Purchased: {new Date(item.purchase_date + 'T00:00:00').toLocaleDateString()}
                             </span>
                           )}
                         </div>

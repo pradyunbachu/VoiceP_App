@@ -949,7 +949,7 @@
   border: 1px solid rgba(255, 255, 255, 0.3);
   border-radius: var(--radius-md);
   width: 140px;
-  height: 110px;
+  height: 120px;
   justify-content: space-between;
   cursor: grab;
   transition: all 0.15s ease;
@@ -1084,6 +1084,16 @@
   font-size: 0.7rem;
   color: #666;
   margin-top: var(--space-1);
+}
+
+.shelf-item-purchase {
+  font-size: 0.6rem;
+  color: #999;
+  margin-top: 1px;
+}
+
+[data-theme="dark"] .shelf-item-purchase {
+  color: var(--text-muted);
 }
 
 .shelf-item-badge {
@@ -1378,7 +1388,7 @@
 
   .shelf-item {
     width: 110px;
-    height: 115px;
+    height: 125px;
     padding: var(--space-2) var(--space-2) var(--space-2);
   }
 
