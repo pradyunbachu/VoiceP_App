@@ -1,9 +1,10 @@
 # ============================================================================
 # DAILY RECS ROUTES - AI-Powered Daily Recommendations
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from pydantic import BaseModel
 from datetime import datetime, timedelta
+from zoneinfo import ZoneInfo
 import json
 
 from config import supabase, groq_client
@@ -14,9 +15,12 @@ from cache import api_cache, make_cache_key
 router = APIRouter()
 
 
-def detect_meal_type() -> str:
-    """Determine meal type based on current hour."""
-    hour = datetime.now().hour
+def detect_meal_type(tz: str | None = None) -> str:
+    """Determine meal type based on current hour in the user's timezone."""
+    try:
+        hour = datetime.now(ZoneInfo(tz)).hour if tz else datetime.now().hour
+    except Exception:
+        hour = datetime.now().hour
     if hour < 11:
         return "breakfast"
     elif hour < 16:
@@ -91,7 +95,8 @@ Keep it short and practical."""
 @limiter.limit("20/minute")
 async def get_daily_recs(
     request: Request,
-    current_user: dict = Depends(get_current_user_dependency)
+    current_user: dict = Depends(get_current_user_dependency),
+    tz: str | None = Query(None),
 ):
     """
     Generate daily recommendations: meal ideas + pantry alerts.
@@ -102,7 +107,7 @@ async def get_daily_recs(
 
     user_id = current_user["id"]
 
-    meal_type = detect_meal_type()
+    meal_type = detect_meal_type(tz)
     cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}")
     cached = api_cache.get(cache_key)
     if cached is not None:

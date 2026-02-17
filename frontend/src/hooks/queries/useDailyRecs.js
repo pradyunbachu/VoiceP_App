@@ -12,7 +12,8 @@ export const useDailyRecs = () => {
       const token = getToken();
       if (!token) throw new Error('No authentication token');
 
-      const response = await fetch(`${API_BASE_URL}/api/daily-recs`, {
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+      const response = await fetch(`${API_BASE_URL}/api/daily-recs?tz=${encodeURIComponent(tz)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
