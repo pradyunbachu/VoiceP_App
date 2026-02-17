@@ -59,6 +59,26 @@
   line-height: 1.5;
 }
 
+.toast-action {
+  background: transparent;
+  border: 1px solid currentColor;
+  color: inherit;
+  cursor: pointer;
+  padding: var(--space-1) var(--space-2);
+  font-size: 0.8rem;
+  font-weight: 600;
+  border-radius: var(--radius-sm);
+  white-space: nowrap;
+  flex-shrink: 0;
+  opacity: 0.9;
+  transition: opacity 0.15s, background 0.15s;
+}
+
+.toast-action:hover {
+  opacity: 1;
+  background: rgba(255, 255, 255, 0.1);
+}
+
 .toast-close {
   background: transparent;
   border: none;

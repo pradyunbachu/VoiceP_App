@@ -1,151 +1,47 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   Package,
   Plus,
-  Search,
-  Trash2,
-  Edit2,
   Check,
   X,
   AlertTriangle,
   CheckCircle,
   Circle,
   Calendar,
-  Tag,
-  ArrowUpDown,
-  CheckSquare,
-  Square,
-  ShoppingCart,
+  Trash2,
   LayoutGrid,
   List,
   Download,
-  ChevronLeft,
-  ChevronRight,
+  RefreshCw,
 } from "lucide-react";
 import {
-  DndContext,
-  closestCenter,
   KeyboardSensor,
   PointerSensor,
   useSensor,
   useSensors,
-  useDraggable,
-  useDroppable,
 } from "@dnd-kit/core";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
 import {
   usePantryItems,
   usePantryStats,
+  useInfinitePantryItems,
+  useContainerColumns,
   useCreatePantryItem,
   useUpdatePantryItem,
   useUpdatePantryStatus,
   useDeletePantryItem,
   useBulkDeletePantryItems,
+  useUndoDelete,
 } from "../hooks";
 import { exportPantryCsv } from "../lib/csvExport";
+import { detectCategory } from "../lib/categoryDetection";
 import LoadingSkeleton from "./LoadingSkeleton";
+import PantryFilters from "./PantryFilters";
+import PantryBulkActions from "./PantryBulkActions";
+import PantryShelfView from "./PantryShelfView";
+import PantryListView from "./PantryListView";
 import "./Pantry.css";
-
-// Draggable shelf item component
-const DraggableShelfItem = ({ item, isExpiringSoon, isExpired, getStatusIcon, onEdit, onRemove, onStatusChange }) => {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    isDragging,
-  } = useDraggable({ id: item.id });
-
-  const style = {
-    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
-    zIndex: isDragging ? 1000 : 1,
-  };
-
-  const statusOptions = [
-    { value: 'full', label: 'Full', icon: <CheckCircle size={11} /> },
-    { value: 'low', label: 'Low', icon: <AlertTriangle size={11} /> },
-    { value: 'out_of_stock', label: 'Out', icon: <Circle size={11} /> },
-  ];
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className={`shelf-item ${item.stock_status} ${isExpired ? 'expired' : ''} ${isExpiringSoon && !isExpired ? 'expiring-soon' : ''} ${isDragging ? 'dragging' : ''}`}
-      title={`${item.name}${item.quantity ? ` (${item.quantity}${item.unit ? ' ' + item.unit : ''})` : ''}${item.expiration_date ? `\nExpires: ${new Date(item.expiration_date).toLocaleDateString()}` : ''}${item.notes ? `\n${item.notes}` : ''}`}
-      {...attributes}
-      {...listeners}
-    >
-      <button
-        className="shelf-item-remove"
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove(item.id);
-        }}
-        title="Remove from pantry"
-      >
-        <X size={10} />
-      </button>
-      <div className="shelf-item-content" onClick={(e) => {
-        e.stopPropagation();
-        onEdit(item);
-      }}>
-        <div className="shelf-item-name">{item.name}</div>
-        {item.quantity && (
-          <div className="shelf-item-qty">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</div>
-        )}
-        {isExpiringSoon && !isExpired && (
-          <div className="shelf-item-badge expiring">Exp Soon</div>
-        )}
-        {isExpired && (
-          <div className="shelf-item-badge expired">Expired</div>
-        )}
-      </div>
-      <div
-        className="shelf-item-status-buttons"
-        onClick={(e) => e.stopPropagation()}
-        onPointerDown={(e) => e.stopPropagation()}
-      >
-        {statusOptions.map((status) => (
-          <button
-            key={status.value}
-            className={`shelf-status-btn ${status.value} ${item.stock_status === status.value ? 'active' : ''}`}
-            onClick={(e) => {
-              e.stopPropagation();
-              onStatusChange(item.id, status.value);
-            }}
-            onPointerDown={(e) => e.stopPropagation()}
-            title={status.label}
-          >
-            {status.icon}
-            <span className="shelf-status-label">{status.label}</span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
-// Droppable shelf component
-const DroppableShelf = ({ category, children, isEmpty }) => {
-  const { setNodeRef, isOver } = useDroppable({ id: category });
-
-  return (
-    <div className={`shelf ${isOver ? 'drag-over' : ''}`}>
-      <div className="shelf-label">{category}</div>
-      <div ref={setNodeRef} className="shelf-surface">
-        <div className="shelf-items">
-          {children}
-          {isEmpty && (
-            <div className="shelf-empty-hint">Drop items here</div>
-          )}
-        </div>
-      </div>
-      <div className="shelf-bracket left"></div>
-      <div className="shelf-bracket right"></div>
-    </div>
-  );
-};
 
 const Pantry = ({ showToast }) => {
   // View mode state
@@ -173,7 +69,6 @@ const Pantry = ({ showToast }) => {
   const [statusFilter, setStatusFilter] = useState("");
   const [sortBy, setSortBy] = useState("name");
   const [sortOrder, setSortOrder] = useState("asc");
-  const [listPage, setListPage] = useState(1);
 
   // Selection state (for bulk operations)
   const [selectedItems, setSelectedItems] = useState(new Set());
@@ -183,15 +78,9 @@ const Pantry = ({ showToast }) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setListPage(1);
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
-
-  // Reset page on filter changes
-  useEffect(() => {
-    setListPage(1);
-  }, [categoryFilter, statusFilter, sortBy, sortOrder]);
 
   // Shelf view: fetch all items (no pagination) for drag-and-drop
   const { data: shelfItems = [], isLoading: shelfLoading } = usePantryItems({
@@ -202,23 +91,25 @@ const Pantry = ({ showToast }) => {
     sort_order: sortOrder,
   });
 
-  // List view: paginated fetch
-  const { data: listData, isLoading: listLoading } = usePantryItems({
+  // List view: infinite scroll
+  const {
+    data: listInfiniteData,
+    isLoading: listLoading,
+    fetchNextPage: listFetchNextPage,
+    hasNextPage: listHasNextPage,
+    isFetchingNextPage: listIsFetchingNextPage,
+  } = useInfinitePantryItems({
     category: categoryFilter || undefined,
     stock_status: statusFilter || undefined,
     search: debouncedSearch || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
-    paginate: true,
-    page: listPage,
-    page_size: 20,
   });
 
-  const items = viewMode === 'shelf' ? shelfItems : (listData?.items || []);
+  const listItems = listInfiniteData?.pages?.flatMap((p) => p.items) ?? [];
+
+  const items = viewMode === 'shelf' ? shelfItems : listItems;
   const loading = viewMode === 'shelf' ? shelfLoading : listLoading;
-  const listTotalPages = listData?.total_pages ?? 1;
-  const listHasNext = listData?.has_next ?? false;
-  const listHasPrev = listData?.has_prev ?? false;
 
   const { data: stats } = usePantryStats();
 
@@ -228,9 +119,47 @@ const Pantry = ({ showToast }) => {
   const statusMutation = useUpdatePantryStatus();
   const deleteMutation = useDeletePantryItem();
   const bulkDeleteMutation = useBulkDeletePantryItems();
+  const { scheduleDelete } = useUndoDelete(showToast);
 
   // For shelf view, use items directly (server handles search now)
   const filteredItems = items;
+
+  // Grid virtualization for list view
+  const { columnCount, containerRef: gridContainerRef } = useContainerColumns(280, 16);
+  const listScrollRef = useRef(null);
+
+  // Combine refs for list scroll container
+  const setListScrollRef = useCallback((node) => {
+    listScrollRef.current = node;
+    gridContainerRef(node);
+  }, [gridContainerRef]);
+
+  // Chunk items into rows for virtualization
+  const rows = useMemo(() => {
+    const result = [];
+    for (let i = 0; i < listItems.length; i += columnCount) {
+      result.push(listItems.slice(i, i + columnCount));
+    }
+    return result;
+  }, [listItems, columnCount]);
+
+  const listVirtualizer = useVirtualizer({
+    count: rows.length,
+    getScrollElement: () => listScrollRef.current,
+    estimateSize: () => 280,
+    overscan: 3,
+    measureElement: (el) => el?.getBoundingClientRect().height ?? 280,
+  });
+
+  // Infinite scroll trigger for list view
+  const listVirtualItems = listVirtualizer.getVirtualItems();
+  useEffect(() => {
+    if (viewMode !== 'list' || listVirtualItems.length === 0) return;
+    const lastRow = listVirtualItems[listVirtualItems.length - 1];
+    if (lastRow.index >= rows.length - 2 && listHasNextPage && !listIsFetchingNextPage) {
+      listFetchNextPage();
+    }
+  }, [viewMode, listVirtualItems, rows.length, listHasNextPage, listIsFetchingNextPage, listFetchNextPage]);
 
   // Group items by category for shelf view - show ALL categories
   const itemsByCategory = useMemo(() => {
@@ -280,9 +209,7 @@ const Pantry = ({ showToast }) => {
     updateMutation.mutate(
       { id: draggedItemId, data: { ...draggedItem, category: targetCategory } },
       {
-        onSuccess: () => {
-          if (showToast) showToast(`Moved "${draggedItem.name}" to ${targetCategory}`, "success");
-        },
+        onSuccess: () => {},
         onError: () => {
           if (showToast) showToast("Error updating item category", "error");
         },
@@ -306,7 +233,6 @@ const Pantry = ({ showToast }) => {
         stock_status: "full",
         notes: ""
       });
-      if (showToast) showToast("Item added to pantry", "success");
     } catch (error) {
       console.error("Error creating item:", error);
       if (showToast) showToast(error.message || "Error adding item to pantry", "error");
@@ -318,58 +244,180 @@ const Pantry = ({ showToast }) => {
       await updateMutation.mutateAsync({ id, data: editForm });
       setEditingId(null);
       setEditForm({});
-      if (showToast) showToast("Item updated successfully", "success");
     } catch (error) {
       console.error("Error updating item:", error);
       if (showToast) showToast(error.message || "Error updating item", "error");
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this item?")) return;
-
-    try {
-      await deleteMutation.mutateAsync(id);
-      if (showToast) showToast("Item deleted successfully", "success");
-    } catch (error) {
-      console.error("Error deleting item:", error);
-      if (showToast) showToast("Error deleting item", "error");
-    }
+  const handleDelete = (id) => {
+    scheduleDelete({
+      id,
+      queryKeyPrefix: ["pantry"],
+      filterFn: (item) => item.id !== id,
+      dataKey: null,
+      onDelete: async () => {
+        try {
+          await deleteMutation.mutateAsync(id);
+        } catch (error) {
+          console.error("Error deleting item:", error);
+          if (showToast) showToast("Error deleting item", "error");
+        }
+      },
+      message: "Item deleted",
+    });
   };
 
   // Remove item from pantry (keeps the expense)
-  const handleRemoveFromPantry = async (id) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-      if (showToast) showToast("Item removed from pantry", "success");
-    } catch (error) {
-      console.error("Error removing item:", error);
-      if (showToast) showToast("Error removing item", "error");
-    }
+  const handleRemoveFromPantry = (id) => {
+    scheduleDelete({
+      id,
+      queryKeyPrefix: ["pantry"],
+      filterFn: (item) => item.id !== id,
+      dataKey: null,
+      onDelete: async () => {
+        try {
+          await deleteMutation.mutateAsync(id);
+        } catch (error) {
+          console.error("Error removing item:", error);
+          if (showToast) showToast("Error removing item", "error");
+        }
+      },
+      message: "Item removed from pantry",
+    });
   };
 
   const handleStatusChange = (id, newStatus) => {
     statusMutation.mutate({ id, status: newStatus });
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedItems.size === 0) {
       if (showToast) showToast("Please select items to delete", "warning");
       return;
     }
 
-    if (!window.confirm(`Delete ${selectedItems.size} item(s)?`)) return;
+    const idsToDelete = Array.from(selectedItems);
+    const idSet = new Set(idsToDelete);
+    const count = idsToDelete.length;
+    setSelectedItems(new Set());
 
-    try {
-      await bulkDeleteMutation.mutateAsync(Array.from(selectedItems));
-      setSelectedItems(new Set());
-      // Stay in select mode so user can continue selecting more items
-      if (showToast) showToast("Items deleted successfully", "success");
-    } catch (error) {
-      console.error("Error bulk deleting:", error);
-      if (showToast) showToast("Error deleting items", "error");
+    scheduleDelete({
+      id: `bulk-pantry-${Date.now()}`,
+      queryKeyPrefix: ["pantry"],
+      filterFn: (item) => !idSet.has(item.id),
+      dataKey: null,
+      onDelete: async () => {
+        try {
+          await bulkDeleteMutation.mutateAsync(idsToDelete);
+        } catch (error) {
+          console.error("Error bulk deleting:", error);
+          if (showToast) showToast("Error deleting items", "error");
+        }
+      },
+      message: `${count} item(s) deleted`,
+    });
+  };
+
+  const handleRecategorize = () => {
+    let mergedCount = 0;
+    let movedCount = 0;
+
+    // --- Pass 1: Deduplicate within every shelf (e.g. two "Bananas" both in Produce) ---
+    // canonical keeps the first item per lowercase name; duplicates get merged into it
+    const canonical = {};
+    shelfItems.forEach((item) => {
+      const key = item.name.toLowerCase().trim();
+      if (!canonical[key]) {
+        canonical[key] = { ...item };
+      } else {
+        // Duplicate — merge quantity into canonical and delete this one
+        mergedCount++;
+        canonical[key].quantity = (canonical[key].quantity || 1) + (item.quantity || 1);
+        updateMutation.mutate(
+          { id: canonical[key].id, data: { ...canonical[key] } },
+          {
+            onError: () => {
+              if (showToast) showToast(`Error merging ${item.name}`, "error");
+            },
+          }
+        );
+        deleteMutation.mutate(item.id, {
+          onError: () => {
+            if (showToast) showToast(`Error removing duplicate ${item.name}`, "error");
+          },
+        });
+      }
+    });
+
+    // --- Pass 2: Re-categorize "Other" items and merge if target shelf already has one ---
+    const otherItems = Object.values(canonical).filter((item) => item.category === "Other");
+    otherItems.forEach((item) => {
+      const newCategory = detectCategory(item.name);
+      if (newCategory === "Other") return;
+
+      const key = item.name.toLowerCase().trim();
+      // Check if an item with the same name already lives in a non-Other shelf
+      const existing = Object.values(canonical).find(
+        (c) => c.id !== item.id && c.name.toLowerCase().trim() === key && c.category !== "Other"
+      );
+
+      if (existing) {
+        // Merge into the existing non-Other item
+        mergedCount++;
+        existing.quantity = (existing.quantity || 1) + (item.quantity || 1);
+        updateMutation.mutate(
+          { id: existing.id, data: { ...existing } },
+          {
+            onError: () => {
+              if (showToast) showToast(`Error merging ${item.name}`, "error");
+            },
+          }
+        );
+        deleteMutation.mutate(item.id, {
+          onError: () => {
+            if (showToast) showToast(`Error removing duplicate ${item.name}`, "error");
+          },
+        });
+        delete canonical[key];
+      } else {
+        // Just move the category
+        movedCount++;
+        item.category = newCategory;
+        updateMutation.mutate(
+          { id: item.id, data: { ...item, category: newCategory } },
+          {
+            onError: () => {
+              if (showToast) showToast(`Error re-categorizing ${item.name}`, "error");
+            },
+          }
+        );
+      }
+    });
+
+    const total = movedCount + mergedCount;
+    if (total > 0) {
+      const parts = [];
+      if (movedCount > 0) parts.push(`${movedCount} re-categorized`);
+      if (mergedCount > 0) parts.push(`${mergedCount} merged`);
+      if (showToast) showToast(`${total} item(s) updated: ${parts.join(", ")}`, "success");
+    } else {
+      if (showToast) showToast("No items to re-categorize or merge", "info");
     }
   };
+
+  // Check if button should be enabled (Other items exist OR duplicates exist)
+  const hasRecategorizeWork = useMemo(() => {
+    const hasOther = shelfItems.some((item) => item.category === "Other");
+    if (hasOther) return true;
+    const seen = new Set();
+    return shelfItems.some((item) => {
+      const key = item.name.toLowerCase().trim();
+      if (seen.has(key)) return true;
+      seen.add(key);
+      return false;
+    });
+  }, [shelfItems]);
 
   // Helper functions
   const startEdit = (item) => {
@@ -382,46 +430,9 @@ const Pantry = ({ showToast }) => {
       expiration_date: item.expiration_date || "",
       purchase_date: item.purchase_date || "",
       stock_status: item.stock_status || "full",
-      notes: item.notes || ""
+      notes: item.notes || "",
+      expiration_predicted: item.expiration_predicted || false
     });
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case "full":
-        return <CheckCircle size={16} className="status-icon full" />;
-      case "low":
-        return <AlertTriangle size={16} className="status-icon low" />;
-      case "out_of_stock":
-        return <Circle size={16} className="status-icon out" />;
-      default:
-        return <Circle size={16} />;
-    }
-  };
-
-  const getStatusLabel = (status) => {
-    switch (status) {
-      case "full": return "In Stock";
-      case "low": return "Low";
-      case "out_of_stock": return "Out";
-      default: return status;
-    }
-  };
-
-  const isExpiringSoon = (expirationDate) => {
-    if (!expirationDate) return false;
-    const expDate = new Date(expirationDate);
-    const today = new Date();
-    const daysUntilExpiry = Math.ceil((expDate - today) / (1000 * 60 * 60 * 24));
-    return daysUntilExpiry <= 7 && daysUntilExpiry >= 0;
-  };
-
-  const isExpired = (expirationDate) => {
-    if (!expirationDate) return false;
-    const expDate = new Date(expirationDate);
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return expDate < today;
   };
 
   const toggleItemSelection = (id) => {
@@ -461,12 +472,21 @@ const Pantry = ({ showToast }) => {
           </div>
           <button
             className="export-pantry-button"
-            onClick={() => exportPantryCsv(filteredItems)}
-            disabled={filteredItems.length === 0}
+            onClick={() => exportPantryCsv(shelfItems)}
+            disabled={shelfItems.length === 0}
             title="Export pantry items to CSV"
           >
             <Download size={18} />
             <span>Export CSV</span>
+          </button>
+          <button
+            className="recategorize-button"
+            onClick={handleRecategorize}
+            disabled={!hasRecategorizeWork}
+            title="Re-categorize items in Other shelf"
+          >
+            <RefreshCw size={18} />
+            <span>Re-categorize</span>
           </button>
           <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
             <Plus size={18} />
@@ -630,78 +650,26 @@ const Pantry = ({ showToast }) => {
       )}
 
       {/* Filters and Search */}
-      <div className="pantry-controls">
-        <div className="search-container">
-          <Search size={18} className="search-icon" />
-          <input
-            type="text"
-            className="search-input"
-            placeholder="Search pantry..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </div>
-        <div className="filter-controls">
-          <select
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="">All Categories</option>
-            {PANTRY_CATEGORIES.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-          >
-            <option value="">All Status</option>
-            <option value="full">In Stock</option>
-            <option value="low">Low Stock</option>
-            <option value="out_of_stock">Out of Stock</option>
-          </select>
-          <div className="sort-control">
-            <ArrowUpDown size={16} />
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value)}
-            >
-              <option value="name">Name</option>
-              <option value="category">Category</option>
-              <option value="expiration_date">Expiration</option>
-              <option value="stock_status">Status</option>
-            </select>
-          </div>
-        </div>
-      </div>
+      <PantryFilters
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        categoryFilter={categoryFilter}
+        onCategoryChange={setCategoryFilter}
+        statusFilter={statusFilter}
+        onStatusChange={setStatusFilter}
+        sortBy={sortBy}
+        onSortChange={setSortBy}
+      />
 
       {/* Bulk controls */}
-      <div className="bulk-controls">
-        {!isSelectMode ? (
-          <button className="select-mode-button" onClick={() => setIsSelectMode(true)}>
-            <CheckSquare size={18} />
-            <span>Select Items</span>
-          </button>
-        ) : (
-          <div className="bulk-actions">
-            <button
-              className="bulk-delete-button"
-              onClick={handleBulkDelete}
-              disabled={selectedItems.size === 0 || bulkDeleteMutation.isPending}
-            >
-              <Trash2 size={16} />
-              <span>{bulkDeleteMutation.isPending ? "Deleting..." : `Delete (${selectedItems.size})`}</span>
-            </button>
-            <button
-              className="cancel-select-button"
-              onClick={() => { setIsSelectMode(false); setSelectedItems(new Set()); }}
-            >
-              <X size={16} />
-              <span>Cancel</span>
-            </button>
-          </div>
-        )}
-      </div>
+      <PantryBulkActions
+        isSelectMode={isSelectMode}
+        selectedCount={selectedItems.size}
+        onEnterSelect={() => setIsSelectMode(true)}
+        onCancelSelect={() => { setIsSelectMode(false); setSelectedItems(new Set()); }}
+        onBulkDelete={handleBulkDelete}
+        isDeleting={bulkDeleteMutation.isPending}
+      />
 
       {/* Items Display */}
       {loading ? (
@@ -721,219 +689,34 @@ const Pantry = ({ showToast }) => {
           </button>
         </div>
       ) : viewMode === 'shelf' ? (
-        /* SHELF VIEW with drag and drop */
-        <DndContext
+        <PantryShelfView
+          itemsByCategory={itemsByCategory}
           sensors={sensors}
-          collisionDetection={closestCenter}
           onDragEnd={handleDragEnd}
-        >
-          <div className="pantry-shelves">
-            {itemsByCategory.map(([category, categoryItems]) => (
-              <DroppableShelf
-                key={category}
-                category={category}
-                isEmpty={categoryItems.length === 0}
-              >
-                {categoryItems.map((item) => (
-                  <DraggableShelfItem
-                    key={item.id}
-                    item={item}
-                    isExpiringSoon={isExpiringSoon(item.expiration_date)}
-                    isExpired={isExpired(item.expiration_date)}
-                    getStatusIcon={getStatusIcon}
-                    onEdit={startEdit}
-                    onRemove={handleRemoveFromPantry}
-                    onStatusChange={handleStatusChange}
-                  />
-                ))}
-              </DroppableShelf>
-            ))}
-          </div>
-        </DndContext>
+          onEdit={startEdit}
+          onRemove={handleRemoveFromPantry}
+          onStatusChange={handleStatusChange}
+        />
       ) : (
-        /* LIST VIEW */
-        <div className="pantry-items">
-          {filteredItems.map((item) => (
-            <div
-              key={item.id}
-              className={`pantry-card ${item.stock_status} ${selectedItems.has(item.id) ? 'selected' : ''} ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring-soon' : ''}`}
-            >
-              {isSelectMode && (
-                <button
-                  className="checkbox-button"
-                  onClick={() => toggleItemSelection(item.id)}
-                >
-                  {selectedItems.has(item.id) ? <CheckSquare size={20} /> : <Square size={20} />}
-                </button>
-              )}
-
-              {editingId === item.id ? (
-                <div className="edit-form">
-                  <div className="edit-row">
-                    <input
-                      type="text"
-                      value={editForm.name}
-                      onChange={(e) => setEditForm({...editForm, name: e.target.value})}
-                      placeholder="Item name"
-                    />
-                    <select
-                      value={editForm.category}
-                      onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                    >
-                      {PANTRY_CATEGORIES.map(cat => (
-                        <option key={cat} value={cat}>{cat}</option>
-                      ))}
-                    </select>
-                  </div>
-                  <div className="edit-row">
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={editForm.quantity}
-                      onChange={(e) => setEditForm({...editForm, quantity: parseFloat(e.target.value) || 1})}
-                      placeholder="Qty"
-                    />
-                    <input
-                      type="text"
-                      value={editForm.unit}
-                      onChange={(e) => setEditForm({...editForm, unit: e.target.value})}
-                      placeholder="Unit"
-                    />
-                  </div>
-                  <div className="edit-row">
-                    <input
-                      type="date"
-                      value={editForm.expiration_date}
-                      onChange={(e) => setEditForm({...editForm, expiration_date: e.target.value})}
-                    />
-                    <select
-                      value={editForm.stock_status}
-                      onChange={(e) => setEditForm({...editForm, stock_status: e.target.value})}
-                    >
-                      <option value="full">In Stock</option>
-                      <option value="low">Low Stock</option>
-                      <option value="out_of_stock">Out of Stock</option>
-                    </select>
-                  </div>
-                  <input
-                    type="text"
-                    value={editForm.notes}
-                    onChange={(e) => setEditForm({...editForm, notes: e.target.value})}
-                    placeholder="Notes"
-                    className="edit-notes"
-                  />
-                  <div className="edit-actions">
-                    <button
-                      className="save-btn"
-                      onClick={() => handleUpdate(item.id)}
-                      disabled={updateMutation.isPending}
-                    >
-                      <Check size={16} /> {updateMutation.isPending ? "Saving..." : "Save"}
-                    </button>
-                    <button className="cancel-btn" onClick={() => setEditingId(null)}>
-                      <X size={16} /> Cancel
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <div className="pantry-card-header">
-                    <div className="item-name">
-                      <span className="name">{item.name}</span>
-                      {item.quantity && (
-                        <span className="item-quantity">
-                          {item.quantity}{item.unit ? ` ${item.unit}` : ""}
-                        </span>
-                      )}
-                    </div>
-                    {!isSelectMode && (
-                      <div className="item-actions">
-                        <button className="edit-button" onClick={() => startEdit(item)} title="Edit">
-                          <Edit2 size={16} />
-                        </button>
-                        <button
-                          className="delete-button"
-                          onClick={() => handleDelete(item.id)}
-                          title="Delete"
-                          disabled={deleteMutation.isPending}
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pantry-card-body">
-                    {item.category && (
-                      <span className="item-category">
-                        <Tag size={14} />
-                        {item.category}
-                      </span>
-                    )}
-
-                    <div className="status-selector">
-                      {["full", "low", "out_of_stock"].map((status) => (
-                        <button
-                          key={status}
-                          className={`status-button ${status} ${item.stock_status === status ? 'active' : ''}`}
-                          onClick={() => handleStatusChange(item.id, status)}
-                        >
-                          {getStatusIcon(status)}
-                          <span>{getStatusLabel(status)}</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pantry-card-footer">
-                    {item.expiration_date && (
-                      <span className={`expiration ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring' : ''}`}>
-                        <Calendar size={14} />
-                        {isExpired(item.expiration_date) ? 'Expired: ' : 'Exp: '}
-                        {new Date(item.expiration_date).toLocaleDateString()}
-                      </span>
-                    )}
-                    {item.purchase_date && (
-                      <span className="purchase-date">
-                        <ShoppingCart size={14} />
-                        {new Date(item.purchase_date).toLocaleDateString()}
-                      </span>
-                    )}
-                  </div>
-
-                  {item.notes && (
-                    <div className="item-notes">{item.notes}</div>
-                  )}
-                </>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
-
-      {/* List View Pagination */}
-      {viewMode === 'list' && listTotalPages > 1 && (
-        <div className="pantry-pagination">
-          <button
-            className="pagination-button"
-            onClick={() => setListPage(p => Math.max(1, p - 1))}
-            disabled={!listHasPrev}
-          >
-            <ChevronLeft size={18} />
-            <span>Prev</span>
-          </button>
-          <span className="pagination-info">
-            Page {listPage} of {listTotalPages}
-          </span>
-          <button
-            className="pagination-button"
-            onClick={() => setListPage(p => Math.min(listTotalPages, p + 1))}
-            disabled={!listHasNext}
-          >
-            <span>Next</span>
-            <ChevronRight size={18} />
-          </button>
-        </div>
+        <PantryListView
+          rows={rows}
+          virtualizer={listVirtualizer}
+          scrollRef={setListScrollRef}
+          isFetchingNextPage={listIsFetchingNextPage}
+          editingId={editingId}
+          editForm={editForm}
+          isSelectMode={isSelectMode}
+          selectedItems={selectedItems}
+          onEditFormChange={setEditForm}
+          onStartEdit={startEdit}
+          onSaveEdit={handleUpdate}
+          onCancelEdit={() => setEditingId(null)}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+          onToggleSelect={toggleItemSelection}
+          updatePending={updateMutation.isPending}
+          deletePending={deleteMutation.isPending}
+        />
       )}
 
       {/* Edit Modal for Shelf View */}
@@ -994,11 +777,14 @@ const Pantry = ({ showToast }) => {
                 </div>
               </div>
               <div className="form-group">
-                <label>Expiration Date</label>
+                <label>
+                  Expiration Date
+                  {editForm.expiration_predicted && <span className="predicted-label">(estimated)</span>}
+                </label>
                 <input
                   type="date"
                   value={editForm.expiration_date}
-                  onChange={(e) => setEditForm({...editForm, expiration_date: e.target.value})}
+                  onChange={(e) => setEditForm({...editForm, expiration_date: e.target.value, expiration_predicted: false})}
                 />
               </div>
               <div className="form-group">

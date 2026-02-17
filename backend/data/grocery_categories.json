@@ -31,7 +31,10 @@
       "broccoli", "cauliflower", "pepper", "bell pepper", "jalapeno",
       "cucumber", "zucchini", "corn", "mushroom", "mushrooms",
       "cabbage", "green beans", "asparagus",
-      "cilantro", "parsley", "basil", "mint", "green onions"
+      "cilantro", "parsley", "basil", "mint", "green onions",
+      "brussel sprouts", "brussels sprouts", "sprouts",
+      "peas", "snow peas", "sugar snap peas",
+      "zuchinni", "zuchini"
     ],
     "Meat & Seafood": [
       "chicken", "chicken breast", "chicken thighs", "whole chicken",

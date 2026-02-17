@@ -171,6 +171,7 @@ async def get_daily_recs(
                         "expiration_date": item["expiration_date"],
                         "days_left": days_left,
                         "category": item.get("category", "Other"),
+                        "expiration_predicted": item.get("expiration_predicted", False),
                     })
             except (ValueError, KeyError):
                 pass

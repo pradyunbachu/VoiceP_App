@@ -64,9 +64,6 @@ const BudgetManagement = ({ showToast }) => {
         repeatInterval: "",
         repeatUnit: "",
       });
-      if (showToast) {
-        showToast("Budget created successfully", "success");
-      }
     } catch (error) {
       console.error("Error creating budget:", error);
       if (showToast) {
@@ -103,9 +100,6 @@ const BudgetManagement = ({ showToast }) => {
         repeatInterval: "",
         repeatUnit: "",
       });
-      if (showToast) {
-        showToast("Budget updated successfully", "success");
-      }
     } catch (error) {
       console.error("Error updating budget:", error);
       if (showToast) {
@@ -121,9 +115,6 @@ const BudgetManagement = ({ showToast }) => {
 
     try {
       await deleteMutation.mutateAsync(id);
-      if (showToast) {
-        showToast("Budget deleted successfully", "success");
-      }
     } catch (error) {
       console.error("Error deleting budget:", error);
       if (showToast) {

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Package, X, Check, Plus, Trash2 } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
+import { detectCategory } from "../lib/categoryDetection";
 import { useAddFromExpense } from "../hooks";
 import "./AddToPantryModal.css";
 
@@ -47,112 +48,6 @@ const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
 
     // No quantity found
     return { quantity: 1, unit: "", name: trimmed };
-  };
-
-  // Auto-detect category based on item name
-  const detectCategory = (itemName) => {
-    let name = itemName.toLowerCase().trim();
-
-    // Normalize plural forms: remove trailing 's' or 'es' for better matching
-    // "bagels" -> "bagel", "muffins" -> "muffin", "cookies" -> "cookie"
-    const normalizedName = name.replace(/(es|s)$/, "");
-
-    // Helper to check if name matches (tries both original and normalized)
-    const matches = (pattern) => {
-      return pattern.test(name) || pattern.test(normalizedName);
-    };
-
-    // Dairy
-    if (
-      matches(
-        /\b(milk|cheese|yogurt|butter|cream|egg|cottage|sour cream|whipping cream|half and half|creamer)\b/
-      )
-    ) {
-      return "Dairy";
-    }
-
-    // Produce (fruits and vegetables)
-    if (
-      matches(
-        /\b(apple|banana|orange|grape|strawberr|blueberr|raspberr|lemon|lime|mango|pineapple|watermelon|cantaloupe|peach|pear|plum|cherry|kiwi|avocado|tomato|potato|onion|garlic|carrot|celery|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|squash|corn|bean|pea|mushroom|cabbage|asparagus|artichoke|beet|radish|turnip|eggplant|ginger|cilantro|parsley|basil|mint|fruit|vegetable|veggie|salad|greens)\b/
-      )
-    ) {
-      return "Produce";
-    }
-
-    // Meat & Seafood
-    if (
-      matches(
-        /\b(chicken|beef|pork|steak|ground|turkey|lamb|bacon|sausage|ham|meat|fish|salmon|tuna|shrimp|crab|lobster|scallop|clam|mussel|oyster|seafood|tilapia|cod|halibut)\b/
-      )
-    ) {
-      return "Meat & Seafood";
-    }
-
-    // Bakery - this is where "bagels" should match "bagel"
-    if (
-      matches(
-        /\b(bread|bagel|muffin|croissant|donut|doughnut|roll|bun|cake|pie|pastry|cookie|brownie|cupcake|baguette|tortilla|pita|naan|wrap)\b/
-      )
-    ) {
-      return "Bakery";
-    }
-
-    // Frozen
-    if (
-      matches(
-        /\b(frozen|ice cream|popsicle|pizza|waffle|fries|nugget|burrito|dinner|meal)\b/
-      )
-    ) {
-      return "Frozen";
-    }
-
-    // Canned Goods
-    if (
-      matches(
-        /\b(canned|can of|soup|broth|stock|bean|tomato|corn|tuna|sardine|spam|chili)\b/
-      )
-    ) {
-      return "Canned Goods";
-    }
-
-    // Snacks
-    if (
-      matches(
-        /\b(chip|crisp|pretzel|popcorn|cracker|cookie|candy|chocolate|gummy|snack|nut|almond|cashew|peanut|walnut|pistachio|trail mix|granola bar|protein bar|jerky)\b/
-      )
-    ) {
-      return "Snacks";
-    }
-
-    // Beverages
-    if (
-      matches(
-        /\b(water|juice|soda|pop|cola|coffee|tea|beer|wine|alcohol|drink|beverage|smoothie|shake|lemonade|energy drink|sports drink|kombucha)\b/
-      )
-    ) {
-      return "Beverages";
-    }
-
-    // Condiments
-    if (
-      matches(
-        /\b(ketchup|mustard|mayo|mayonnaise|sauce|dressing|vinegar|oil|olive oil|soy sauce|hot sauce|salsa|relish|pickle|jam|jelly|honey|syrup|peanut butter|nutella|spread)\b/
-      )
-    ) {
-      return "Condiments";
-    }
-
-    // Grains & Pasta
-    if (
-      matches(
-        /\b(pasta|spaghetti|noodle|rice|quinoa|oat|oatmeal|cereal|flour|bread crumb|couscous|barley|grain|macaroni|penne|fettuccine|linguine|ramen)\b/
-      )
-    ) {
-      return "Grains & Pasta";
-    }
-
-    return "Other";
   };
 
   // Parse items from expense.items (comma-separated)

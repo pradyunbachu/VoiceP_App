@@ -16,8 +16,37 @@ from schemas import (
     BulkPantryDeleteRequest,
     AutoPopulatePantryRequest
 )
+from shelf_life import predict_expiration
 
 router = APIRouter()
+
+
+def _find_existing_pantry_item(user_id: str, item_name: str):
+    """Find an existing pantry item by name (case-insensitive) for the user."""
+    response = supabase.table("pantry_items").select("*")\
+        .eq("user_id", user_id)\
+        .ilike("name", item_name.strip())\
+        .limit(1)\
+        .execute()
+    return response.data[0] if response.data else None
+
+
+def _merge_pantry_item(existing, add_quantity: float, purchase_date: str = None):
+    """Merge a new quantity into an existing pantry item, updating stock status."""
+    new_qty = (existing.get("quantity") or 1) + (add_quantity or 1)
+    update_data = {
+        "quantity": new_qty,
+        "stock_status": "full",
+        "updated_at": datetime.now().isoformat(),
+    }
+    if purchase_date:
+        update_data["purchase_date"] = purchase_date
+
+    supabase.table("pantry_items").update(update_data)\
+        .eq("id", existing["id"]).execute()
+
+    return {**existing, **update_data}
+
 
 @router.get("/pantry")
 @limiter.limit("60/minute")
@@ -93,11 +122,29 @@ async def create_pantry_item(
     item: PantryItemCreate,
     current_user: dict = Depends(get_current_user_dependency)
 ):
-    """Create a new pantry item manually"""
+    """Create a new pantry item, or merge quantity if it already exists."""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
+    purchase = item.purchase_date or datetime.now().strftime("%Y-%m-%d")
+
+    # Check for existing item with same name — merge instead of duplicating
+    existing = _find_existing_pantry_item(current_user["id"], item.name)
+    if existing:
+        merged = _merge_pantry_item(existing, item.quantity or 1, purchase)
+        return {
+            "message": f"Updated quantity for {item.name}",
+            "merged": True,
+            **merged
+        }
+
     now = datetime.now().isoformat()
+
+    expiration_date = item.expiration_date
+    expiration_predicted = False
+    if not expiration_date:
+        expiration_date = predict_expiration(item.name, item.category, purchase)
+        expiration_predicted = True
 
     response = supabase.table("pantry_items").insert({
         "user_id": current_user["id"],
@@ -105,10 +152,11 @@ async def create_pantry_item(
         "quantity": item.quantity or 1,
         "unit": item.unit,
         "category": item.category or "Other",
-        "expiration_date": item.expiration_date,
-        "purchase_date": item.purchase_date or datetime.now().strftime("%Y-%m-%d"),
+        "expiration_date": expiration_date,
+        "purchase_date": purchase,
         "stock_status": item.stock_status or "full",
         "notes": item.notes,
+        "expiration_predicted": expiration_predicted,
         "created_at": now,
         "updated_at": now
     }).execute()
@@ -118,6 +166,7 @@ async def create_pantry_item(
 
     return {
         "message": "Pantry item created successfully",
+        "merged": False,
         **response.data[0]
     }
 
@@ -141,18 +190,39 @@ async def auto_populate_pantry_from_expense(
     now = datetime.now().isoformat()
     created_items = []
 
+    merged_count = 0
     for item_data in populate_request.items:
+        item_name = item_data.get("name", "Unknown Item")
+        item_category = item_data.get("category", "Other")
+        item_expiration = item_data.get("expiration_date")
+        item_purchase = expense.get("date")
+        item_qty = item_data.get("quantity", 1)
+
+        # Check for existing item — merge instead of duplicating
+        existing = _find_existing_pantry_item(current_user["id"], item_name)
+        if existing:
+            merged = _merge_pantry_item(existing, item_qty, item_purchase)
+            created_items.append(merged)
+            merged_count += 1
+            continue
+
+        exp_predicted = False
+        if not item_expiration:
+            item_expiration = predict_expiration(item_name, item_category, item_purchase)
+            exp_predicted = True
+
         response = supabase.table("pantry_items").insert({
             "user_id": current_user["id"],
-            "name": item_data.get("name", "Unknown Item"),
-            "quantity": item_data.get("quantity", 1),
+            "name": item_name,
+            "quantity": item_qty,
             "unit": item_data.get("unit"),
-            "category": item_data.get("category", "Other"),
-            "expiration_date": item_data.get("expiration_date"),
-            "purchase_date": expense.get("date"),
+            "category": item_category,
+            "expiration_date": item_expiration,
+            "purchase_date": item_purchase,
             "stock_status": "full",
             "notes": f"Auto-added from {expense.get('store', 'Unknown Store')}",
             "source_expense_id": populate_request.expense_id,
+            "expiration_predicted": exp_predicted,
             "created_at": now,
             "updated_at": now
         }).execute()
@@ -160,8 +230,15 @@ async def auto_populate_pantry_from_expense(
         if response.data:
             created_items.append(response.data[0])
 
+    new_count = len(created_items) - merged_count
+    parts = []
+    if new_count > 0:
+        parts.append(f"{new_count} new")
+    if merged_count > 0:
+        parts.append(f"{merged_count} updated")
+
     return {
-        "message": f"{len(created_items)} item(s) added to pantry",
+        "message": f"{' and '.join(parts)} item(s) added to pantry",
         "items": created_items
     }
 
@@ -193,12 +270,17 @@ async def update_pantry_item(
         update_data["category"] = item_update.category
     if item_update.expiration_date is not None:
         update_data["expiration_date"] = item_update.expiration_date if item_update.expiration_date else None
+        # Clear predicted flag when user manually sets an expiration date
+        if item_update.expiration_predicted is None:
+            update_data["expiration_predicted"] = False
     if item_update.purchase_date is not None:
         update_data["purchase_date"] = item_update.purchase_date if item_update.purchase_date else None
     if item_update.stock_status is not None:
         update_data["stock_status"] = item_update.stock_status
     if item_update.notes is not None:
         update_data["notes"] = item_update.notes
+    if item_update.expiration_predicted is not None:
+        update_data["expiration_predicted"] = item_update.expiration_predicted
 
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")

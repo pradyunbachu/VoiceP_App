@@ -83,6 +83,7 @@ class PantryItemCreate(BaseModel):
     purchase_date: Optional[str] = Field(default=None, max_length=30)
     stock_status: Optional[str] = Field(default="full", max_length=20)
     notes: Optional[str] = Field(default=None, max_length=500)
+    expiration_predicted: Optional[bool] = None
 
 class PantryItemUpdate(BaseModel):
     name: Optional[str] = Field(default=None, max_length=200)
@@ -93,6 +94,7 @@ class PantryItemUpdate(BaseModel):
     purchase_date: Optional[str] = Field(default=None, max_length=30)
     stock_status: Optional[str] = Field(default=None, max_length=20)
     notes: Optional[str] = Field(default=None, max_length=500)
+    expiration_predicted: Optional[bool] = None
 
 class BulkPantryDeleteRequest(BaseModel):
     item_ids: List[int]
@@ -163,6 +165,12 @@ class ChatResponse(BaseModel):
 
 class InsightsRequest(BaseModel):
     time_period: str = Field(default="last_30_days", max_length=30)
+
+class SpendingComparisonRequest(BaseModel):
+    current_month: Optional[int] = None
+    current_year: Optional[int] = None
+    compare_month: Optional[int] = None
+    compare_year: Optional[int] = None
 
 class InsightsResponse(BaseModel):
     period: dict

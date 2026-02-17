@@ -53,6 +53,9 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     const { error } = await supabase.auth.signOut();
+    // Always clear local state even if server-side revocation fails
+    setSession(null);
+    setUser(null);
     return { error };
   };
 

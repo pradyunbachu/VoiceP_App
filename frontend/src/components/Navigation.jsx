@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import "./Navigation.css";
 
@@ -25,7 +25,7 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const isFinanceView = ["dashboard", "expenses", "budgets", "insights"].includes(currentView);
+  const isFinanceView = ["dashboard", "expenses", "budgets", "insights", "comparisons"].includes(currentView);
   const isKitchenView = ["pantry", "shopping-list"].includes(currentView);
 
   const handleFinanceItemClick = (view) => {
@@ -107,6 +107,13 @@ const Navigation = ({ currentView, onViewChange, onLogout, user }) => {
               >
                 <Sparkles size={16} />
                 <span>Insights</span>
+              </button>
+              <button
+                className={`nav-dropdown-item ${currentView === "comparisons" ? "active" : ""}`}
+                onClick={() => handleFinanceItemClick("comparisons")}
+              >
+                <ArrowLeftRight size={16} />
+                <span>Compare</span>
               </button>
             </div>
           )}

@@ -36,7 +36,6 @@ const SpendingInsights = ({ showToast }) => {
 
   const handleRefresh = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.insights.all });
-    showToast?.('Refreshing insights...', 'info');
   };
 
   const handlePeriodChange = (e) => {

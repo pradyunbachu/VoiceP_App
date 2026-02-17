@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { CheckCircle, XCircle, AlertCircle, Info, X } from "lucide-react";
 import "./Toast.css";
 
-const Toast = ({ message, type = "info", onClose, duration = 5000 }) => {
+const Toast = ({ message, type = "info", onClose, duration = 5000, action = null }) => {
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
@@ -25,6 +25,17 @@ const Toast = ({ message, type = "info", onClose, duration = 5000 }) => {
     <div className={`toast toast-${type}`} role="alert">
       <Icon size={20} className="toast-icon" />
       <span className="toast-message">{message}</span>
+      {action && (
+        <button
+          className="toast-action"
+          onClick={() => {
+            action.onClick();
+            onClose();
+          }}
+        >
+          {action.label}
+        </button>
+      )}
       <button
         className="toast-close"
         onClick={onClose}

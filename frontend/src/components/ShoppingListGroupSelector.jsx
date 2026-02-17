@@ -42,7 +42,6 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
       await createMutation.mutateAsync(newGroupName.trim());
       setNewGroupName("");
       setShowCreateInput(false);
-      if (showToast) showToast("Shared list created", "success");
     } catch (error) {
       if (showToast) showToast(error.message, "error");
     }
@@ -57,7 +56,6 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
       if (result.group) {
         onSelectGroup(result.group.id);
       }
-      if (showToast) showToast("Joined shared list", "success");
     } catch (error) {
       if (showToast) showToast(error.message, "error");
     }
@@ -69,7 +67,6 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
       await inviteMutation.mutateAsync({ groupId, email: inviteEmail.trim() });
       setInviteEmail("");
       setShowInviteInput(null);
-      if (showToast) showToast("Invite sent", "success");
     } catch (error) {
       if (showToast) showToast(error.message, "error");
     }
@@ -82,7 +79,6 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
       if (selectedGroupId === groupId) {
         onSelectGroup(null);
       }
-      if (showToast) showToast("Shared list deleted", "success");
     } catch (error) {
       if (showToast) showToast(error.message, "error");
     }

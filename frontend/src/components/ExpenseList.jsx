@@ -1,6 +1,7 @@
-import { useState, useEffect } from "react";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download, ChevronLeft, ChevronRight } from "lucide-react";
-import { useExpenses, useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems } from "../hooks";
+import { useState, useEffect, useRef, useCallback } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download, Loader } from "lucide-react";
+import { useInfiniteExpenses, useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems, useUndoDelete } from "../hooks";
 import { exportExpensesCsv } from "../lib/csvExport";
 import { useAuth } from "../context/AuthContext";
 import { API_BASE_URL } from "../config/api";
@@ -26,44 +27,59 @@ const ExpenseList = ({ showToast }) => {
   const [categoryFilter, setCategoryFilter] = useState(null);
   const [pantryModalExpense, setPantryModalExpense] = useState(null);
   const [addedToPantry, setAddedToPantry] = useState(new Set());
-  const [page, setPage] = useState(1);
 
   // Debounce search input
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
-      setPage(1); // Reset to first page on search change
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Reset page when category or sort changes
-  useEffect(() => {
-    setPage(1);
-  }, [categoryFilter, sortBy]);
-
   const { sortBy: sortField, sortOrder } = SORT_MAP[sortBy] || SORT_MAP.recent;
 
-  // Fetch expenses with pagination and server-side filtering
-  const { data: expenseData, isLoading } = useExpenses({
-    page,
-    pageSize: 20,
+  // Fetch expenses with infinite query
+  const {
+    data,
+    isLoading,
+    fetchNextPage,
+    hasNextPage,
+    isFetchingNextPage,
+  } = useInfiniteExpenses({
     search: debouncedSearch || undefined,
     category: categoryFilter || undefined,
     sortBy: sortField,
     sortOrder,
   });
 
-  const expenses = expenseData?.expenses || [];
-  const totalCount = expenseData?.total_count ?? 0;
-  const totalPages = expenseData?.total_pages ?? 1;
-  const hasNext = expenseData?.has_next ?? false;
-  const hasPrev = expenseData?.has_prev ?? false;
+  const expenses = data?.pages?.flatMap((p) => p.expenses) ?? [];
+  const totalCount = data?.pages?.[0]?.total_count ?? 0;
+
+  // Virtualizer setup
+  const scrollContainerRef = useRef(null);
+  const virtualizer = useVirtualizer({
+    count: expenses.length,
+    getScrollElement: () => scrollContainerRef.current,
+    estimateSize: () => 160,
+    overscan: 5,
+    measureElement: (el) => el?.getBoundingClientRect().height ?? 160,
+  });
+
+  // Infinite scroll trigger
+  const virtualItems = virtualizer.getVirtualItems();
+  useEffect(() => {
+    if (virtualItems.length === 0) return;
+    const lastItem = virtualItems[virtualItems.length - 1];
+    if (lastItem.index >= expenses.length - 5 && hasNextPage && !isFetchingNextPage) {
+      fetchNextPage();
+    }
+  }, [virtualItems, expenses.length, hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   // React Query mutations
   const updateMutation = useUpdateExpense();
   const deleteMutation = useDeleteExpense();
   const bulkDeleteMutation = useBulkDeleteExpenses();
+  const { scheduleDelete } = useUndoDelete(showToast);
   // Fetch pantry items to check if expense items are already in pantry
   const { data: pantryItems = [] } = usePantryItems();
 
@@ -92,7 +108,6 @@ const ExpenseList = ({ showToast }) => {
     try {
       await updateMutation.mutateAsync({ id, data: editForm });
       setEditingId(null);
-      if (showToast) showToast("Expense updated successfully", "success");
     } catch (error) {
       console.error("Error updating expense:", error);
       if (showToast) showToast(`Failed to update expense: ${error.message || "Unknown error"}`, "error");
@@ -104,15 +119,22 @@ const ExpenseList = ({ showToast }) => {
     setEditForm({});
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this expense?")) return;
-    try {
-      await deleteMutation.mutateAsync(id);
-      if (showToast) showToast("Expense deleted successfully", "success");
-    } catch (error) {
-      console.error("Error deleting expense:", error);
-      if (showToast) showToast("Error deleting expense", "error");
-    }
+  const handleDelete = (id) => {
+    scheduleDelete({
+      id,
+      queryKeyPrefix: ["expenses"],
+      filterFn: (item) => item.id !== id,
+      dataKey: "expenses",
+      onDelete: async () => {
+        try {
+          await deleteMutation.mutateAsync(id);
+        } catch (error) {
+          console.error("Error deleting expense:", error);
+          if (showToast) showToast("Error deleting expense", "error");
+        }
+      },
+      message: "Expense deleted",
+    });
   };
 
   const handleCategoryClick = (category) => {
@@ -147,21 +169,32 @@ const ExpenseList = ({ showToast }) => {
     }
   };
 
-  const handleBulkDelete = async () => {
+  const handleBulkDelete = () => {
     if (selectedExpenses.size === 0) {
       if (showToast) showToast("Please select expenses to delete", "warning");
       return;
     }
-    if (!window.confirm(`Are you sure you want to delete ${selectedExpenses.size} expense(s)?`)) return;
-    try {
-      const result = await bulkDeleteMutation.mutateAsync(Array.from(selectedExpenses));
-      setSelectedExpenses(new Set());
-      setIsSelectMode(false);
-      if (showToast) showToast(`${result.deleted_count || selectedExpenses.size} expense(s) deleted successfully`, "success");
-    } catch (error) {
-      console.error("Error deleting expenses:", error);
-      if (showToast) showToast(`Failed to delete expenses: ${error.message || "Unknown error"}`, "error");
-    }
+    const idsToDelete = Array.from(selectedExpenses);
+    const idSet = new Set(idsToDelete);
+    const count = idsToDelete.length;
+    setSelectedExpenses(new Set());
+    setIsSelectMode(false);
+
+    scheduleDelete({
+      id: `bulk-expenses-${Date.now()}`,
+      queryKeyPrefix: ["expenses"],
+      filterFn: (item) => !idSet.has(item.id),
+      dataKey: "expenses",
+      onDelete: async () => {
+        try {
+          await bulkDeleteMutation.mutateAsync(idsToDelete);
+        } catch (error) {
+          console.error("Error deleting expenses:", error);
+          if (showToast) showToast(`Failed to delete expenses: ${error.message || "Unknown error"}`, "error");
+        }
+      },
+      message: `${count} expense(s) deleted`,
+    });
   };
 
   const handleBulkEdit = () => {
@@ -207,7 +240,7 @@ const ExpenseList = ({ showToast }) => {
   const allSelected = expenses.length > 0 && selectedExpenses.size === expenses.length;
   const someSelected = selectedExpenses.size > 0 && selectedExpenses.size < expenses.length;
 
-  if (isLoading && !expenseData) {
+  if (isLoading && !data) {
     return (
       <div className="expense-list">
         <h2>Recent Expenses</h2>
@@ -330,185 +363,195 @@ const ExpenseList = ({ showToast }) => {
           </button>
         </div>
       )}
-      <div className="expenses-container">
-        {expenses.map((expense) => (
-          <div key={expense.id} className={`expense-card ${selectedExpenses.has(expense.id) ? 'selected' : ''}`}>
-            {isSelectMode && (
-              <div className="expense-checkbox">
-                <button
-                  className="checkbox-button"
-                  onClick={() => toggleExpenseSelection(expense.id)}
-                >
-                  {selectedExpenses.has(expense.id) ? <CheckSquare size={20} /> : <Square size={20} />}
-                </button>
-              </div>
-            )}
-            {editingId === expense.id ? (
-              <div className="edit-form">
-                <div className="edit-form-group">
-                  <label>Store</label>
-                  <input
-                    type="text"
-                    placeholder="Store name"
-                    value={editForm.store}
-                    onChange={(e) => setEditForm({...editForm, store: e.target.value})}
-                  />
-                </div>
-                <div className="edit-form-group">
-                  <label>Items</label>
-                  <input
-                    type="text"
-                    placeholder="Items purchased"
-                    value={editForm.items}
-                    onChange={(e) => setEditForm({...editForm, items: e.target.value})}
-                  />
-                </div>
-                <div className="edit-form-group">
-                  <label>Category</label>
-                  <input
-                    type="text"
-                    placeholder="Category (e.g., Groceries, Electronics)"
-                    value={editForm.category}
-                    onChange={(e) => setEditForm({...editForm, category: e.target.value})}
-                  />
-                </div>
-                <div className="edit-form-group">
-                  <label>Amount</label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    value={editForm.amount}
-                    onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
-                  />
-                </div>
-                <div className="edit-form-group">
-                  <label>Date</label>
-                  <input
-                    type="date"
-                    value={editForm.date}
-                    onChange={(e) => setEditForm({...editForm, date: e.target.value})}
-                  />
-                </div>
-                <div className="edit-actions">
-                  <button
-                    className="save-button"
-                    onClick={() => handleSaveEdit(expense.id)}
-                    disabled={updateMutation.isPending}
-                  >
-                    <Check size={16} />
-                    <span>{updateMutation.isPending ? "Saving..." : "Save"}</span>
-                  </button>
-                  <button className="cancel-button" onClick={handleCancelEdit}>
-                    <X size={16} />
-                    <span>Cancel</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className="expense-header" style={{ paddingLeft: isSelectMode ? '3rem' : '0' }}>
-                  <div className="expense-store">
-                    <Store size={18} />
-                    <span>{expense.store}</span>
-                  </div>
-                  {!isSelectMode && (
-                    <div className="expense-actions">
+
+      {/* Virtualized scroll container */}
+      <div ref={scrollContainerRef} className="expenses-scroll-container">
+        <div
+          style={{
+            height: virtualizer.getTotalSize(),
+            width: '100%',
+            position: 'relative',
+          }}
+        >
+          {virtualizer.getVirtualItems().map((virtualRow) => {
+            const expense = expenses[virtualRow.index];
+            if (!expense) return null;
+            return (
+              <div
+                key={expense.id}
+                data-index={virtualRow.index}
+                ref={virtualizer.measureElement}
+                style={{
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  width: '100%',
+                  transform: `translateY(${virtualRow.start}px)`,
+                }}
+              >
+                <div className={`expense-card ${selectedExpenses.has(expense.id) ? 'selected' : ''}`}>
+                  {isSelectMode && (
+                    <div className="expense-checkbox">
                       <button
-                        className="edit-button"
-                        onClick={() => handleEdit(expense)}
-                        aria-label="Edit expense"
-                        title="Edit expense"
+                        className="checkbox-button"
+                        onClick={() => toggleExpenseSelection(expense.id)}
                       >
-                        <Edit2 size={16} />
-                      </button>
-                      <button
-                        className="delete-button"
-                        onClick={() => handleDelete(expense.id)}
-                        aria-label="Delete expense"
-                        title="Delete expense"
-                        disabled={deleteMutation.isPending}
-                      >
-                        <Trash2 size={16} />
+                        {selectedExpenses.has(expense.id) ? <CheckSquare size={20} /> : <Square size={20} />}
                       </button>
                     </div>
                   )}
-                </div>
-
-                <div className="expense-items">
-                  <p>{expense.items}</p>
-                </div>
-
-                {expense.category && (
-                  <div className="expense-categories">
-                    {expense.category.split(",").map((cat, index) => (
-                      <button
-                        key={index}
-                        className={`expense-category ${categoryFilter === cat.trim() ? 'active' : ''}`}
-                        onClick={() => handleCategoryClick(cat.trim())}
-                        title={`Filter by ${cat.trim()}`}
-                      >
-                        <Tag size={14} />
-                        <span>{cat.trim()}</span>
-                      </button>
-                    ))}
-                  </div>
-                )}
-
-                <div className="expense-footer">
-                  <div className="expense-footer-left">
-                    {expense.amount && (
-                      <div className="expense-amount">
-                        <DollarSign size={16} />
-                        <span>${parseFloat(expense.amount).toFixed(2)}</span>
+                  {editingId === expense.id ? (
+                    <div className="edit-form">
+                      <div className="edit-form-group">
+                        <label>Store</label>
+                        <input
+                          type="text"
+                          placeholder="Store name"
+                          value={editForm.store}
+                          onChange={(e) => setEditForm({...editForm, store: e.target.value})}
+                        />
                       </div>
-                    )}
-                    <div className="expense-date">
-                      <Calendar size={16} />
-                      <span>{expense.date}</span>
+                      <div className="edit-form-group">
+                        <label>Items</label>
+                        <input
+                          type="text"
+                          placeholder="Items purchased"
+                          value={editForm.items}
+                          onChange={(e) => setEditForm({...editForm, items: e.target.value})}
+                        />
+                      </div>
+                      <div className="edit-form-group">
+                        <label>Category</label>
+                        <input
+                          type="text"
+                          placeholder="Category (e.g., Groceries, Electronics)"
+                          value={editForm.category}
+                          onChange={(e) => setEditForm({...editForm, category: e.target.value})}
+                        />
+                      </div>
+                      <div className="edit-form-group">
+                        <label>Amount</label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          placeholder="0.00"
+                          value={editForm.amount}
+                          onChange={(e) => setEditForm({...editForm, amount: e.target.value})}
+                        />
+                      </div>
+                      <div className="edit-form-group">
+                        <label>Date</label>
+                        <input
+                          type="date"
+                          value={editForm.date}
+                          onChange={(e) => setEditForm({...editForm, date: e.target.value})}
+                        />
+                      </div>
+                      <div className="edit-actions">
+                        <button
+                          className="save-button"
+                          onClick={() => handleSaveEdit(expense.id)}
+                          disabled={updateMutation.isPending}
+                        >
+                          <Check size={16} />
+                          <span>{updateMutation.isPending ? "Saving..." : "Save"}</span>
+                        </button>
+                        <button className="cancel-button" onClick={handleCancelEdit}>
+                          <X size={16} />
+                          <span>Cancel</span>
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                  {!isExpenseInPantry(expense.id) && expense.category?.toLowerCase().includes('groceries') && (
-                    <button
-                      className="add-to-pantry-button"
-                      onClick={() => handleAddToPantry(expense)}
-                      title="Add to pantry"
-                    >
-                      <Plus size={14} />
-                      <span>Add to Pantry</span>
-                    </button>
+                  ) : (
+                    <>
+                      <div className="expense-header" style={{ paddingLeft: isSelectMode ? '3rem' : '0' }}>
+                        <div className="expense-store">
+                          <Store size={18} />
+                          <span>{expense.store}</span>
+                        </div>
+                        {!isSelectMode && (
+                          <div className="expense-actions">
+                            <button
+                              className="edit-button"
+                              onClick={() => handleEdit(expense)}
+                              aria-label="Edit expense"
+                              title="Edit expense"
+                            >
+                              <Edit2 size={16} />
+                            </button>
+                            <button
+                              className="delete-button"
+                              onClick={() => handleDelete(expense.id)}
+                              aria-label="Delete expense"
+                              title="Delete expense"
+                              disabled={deleteMutation.isPending}
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="expense-items">
+                        <p>{expense.items}</p>
+                      </div>
+
+                      {expense.category && (
+                        <div className="expense-categories">
+                          {expense.category.split(",").map((cat, index) => (
+                            <button
+                              key={index}
+                              className={`expense-category ${categoryFilter === cat.trim() ? 'active' : ''}`}
+                              onClick={() => handleCategoryClick(cat.trim())}
+                              title={`Filter by ${cat.trim()}`}
+                            >
+                              <Tag size={14} />
+                              <span>{cat.trim()}</span>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="expense-footer">
+                        <div className="expense-footer-left">
+                          {expense.amount && (
+                            <div className="expense-amount">
+                              <DollarSign size={16} />
+                              <span>${parseFloat(expense.amount).toFixed(2)}</span>
+                            </div>
+                          )}
+                          <div className="expense-date">
+                            <Calendar size={16} />
+                            <span>{expense.date}</span>
+                          </div>
+                        </div>
+                        {!isExpenseInPantry(expense.id) && expense.category?.toLowerCase().includes('groceries') && (
+                          <button
+                            className="add-to-pantry-button"
+                            onClick={() => handleAddToPantry(expense)}
+                            title="Add to pantry"
+                          >
+                            <Plus size={14} />
+                            <span>Add to Pantry</span>
+                          </button>
+                        )}
+                      </div>
+                    </>
                   )}
                 </div>
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Pagination Controls */}
-      {totalPages > 1 && (
-        <div className="pagination-controls">
-          <button
-            className="pagination-button"
-            onClick={() => setPage(p => Math.max(1, p - 1))}
-            disabled={!hasPrev}
-          >
-            <ChevronLeft size={18} />
-            <span>Prev</span>
-          </button>
-          <span className="pagination-info">
-            Page {page} of {totalPages}
-          </span>
-          <button
-            className="pagination-button"
-            onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-            disabled={!hasNext}
-          >
-            <span>Next</span>
-            <ChevronRight size={18} />
-          </button>
+              </div>
+            );
+          })}
         </div>
-      )}
+
+        {/* Loading spinner at bottom */}
+        {isFetchingNextPage && (
+          <div className="infinite-scroll-loading">
+            <Loader size={20} className="spinner" />
+            <span>Loading more...</span>
+          </div>
+        )}
+      </div>
 
       {/* Empty state for search/filter with no results */}
       {expenses.length === 0 && (debouncedSearch || categoryFilter) && (
@@ -524,7 +567,6 @@ const ExpenseList = ({ showToast }) => {
           onClose={() => setPantryModalExpense(null)}
           onSuccess={() => {
             setAddedToPantry(prev => new Set([...prev, pantryModalExpense.id]));
-            if (showToast) showToast("Added to pantry successfully", "success");
           }}
         />
       )}

@@ -62,7 +62,7 @@ export const useUpdatePantryItem = () => {
       await queryClient.cancelQueries({ queryKey: ['pantry'] });
 
       const allQueries = queryClient.getQueryCache().findAll({
-        predicate: (query) => query.queryKey[0] === 'pantry' && query.queryKey[1] === 'items',
+        predicate: (query) => query.queryKey[0] === 'pantry' && (query.queryKey[1] === 'items' || query.queryKey[1] === 'infinite'),
       });
 
       const previousData = new Map();
@@ -74,6 +74,15 @@ export const useUpdatePantryItem = () => {
           queryClient.setQueryData(query.queryKey,
             queryData.map((item) => item.id === id ? { ...item, ...data } : item)
           );
+        } else if (queryData?.pages) {
+          previousData.set(query.queryKey, queryData);
+          queryClient.setQueryData(query.queryKey, {
+            ...queryData,
+            pages: queryData.pages.map((page) => ({
+              ...page,
+              items: page.items.map((item) => item.id === id ? { ...item, ...data } : item),
+            })),
+          });
         }
       });
 
@@ -120,7 +129,7 @@ export const useUpdatePantryStatus = () => {
 
       // Get all pantry item queries and update them
       const allQueries = queryClient.getQueryCache().findAll({
-        predicate: (query) => query.queryKey[0] === 'pantry' && query.queryKey[1] === 'items',
+        predicate: (query) => query.queryKey[0] === 'pantry' && (query.queryKey[1] === 'items' || query.queryKey[1] === 'infinite'),
       });
 
       const previousData = new Map();
@@ -132,6 +141,15 @@ export const useUpdatePantryStatus = () => {
           queryClient.setQueryData(query.queryKey,
             data.map((item) => item.id === id ? { ...item, stock_status: status } : item)
           );
+        } else if (data?.pages) {
+          previousData.set(query.queryKey, data);
+          queryClient.setQueryData(query.queryKey, {
+            ...data,
+            pages: data.pages.map((page) => ({
+              ...page,
+              items: page.items.map((item) => item.id === id ? { ...item, stock_status: status } : item),
+            })),
+          });
         }
       });
 

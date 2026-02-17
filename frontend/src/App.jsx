@@ -10,6 +10,7 @@ import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
 import ShoppingList from "./components/ShoppingList";
 import SpendingInsights from "./components/SpendingInsights";
+import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
@@ -39,9 +40,9 @@ function AppContent() {
   const loading = analyticsLoading;
 
   // Toast notification helper
-  const showToast = useCallback((message, type = "info", duration = 5000) => {
+  const showToast = useCallback((message, type = "info", duration = 5000, action = null) => {
     const id = Date.now() + Math.random();
-    setToasts((prev) => [...prev, { id, message, type, duration }]);
+    setToasts((prev) => [...prev, { id, message, type, duration, action }]);
   }, []);
 
   const removeToast = useCallback((id) => {
@@ -207,6 +208,14 @@ function AppContent() {
         return (
           <div className="view-container" key="insights">
             <SpendingInsights
+              showToast={showToast}
+            />
+          </div>
+        );
+      case "comparisons":
+        return (
+          <div className="view-container" key="comparisons">
+            <SpendingComparisons
               showToast={showToast}
             />
           </div>

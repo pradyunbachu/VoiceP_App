@@ -1,11 +1,14 @@
 // Query hooks
 export { useExpenses } from './queries/useExpenses';
+export { useInfiniteExpenses } from './queries/useInfiniteExpenses';
 export { useAnalytics } from './queries/useAnalytics';
 export { useBudgets } from './queries/useBudgets';
 export { usePantryItems, usePantryStats } from './queries/usePantry';
+export { useInfinitePantryItems } from './queries/useInfinitePantryItems';
 export { useShoppingList, useShoppingPantryMatches } from './queries/useShoppingList';
 export { useShoppingListGroups } from './queries/useShoppingListGroups';
 export { useSpendingInsights } from './queries/useSpendingInsights';
+export { useSpendingComparison } from './queries/useSpendingComparison';
 export { useDailyRecs } from './queries/useDailyRecs';
 export { queryKeys } from './queries/queryKeys';
 
@@ -69,4 +72,13 @@ export { default as useAudioRecorder } from './useAudioRecorder';
 
 // Grocery suggestions
 export { useGrocerySuggestions } from './useGrocerySuggestions';
+
+// Undo delete
+export { useUndoDelete } from './useUndoDelete';
+
+// Container columns (grid virtualization)
+export { useContainerColumns } from './useContainerColumns';
+
+// Voice processor
+export { default as useVoiceProcessor } from './useVoiceProcessor';
 

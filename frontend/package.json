@@ -14,6 +14,7 @@
     "@supabase/supabase-js": "^2.90.1",
     "@tanstack/react-query": "^5.90.17",
     "@tanstack/react-query-devtools": "^5.91.2",
+    "@tanstack/react-virtual": "^3.13.18",
     "fuse.js": "^7.1.0",
     "heic2any": "^0.0.4",
     "lucide-react": "^0.294.0",

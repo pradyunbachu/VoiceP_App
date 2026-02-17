@@ -4,6 +4,7 @@ export const queryKeys = {
   expenses: {
     all: ['expenses'],
     list: (filters = {}) => [...queryKeys.expenses.all, 'list', filters],
+    infinite: (filters = {}) => [...queryKeys.expenses.all, 'infinite', filters],
   },
 
   // Analytics
@@ -23,6 +24,7 @@ export const queryKeys = {
   pantry: {
     all: ['pantry'],
     items: (filters) => [...queryKeys.pantry.all, 'items', filters],
+    infinite: (filters = {}) => [...queryKeys.pantry.all, 'infinite', filters],
     stats: () => [...queryKeys.pantry.all, 'stats'],
   },
 
@@ -39,6 +41,13 @@ export const queryKeys = {
   insights: {
     all: ['insights'],
     report: (timePeriod) => [...queryKeys.insights.all, 'report', timePeriod],
+  },
+
+  // Spending Comparisons
+  comparison: {
+    all: ['comparison'],
+    months: (currentMonth, currentYear, compareMonth, compareYear) =>
+      [...queryKeys.comparison.all, 'months', { currentMonth, currentYear, compareMonth, compareYear }],
   },
 
   // Daily Recs

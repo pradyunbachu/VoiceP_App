@@ -4,12 +4,13 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from datetime import datetime, timedelta
 from typing import Optional, Tuple
+import calendar
 import json
 
 from config import supabase, groq_client
 from auth import get_current_user_dependency
 from rate_limit import limiter
-from schemas import InsightsRequest, InsightsResponse
+from schemas import InsightsRequest, InsightsResponse, SpendingComparisonRequest
 from cache import api_cache, make_cache_key
 
 router = APIRouter()
@@ -349,4 +350,212 @@ async def get_insights(
         "generated_at": datetime.now().isoformat()
     }
     api_cache.set(cache_key, result, ttl=300)
+    return result
+
+
+# ============================================================================
+# SPENDING COMPARISON ENDPOINT
+# ============================================================================
+
+@router.post("/spending-comparison")
+@limiter.limit("10/minute")
+async def get_spending_comparison(
+    request: Request,
+    comparison_request: SpendingComparisonRequest,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """
+    Compare spending between two months with per-category and per-store breakdowns.
+    Defaults to current month vs previous month.
+    """
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    user_id = current_user["id"]
+    today = datetime.now()
+
+    # Default to current month vs previous month
+    current_month = comparison_request.current_month or today.month
+    current_year = comparison_request.current_year or today.year
+
+    if comparison_request.compare_month is not None and comparison_request.compare_year is not None:
+        compare_month = comparison_request.compare_month
+        compare_year = comparison_request.compare_year
+    else:
+        # Previous month
+        if current_month == 1:
+            compare_month = 12
+            compare_year = current_year - 1
+        else:
+            compare_month = current_month - 1
+            compare_year = current_year
+
+    cache_key = make_cache_key(
+        user_id, "spending_comparison",
+        current=f"{current_year}-{current_month}",
+        compare=f"{compare_year}-{compare_month}"
+    )
+    cached = api_cache.get(cache_key)
+    if cached is not None:
+        return cached
+
+    # Build date ranges for both months
+    current_days_in_month = calendar.monthrange(current_year, current_month)[1]
+    compare_days_in_month = calendar.monthrange(compare_year, compare_month)[1]
+
+    current_start = f"{current_year}-{current_month:02d}-01"
+    current_end = f"{current_year}-{current_month:02d}-{current_days_in_month:02d}"
+    compare_start = f"{compare_year}-{compare_month:02d}-01"
+    compare_end = f"{compare_year}-{compare_month:02d}-{compare_days_in_month:02d}"
+
+    # Fetch expenses for both months
+    current_response = supabase.table("expenses").select("*")\
+        .eq("user_id", user_id)\
+        .gte("date", current_start)\
+        .lte("date", current_end)\
+        .execute()
+    current_expenses = current_response.data or []
+
+    compare_response = supabase.table("expenses").select("*")\
+        .eq("user_id", user_id)\
+        .gte("date", compare_start)\
+        .lte("date", compare_end)\
+        .execute()
+    compare_expenses = compare_response.data or []
+
+    # Totals
+    current_total = sum(float(e.get("amount") or 0) for e in current_expenses)
+    compare_total = sum(float(e.get("amount") or 0) for e in compare_expenses)
+    total_diff = current_total - compare_total
+    total_pct_change = ((total_diff / compare_total) * 100) if compare_total > 0 else (100 if current_total > 0 else 0)
+
+    current_count = len(current_expenses)
+    compare_count = len(compare_expenses)
+    count_diff = current_count - compare_count
+    count_pct_change = ((count_diff / compare_count) * 100) if compare_count > 0 else (100 if current_count > 0 else 0)
+
+    # Category comparison using existing helpers
+    current_by_cat, compare_by_cat = calculate_category_trends(current_expenses, compare_expenses)
+    all_categories = set(list(current_by_cat.keys()) + list(compare_by_cat.keys()))
+
+    category_comparisons = []
+    for cat in all_categories:
+        cur_amt = current_by_cat.get(cat, 0)
+        prev_amt = compare_by_cat.get(cat, 0)
+        diff = cur_amt - prev_amt
+        pct = ((diff / prev_amt) * 100) if prev_amt > 0 else (100 if cur_amt > 0 else 0)
+        category_comparisons.append({
+            "category": cat,
+            "current_amount": round(cur_amt, 2),
+            "previous_amount": round(prev_amt, 2),
+            "difference": round(diff, 2),
+            "percent_change": round(pct, 1),
+        })
+
+    category_comparisons.sort(key=lambda x: x["current_amount"], reverse=True)
+
+    # Store comparison using existing helpers
+    current_by_store, compare_by_store = calculate_store_trends(current_expenses, compare_expenses)
+    all_stores = set(list(current_by_store.keys()) + list(compare_by_store.keys()))
+
+    store_comparisons = []
+    for store in all_stores:
+        cur_data = current_by_store.get(store, {"amount": 0, "visits": 0})
+        prev_data = compare_by_store.get(store, {"amount": 0, "visits": 0})
+        cur_amt = cur_data["amount"]
+        prev_amt = prev_data["amount"]
+        diff = cur_amt - prev_amt
+        pct = ((diff / prev_amt) * 100) if prev_amt > 0 else (100 if cur_amt > 0 else 0)
+        store_comparisons.append({
+            "store": store,
+            "current_amount": round(cur_amt, 2),
+            "previous_amount": round(prev_amt, 2),
+            "current_visits": cur_data["visits"],
+            "previous_visits": prev_data["visits"],
+            "difference": round(diff, 2),
+            "percent_change": round(pct, 1),
+        })
+
+    store_comparisons.sort(key=lambda x: x["current_amount"], reverse=True)
+
+    # Natural-language comparison sentences
+    sentences = []
+    for cat_comp in category_comparisons:
+        if cat_comp["previous_amount"] == 0 and cat_comp["current_amount"] == 0:
+            continue
+        pct = cat_comp["percent_change"]
+        cat_name = cat_comp["category"]
+        if cat_comp["previous_amount"] == 0:
+            sentences.append({
+                "text": f"New spending on {cat_name} this month: ${cat_comp['current_amount']:.2f}",
+                "type": "increase",
+                "percent_change": 100,
+            })
+        elif cat_comp["current_amount"] == 0:
+            sentences.append({
+                "text": f"No spending on {cat_name} this month (was ${cat_comp['previous_amount']:.2f})",
+                "type": "decrease",
+                "percent_change": -100,
+            })
+        elif pct > 0:
+            sentences.append({
+                "text": f"You spent {abs(pct):.0f}% more on {cat_name} this month",
+                "type": "increase",
+                "percent_change": round(pct, 1),
+            })
+        elif pct < 0:
+            sentences.append({
+                "text": f"You saved {abs(pct):.0f}% on {cat_name} this month",
+                "type": "decrease",
+                "percent_change": round(pct, 1),
+            })
+
+    # Sort sentences by magnitude of change
+    sentences.sort(key=lambda x: abs(x["percent_change"]), reverse=True)
+
+    # Biggest increase / decrease
+    increases = [c for c in category_comparisons if c["difference"] > 0]
+    decreases = [c for c in category_comparisons if c["difference"] < 0]
+    biggest_increase = max(increases, key=lambda x: x["difference"]) if increases else None
+    biggest_decrease = min(decreases, key=lambda x: x["difference"]) if decreases else None
+
+    MONTH_NAMES = [
+        "", "January", "February", "March", "April", "May", "June",
+        "July", "August", "September", "October", "November", "December"
+    ]
+
+    result = {
+        "current_period": {
+            "month": current_month,
+            "year": current_year,
+            "label": f"{MONTH_NAMES[current_month]} {current_year}",
+            "start_date": current_start,
+            "end_date": current_end,
+        },
+        "compare_period": {
+            "month": compare_month,
+            "year": compare_year,
+            "label": f"{MONTH_NAMES[compare_month]} {compare_year}",
+            "start_date": compare_start,
+            "end_date": compare_end,
+        },
+        "summary": {
+            "current_total": round(current_total, 2),
+            "compare_total": round(compare_total, 2),
+            "total_difference": round(total_diff, 2),
+            "total_percent_change": round(total_pct_change, 1),
+            "current_count": current_count,
+            "compare_count": compare_count,
+            "count_difference": count_diff,
+            "count_percent_change": round(count_pct_change, 1),
+        },
+        "category_comparisons": category_comparisons,
+        "store_comparisons": store_comparisons,
+        "sentences": sentences[:8],
+        "biggest_increase": biggest_increase,
+        "biggest_decrease": biggest_decrease,
+        "generated_at": datetime.now().isoformat(),
+    }
+
+    api_cache.set(cache_key, result, ttl=60)
     return result

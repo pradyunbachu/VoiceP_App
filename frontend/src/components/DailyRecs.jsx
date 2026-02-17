@@ -146,7 +146,7 @@ const DailyRecs = () => {
                     <span key={i} className="alert-chip expiring">
                       {item.name}
                       <span className="chip-detail">
-                        {item.days_left === 0 ? 'today' : item.days_left === 1 ? '1d' : `${item.days_left}d`}
+                        {item.expiration_predicted ? '~' : ''}{item.days_left === 0 ? 'today' : item.days_left === 1 ? '1d' : `${item.days_left}d`}
                       </span>
                     </span>
                   ))}

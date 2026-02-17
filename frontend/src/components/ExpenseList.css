@@ -158,6 +158,13 @@
   font-size: 0.95rem;
 }
 
+.expenses-scroll-container {
+  height: calc(100vh - 320px);
+  min-height: 300px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 .expenses-container {
   display: flex;
   flex-direction: column;
@@ -166,6 +173,7 @@
 
 .expense-card {
   padding: var(--space-5);
+  margin-bottom: var(--space-3);
   transition: all 0.15s ease;
   background: var(--bg-card);
   border-radius: var(--radius-lg);
@@ -548,45 +556,23 @@
   color: var(--accent-primary);
 }
 
-/* Pagination Controls */
-.pagination-controls {
+/* Infinite scroll loading indicator */
+.infinite-scroll-loading {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: var(--space-4);
-  margin-top: var(--space-6);
-  padding: var(--space-4) 0;
-}
-
-.pagination-button {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-4);
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: var(--radius-md);
-  color: var(--text-primary);
+  gap: var(--space-3);
+  padding: var(--space-6) 0;
+  color: var(--text-muted);
   font-size: 0.875rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.15s ease;
 }
 
-.pagination-button:hover:not(:disabled) {
-  background: var(--bg-card-hover);
-  border-color: var(--border-hover);
+.infinite-scroll-loading .spinner {
+  animation: spin 1s linear infinite;
 }
 
-.pagination-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-.pagination-info {
-  color: var(--text-tertiary);
-  font-size: 0.875rem;
-  font-weight: 500;
+@keyframes spin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {

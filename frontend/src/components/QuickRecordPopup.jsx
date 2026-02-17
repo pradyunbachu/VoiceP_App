@@ -218,13 +218,6 @@ const QuickRecordPopup = ({ showToast }) => {
   };
 
   const handleConfirm = () => {
-    if (showToast) {
-      const count = extractedExpense?.count || 1;
-      showToast(
-        `${count} expense${count > 1 ? "s" : ""} added successfully!`,
-        "success"
-      );
-    }
     handleDismiss();
   };
 
@@ -394,7 +387,6 @@ const QuickRecordPopup = ({ showToast }) => {
           onSuccess={() => {
             setShowPantryModal(false);
             setPendingPantryExpense(null);
-            if (showToast) showToast("Items added to pantry!", "success");
             handleDismiss();
           }}
         />

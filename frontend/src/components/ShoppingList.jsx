@@ -17,6 +17,7 @@ import {
   useClearShoppingList,
   usePantryItems,
   useGrocerySuggestions,
+  useUndoDelete,
 } from "../hooks";
 import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
 import LoadingSkeleton from "./LoadingSkeleton";
@@ -45,6 +46,7 @@ const ShoppingList = ({ showToast }) => {
   const createMutation = useCreateShoppingListItem();
   const deleteMutation = useDeleteShoppingListItem();
   const clearMutation = useClearShoppingList();
+  const { scheduleDelete } = useUndoDelete(showToast);
 
   // Grocery autocomplete suggestions
   const {
@@ -182,29 +184,44 @@ const ShoppingList = ({ showToast }) => {
     }
   };
 
-  const handleDelete = async (id) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-    } catch (error) {
-      console.error("Error deleting item:", error);
-      if (showToast) showToast("Error removing item", "error");
-    }
+  const handleDelete = (id) => {
+    scheduleDelete({
+      id,
+      queryKeyPrefix: ["shoppingList"],
+      filterFn: (item) => item.id !== id,
+      dataKey: null,
+      onDelete: async () => {
+        try {
+          await deleteMutation.mutateAsync(id);
+        } catch (error) {
+          console.error("Error deleting item:", error);
+          if (showToast) showToast("Error removing item", "error");
+        }
+      },
+      message: "Item removed",
+    });
   };
 
-  const handleClearAll = async () => {
+  const handleClearAll = () => {
     if (shoppingItems.length === 0) return;
 
-    if (!window.confirm("Clear all items from your shopping list?")) {
-      return;
-    }
+    const count = shoppingItems.length;
 
-    try {
-      await clearMutation.mutateAsync();
-      if (showToast) showToast("Shopping list cleared", "success");
-    } catch (error) {
-      console.error("Error clearing list:", error);
-      if (showToast) showToast("Error clearing list", "error");
-    }
+    scheduleDelete({
+      id: `clear-shopping-${Date.now()}`,
+      queryKeyPrefix: ["shoppingList"],
+      filterFn: () => false, // remove all items
+      dataKey: null,
+      onDelete: async () => {
+        try {
+          await clearMutation.mutateAsync();
+        } catch (error) {
+          console.error("Error clearing list:", error);
+          if (showToast) showToast("Error clearing list", "error");
+        }
+      },
+      message: `${count} item(s) cleared`,
+    });
   };
 
   const handleAddFromPantry = async (pantryItem) => {
