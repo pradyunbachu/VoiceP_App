@@ -22,7 +22,8 @@
       "Bash(npx vite build)",
       "Bash(git check-ignore:*)",
       "Bash(python -c:*)",
-      "Bash(done)"
+      "Bash(done)",
+      "Bash(git checkout:*)"
     ]
   }
 }

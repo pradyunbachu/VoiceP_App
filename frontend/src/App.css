@@ -3,8 +3,6 @@
   padding: 0;
   max-width: 100%;
   margin: 0;
-  background: var(--bg-primary);
-  transition: background-color 0.2s ease;
 }
 
 .app-main {

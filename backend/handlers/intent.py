@@ -9,14 +9,14 @@ from config import groq_client
 INTENT_DETECTION_PROMPT = """You are an intent classifier for a voice assistant that helps users track expenses and pantry items.
 
 Analyze the user message and classify it into ONE of these intents:
-- expense_input: User wants to log a new expense (e.g., "I spent $20 at Walmart", "bought groceries for $50")
+- expense_input: User wants to log a new expense (e.g., "I spent $20 at Walmart", "bought groceries for $50"). IMPORTANT: If the user mentions specific dollar amounts or prices alongside items (e.g., "I bought carrots for $34", "I bought milk for $5 and eggs for $3"), this is ALWAYS expense_input, NOT shopping_complete.
 - pantry_query: User asks about pantry/inventory (e.g., "How many eggs do I have?", "What's running low?", "What's expiring soon?")
 - pantry_add: User wants to add pre-existing items to their pantry WITHOUT logging an expense (e.g., "I have flour, oil, and salt", "Currently I have eggs and milk in my pantry", "I already have rice, beans, and chicken")
 - pantry_remove: User wants to remove items from their pantry (e.g., "Remove chicken from my pantry", "Delete eggs from my inventory", "Take out the milk")
 - expense_query: User asks about spending (e.g., "How much did I spend this month?", "What did I spend on groceries?")
 - suggestion: User wants shopping suggestions (e.g., "What should I get from the store?", "Give me a shopping list")
 - meal_suggestion: User wants meal ideas or recipes based on what they have (e.g., "What can I cook?", "Suggest a meal", "Dinner ideas", "What can I make with what I have?")
-- shopping_complete: User indicates they finished shopping and bought items (e.g., "I bought milk and eggs", "Just got back from the store, got bread and butter", "Picked up the groceries")
+- shopping_complete: User indicates they finished shopping and bought items WITHOUT mentioning prices (e.g., "I bought milk and eggs", "Just got back from the store, got bread and butter", "Picked up the groceries"). If the user mentions dollar amounts or prices, classify as expense_input instead.
 - shopping_list_add: User wants to add items to their shopping list (e.g., "Add milk to my shopping list", "Put eggs on the list", "I need to buy bread and butter")
 - budget_set: User wants to set or update a budget (e.g., "Set a $200 budget for groceries", "My food budget is $500 this month", "Budget $300 for eating out")
 - store_trip: User indicates they just returned from a specific store and wants items logged to pantry (e.g., "I just got back from Costco", "Just came from Trader Joe's", "Back from the grocery store")

@@ -289,45 +289,42 @@ const ReceiptScanner = ({ onClose, onSuccess }) => {
             onDragOver={handleDragOver}
             onDrop={handleDrop}
           >
-            {isDragging ? (
-              <div className="drop-zone-overlay">
-                <Upload size={48} />
-                <p>Drop your receipt here</p>
+            <div className="drop-zone-overlay">
+              <Upload size={48} />
+              <p>Drop your receipt here</p>
+            </div>
+            <div>
+              <p className="scanner-description">
+                Take a photo, upload, or drag & drop a receipt image to automatically extract expense data.
+              </p>
+
+              <div className="scanner-options">
+                <button className="scanner-option-button" onClick={startCamera}>
+                  <Camera size={32} />
+                  <span>Take Photo</span>
+                </button>
+
+                <button
+                  className="scanner-option-button"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload size={32} />
+                  <span>Upload Image</span>
+                </button>
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/*,.heic,.heif"
+                  onChange={handleFileUpload}
+                  style={{ display: "none" }}
+                />
               </div>
-            ) : (
-              <>
-                <p className="scanner-description">
-                  Take a photo, upload, or drag & drop a receipt image to automatically extract expense data.
-                </p>
 
-                <div className="scanner-options">
-                  <button className="scanner-option-button" onClick={startCamera}>
-                    <Camera size={32} />
-                    <span>Take Photo</span>
-                  </button>
-
-                  <button
-                    className="scanner-option-button"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    <Upload size={32} />
-                    <span>Upload Image</span>
-                  </button>
-
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*,.heic,.heif"
-                    onChange={handleFileUpload}
-                    style={{ display: "none" }}
-                  />
-                </div>
-
-                <p className="scanner-tips">
-                  Tip: You can drag & drop a receipt image directly onto this window. Supports JPG, PNG, HEIC, and more.
-                </p>
-              </>
-            )}
+              <p className="scanner-tips">
+                Tip: You can drag & drop a receipt image directly onto this window. Supports JPG, PNG, HEIC, and more.
+              </p>
+            </div>
           </div>
         )}
 

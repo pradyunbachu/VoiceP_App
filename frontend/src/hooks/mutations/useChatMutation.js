@@ -37,6 +37,10 @@ export const useChat = () => {
       if (data.intent === 'pantry_add') {
         queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
       }
+      // Invalidate budget cache when a budget is set via voice
+      if (data.intent === 'budget_set') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.budgets.all });
+      }
     },
   });
 };

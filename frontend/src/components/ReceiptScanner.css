@@ -58,6 +58,7 @@
 
 .receipt-scanner-content {
   padding: var(--space-6);
+  position: relative;
 }
 
 .scanner-description {
@@ -115,6 +116,11 @@
 }
 
 .drop-zone-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -123,6 +129,17 @@
   padding: var(--space-10);
   color: var(--accent-primary);
   min-height: 200px;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: var(--bg-input-focus);
+  border-radius: var(--radius-lg);
+  transition: opacity 0.15s ease;
+}
+
+.receipt-scanner-content.drag-active .drop-zone-overlay {
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .drop-zone-overlay p {

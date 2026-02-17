@@ -91,5 +91,20 @@
       "frozen vegetables", "frozen fruit", "frozen waffles",
       "frozen chicken nuggets", "frozen fries", "frozen burritos"
     ]
-  }
+  },
+  "non_pantry": [
+    "air freshener", "bleach", "windex", "lysol", "sponge", "sponges",
+    "dish soap", "laundry detergent", "fabric softener", "dryer sheets",
+    "cleaning spray", "disinfectant", "disinfecting wipes", "mop", "broom", "duster",
+    "all purpose cleaner", "glass cleaner", "floor cleaner", "scrub brush",
+    "paper towels", "trash bags", "garbage bags", "napkins", "paper plates",
+    "plastic cups", "styrofoam",
+    "shampoo", "conditioner", "body wash", "soap bar", "bar soap",
+    "toothpaste", "toothbrush", "deodorant", "lotion", "razor", "razors",
+    "floss", "mouthwash", "tampons", "pads", "toilet paper", "tissues",
+    "cotton balls", "cotton swabs", "q-tips", "sunscreen", "hand soap",
+    "dog food", "cat food", "cat litter", "pet treats", "pet food",
+    "diapers", "baby wipes", "formula",
+    "batteries", "light bulbs", "candles", "matches"
+  ]
 }

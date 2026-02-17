@@ -4,6 +4,7 @@ import { CATEGORIES } from "../constants/categories";
 import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from "../hooks";
 import { exportBudgetsCsv } from "../lib/csvExport";
 import LoadingSkeleton from "./LoadingSkeleton";
+import ConfirmDialog from "./ConfirmDialog";
 import "./BudgetManagement.css";
 
 const BudgetManagement = ({ showToast }) => {
@@ -108,11 +109,9 @@ const BudgetManagement = ({ showToast }) => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Are you sure you want to delete this budget?")) {
-      return;
-    }
+  const [confirmDeleteId, setConfirmDeleteId] = useState(null);
 
+  const handleDelete = async (id) => {
     try {
       await deleteMutation.mutateAsync(id);
     } catch (error) {
@@ -121,6 +120,7 @@ const BudgetManagement = ({ showToast }) => {
         showToast("Failed to delete budget", "error");
       }
     }
+    setConfirmDeleteId(null);
   };
 
   const startEdit = (budget) => {
@@ -447,7 +447,7 @@ const BudgetManagement = ({ showToast }) => {
                     <div className="budget-category">
                       <DollarSign size={20} />
                       <span>{budget.category?.trim() || 'Uncategorized'}</span>
-                      {budget.recurring && (
+                      {!!budget.recurring && (
                         <span className="recurring-badge" title={`Repeats every ${budget.repeat_interval} ${budget.repeat_unit}`}>
                           Recurring
                         </span>
@@ -459,7 +459,7 @@ const BudgetManagement = ({ showToast }) => {
                       </button>
                       <button
                         className="delete-budget-button"
-                        onClick={() => handleDelete(budget.id)}
+                        onClick={() => setConfirmDeleteId(budget.id)}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={16} />
@@ -508,6 +508,14 @@ const BudgetManagement = ({ showToast }) => {
             </div>
           ))}
         </div>
+      )}
+      {confirmDeleteId && (
+        <ConfirmDialog
+          message="Are you sure you want to delete this budget?"
+          confirmLabel="Delete"
+          onConfirm={() => handleDelete(confirmDeleteId)}
+          onCancel={() => setConfirmDeleteId(null)}
+        />
       )}
     </div>
   );

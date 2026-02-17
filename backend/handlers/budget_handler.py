@@ -51,10 +51,13 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
             "query_type": "budget_set"
         }
 
-    category = entities.get("category") or parse_budget_category(original_message)
+    raw_category = entities.get("category") or parse_budget_category(original_message)
+    category = raw_category.capitalize()
 
     month_str = entities.get("budget_month")
     now = datetime.now()
+    budget_month = now.month
+    budget_year = now.year
     if month_str:
         month_names = [
             "january", "february", "march", "april", "may", "june",
@@ -62,18 +65,14 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
         ]
         month_lower = month_str.lower()
         if month_lower in month_names:
-            month_num = month_names.index(month_lower) + 1
-            year = now.year if month_num >= now.month else now.year + 1
-            budget_month = f"{year}-{month_num:02d}-01"
+            budget_month = month_names.index(month_lower) + 1
+            budget_year = now.year if budget_month >= now.month else now.year + 1
         elif month_lower == "next month":
             if now.month == 12:
-                budget_month = f"{now.year + 1}-01-01"
+                budget_month = 1
+                budget_year = now.year + 1
             else:
-                budget_month = f"{now.year}-{now.month + 1:02d}-01"
-        else:
-            budget_month = f"{now.year}-{now.month:02d}-01"
-    else:
-        budget_month = f"{now.year}-{now.month:02d}-01"
+                budget_month = now.month + 1
 
     now_iso = now.isoformat()
 
@@ -84,6 +83,7 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
             .eq("user_id", user_id)
             .eq("category", category)
             .eq("month", budget_month)
+            .eq("year", budget_year)
             .execute()
         )
 
@@ -100,6 +100,7 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
                 "amount": amount,
                 "category": category,
                 "month": budget_month,
+                "year": budget_year,
                 "updated": True,
                 "old_amount": old_amount,
                 "query_type": "budget_set"
@@ -112,6 +113,7 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
                     "amount": amount,
                     "category": category,
                     "month": budget_month,
+                    "year": budget_year,
                     "created_at": now_iso,
                     "updated_at": now_iso
                 })
@@ -122,6 +124,7 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
                 "amount": amount,
                 "category": category,
                 "month": budget_month,
+                "year": budget_year,
                 "updated": False,
                 "query_type": "budget_set"
             }

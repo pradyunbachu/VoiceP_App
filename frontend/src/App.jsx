@@ -16,6 +16,7 @@ import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
 import DailyRecs from "./components/DailyRecs";
 import TutorialOverlay from "./components/TutorialOverlay";
+import ConfirmDialog from "./components/ConfirmDialog";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useAnalytics, useClearAllExpenses } from "./hooks";
@@ -84,15 +85,9 @@ function AppContent() {
     localStorage.setItem("voxal_tutorial_seen", "true");
   }, []);
 
-  const handleClearAll = async () => {
-    if (
-      !window.confirm(
-        "Are you sure you want to delete ALL expenses? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
+  const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
 
+  const handleClearAll = async () => {
     try {
       await clearAllMutation.mutateAsync();
       showToast("All expenses deleted successfully", "success");
@@ -177,7 +172,7 @@ function AppContent() {
             ) : analytics ? (
               <AnalyticsDashboard
                 analytics={analytics}
-                onClearAll={handleClearAll}
+                onClearAll={() => setShowClearAllConfirm(true)}
                 showToast={showToast}
               />
             ) : (
@@ -259,9 +254,20 @@ function AppContent() {
           <QuickRecordPopup showToast={showToast} />
         </>
       )}
-      <main className="app-main">{renderView()}</main>
+      <main className={isAuthenticated ? "app-main" : ""}>{renderView()}</main>
       {currentView === "record" && <DailyRecs />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
+      {showClearAllConfirm && (
+        <ConfirmDialog
+          message="Are you sure you want to delete ALL expenses? This action cannot be undone."
+          confirmLabel="Delete All"
+          onConfirm={() => {
+            handleClearAll();
+            setShowClearAllConfirm(false);
+          }}
+          onCancel={() => setShowClearAllConfirm(false)}
+        />
+      )}
     </div>
   );
 }

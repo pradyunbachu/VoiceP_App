@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Package, X, Check, Plus, Trash2 } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
-import { detectCategory } from "../lib/categoryDetection";
+import { detectCategory, isPantryItem } from "../lib/categoryDetection";
 import { useAddFromExpense } from "../hooks";
 import "./AddToPantryModal.css";
 
@@ -62,7 +62,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
         unit: parsed.unit,
         category: detectCategory(parsed.name),
         expiration_date: "",
-        selected: true,
+        selected: isPantryItem(parsed.name),
       };
     });
   };

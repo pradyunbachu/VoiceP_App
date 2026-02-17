@@ -109,3 +109,12 @@ export const detectCategory = (itemName) => {
 
   return "Other";
 };
+
+const NON_PANTRY_PATTERN =
+  /\b(air freshener|bleach|windex|lysol|sponge|dish soap|laundry detergent|fabric softener|dryer sheet|cleaning spray|disinfectant|disinfecting wipe|mop|broom|duster|all purpose cleaner|glass cleaner|floor cleaner|scrub brush|paper towel|trash bag|garbage bag|napkin|paper plate|plastic cup|styrofoam|shampoo|conditioner|body wash|soap bar|bar soap|toothpaste|toothbrush|deodorant|lotion|razor|floss|mouthwash|tampon|pad|toilet paper|tissue|cotton ball|cotton swab|q-tip|sunscreen|hand soap|dog food|cat food|cat litter|pet treat|pet food|diaper|baby wipe|formula|batteries|battery|light bulb|candle|matches)\b/;
+
+export const isPantryItem = (itemName) => {
+  const name = itemName.toLowerCase().trim();
+  const normalizedName = name.split(/\s+/).map(singularize).join(' ');
+  return !NON_PANTRY_PATTERN.test(name) && !NON_PANTRY_PATTERN.test(normalizedName);
+};

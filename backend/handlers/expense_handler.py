@@ -177,7 +177,7 @@ async def handle_store_trip(user_id: str, entities: dict, original_message: str)
         items_str = expense.get("items") or expense.get("description") or ""
 
         if items_str:
-            from handlers.pantry_handler import parse_pantry_items_from_message, categorize_pantry_item
+            from handlers.pantry_handler import parse_pantry_items_from_message, categorize_pantry_item, is_pantry_item
 
             item_names = re.split(r'[,;]|\band\b', items_str)
             item_names = [i.strip().strip(".") for i in item_names if i.strip() and len(i.strip()) > 1]
@@ -185,8 +185,12 @@ async def handle_store_trip(user_id: str, entities: dict, original_message: str)
             now = datetime.now().isoformat()
             today_str = today.strftime("%Y-%m-%d")
             added_items = []
+            skipped_items = []
 
             for item_name in item_names:
+                if not is_pantry_item(item_name):
+                    skipped_items.append(item_name.title())
+                    continue
                 category = categorize_pantry_item(item_name)
                 try:
                     supabase.table("pantry_items").insert({
@@ -212,6 +216,8 @@ async def handle_store_trip(user_id: str, entities: dict, original_message: str)
                 "expense_amount": expense.get("amount"),
                 "added_items": added_items,
                 "added_count": len(added_items),
+                "skipped_items": skipped_items,
+                "skipped_count": len(skipped_items),
                 "query_type": "store_trip"
             }
         else:

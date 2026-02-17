@@ -95,13 +95,17 @@ async def handle_shopping_complete(user_id: str, entities: dict, original_messag
 
     # Auto-add purchased items to pantry if the user asked for it
     pantry_added = []
+    pantry_skipped = []
     if auto_add_pantry:
-        from handlers.pantry_handler import categorize_pantry_item
+        from handlers.pantry_handler import categorize_pantry_item, is_pantry_item
 
         now = datetime.now().isoformat()
         today = datetime.now().strftime("%Y-%m-%d")
 
         for item_name in purchased_items:
+            if not is_pantry_item(item_name):
+                pantry_skipped.append(item_name.title())
+                continue
             category = categorize_pantry_item(item_name)
             try:
                 resp = supabase.table("pantry_items").insert({
@@ -128,6 +132,8 @@ async def handle_shopping_complete(user_id: str, entities: dict, original_messag
         "purchased_items": purchased_items,
         "pantry_added": pantry_added,
         "pantry_added_count": len(pantry_added),
+        "pantry_skipped": pantry_skipped,
+        "pantry_skipped_count": len(pantry_skipped),
         "query_type": "shopping_complete"
     }
 

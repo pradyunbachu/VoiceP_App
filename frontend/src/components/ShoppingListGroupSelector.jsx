@@ -16,6 +16,7 @@ import {
   useInviteToGroup,
   useDeleteShoppingListGroup,
 } from "../hooks";
+import ConfirmDialog from "./ConfirmDialog";
 import "./ShoppingListGroupSelector.css";
 
 const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }) => {
@@ -27,6 +28,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
   const [inviteEmail, setInviteEmail] = useState("");
   const [copiedCode, setCopiedCode] = useState(null);
   const [isOpen, setIsOpen] = useState(false);
+  const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState(null);
 
   const { data: groups = [] } = useShoppingListGroups();
   const createMutation = useCreateShoppingListGroup();
@@ -73,7 +75,6 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
   };
 
   const handleDelete = async (groupId) => {
-    if (!window.confirm("Delete this shared list? All items will be removed.")) return;
     try {
       await deleteMutation.mutateAsync(groupId);
       if (selectedGroupId === groupId) {
@@ -82,6 +83,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
     } catch (error) {
       if (showToast) showToast(error.message, "error");
     }
+    setConfirmDeleteGroupId(null);
   };
 
   const handleCopyCode = (code) => {
@@ -187,7 +189,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
                       )}
                       <button
                         className="group-action-btn delete-btn"
-                        onClick={() => handleDelete(group.id)}
+                        onClick={() => setConfirmDeleteGroupId(group.id)}
                         disabled={deleteMutation.isPending}
                       >
                         <Trash2 size={14} />
@@ -284,6 +286,14 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
             )}
           </div>
         </div>
+      )}
+      {confirmDeleteGroupId && (
+        <ConfirmDialog
+          message="Delete this shared list? All items will be removed."
+          confirmLabel="Delete"
+          onConfirm={() => handleDelete(confirmDeleteGroupId)}
+          onCancel={() => setConfirmDeleteGroupId(null)}
+        />
       )}
     </div>
   );

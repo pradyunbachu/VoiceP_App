@@ -109,10 +109,17 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
         added = data.get("added_items", [])
         count = data.get("added_count", 0)
         amount = data.get("expense_amount")
+        skipped = data.get("skipped_items", [])
+        skipped_count = data.get("skipped_count", 0)
+        parts = []
         if count > 0:
             amount_str = f" (${amount})" if amount else ""
-            return f"Welcome back from {store}{amount_str}! Added {count} item(s) to your pantry: {', '.join(added)}"
-        return f"Welcome back from {store}! No items to add to your pantry."
+            parts.append(f"Welcome back from {store}{amount_str}! Added {count} item(s) to your pantry: {', '.join(added)}")
+        else:
+            parts.append(f"Welcome back from {store}! No items to add to your pantry.")
+        if skipped_count > 0:
+            parts.append(f"Skipped {skipped_count} non-pantry item(s): {', '.join(skipped)}")
+        return "\n".join(parts)
 
     elif intent == "mark_subscription":
         message = data.get("message")
@@ -169,11 +176,19 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
         if message:
             return message
 
-        if added_count == 0:
+        skipped_items = data.get("skipped_items", [])
+        skipped_count = data.get("skipped_count", 0)
+
+        if added_count == 0 and skipped_count == 0:
             return "I couldn't identify any items to add to your pantry."
 
-        item_names = [item["name"] for item in added_items]
-        return f"Added {added_count} item(s) to your pantry: {', '.join(item_names)}"
+        parts = []
+        if added_count > 0:
+            item_names = [item["name"] for item in added_items]
+            parts.append(f"Added {added_count} item(s) to your pantry: {', '.join(item_names)}")
+        if skipped_count > 0:
+            parts.append(f"Skipped {skipped_count} non-pantry item(s): {', '.join(skipped_items)}")
+        return "\n".join(parts)
 
     elif intent == "meal_suggestion":
         meals = data.get("meals", [])
@@ -208,11 +223,16 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
         if message:
             return message
 
+        pantry_skipped = data.get("pantry_skipped", [])
+        pantry_skipped_count = data.get("pantry_skipped_count", 0)
+
         parts = []
         if removed_count > 0:
             parts.append(f"Removed {removed_count} item(s) from your shopping list: {', '.join(removed_items)}")
         if pantry_added_count > 0:
             parts.append(f"Added {pantry_added_count} item(s) to your pantry: {', '.join(pantry_added)}")
+        if pantry_skipped_count > 0:
+            parts.append(f"Skipped {pantry_skipped_count} non-pantry item(s): {', '.join(pantry_skipped)}")
 
         if not parts:
             return "I didn't find any matching items in your shopping list to remove."
@@ -235,13 +255,20 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
         if message:
             return message
         amount = data.get("amount", 0)
-        category = data.get("category", "groceries")
-        month = data.get("month", "")
+        category = data.get("category", "Groceries")
+        month_num = data.get("month")
+        year = data.get("year", "")
+        month_names = [
+            "January", "February", "March", "April", "May", "June",
+            "July", "August", "September", "October", "November", "December"
+        ]
+        month_label = month_names[month_num - 1] if month_num and 1 <= month_num <= 12 else ""
+        period = f"{month_label} {year}".strip()
         updated = data.get("updated", False)
         if updated:
             old = data.get("old_amount", 0)
-            return f"Updated your {category} budget from ${old:.2f} to ${amount:.2f} for {month}."
-        return f"Budget set! ${amount:.2f} for {category} ({month})."
+            return f"Updated your {category} budget from ${old:.2f} to ${amount:.2f} for {period}."
+        return f"Budget set! ${amount:.2f} for {category} for {period}."
 
     elif intent == "reminder_check":
         message = data.get("message")

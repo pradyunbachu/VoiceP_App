@@ -14,6 +14,16 @@ with open(_data_path, "r") as f:
     _grocery_data = json.load(f)
 
 _CATEGORY_ITEMS = _grocery_data["items"]
+_NON_PANTRY_KEYWORDS = _grocery_data.get("non_pantry", [])
+
+
+def is_pantry_item(name: str) -> bool:
+    """Return False if the item matches a non-pantry keyword (household, toiletry, pet, etc.)."""
+    name_lower = name.lower().strip()
+    for keyword in _NON_PANTRY_KEYWORDS:
+        if keyword in name_lower or name_lower in keyword:
+            return False
+    return True
 
 
 def categorize_pantry_item(name: str) -> str:
@@ -135,8 +145,12 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
     now = datetime.now().isoformat()
     today = datetime.now().strftime("%Y-%m-%d")
     added_items = []
+    skipped_items = []
 
     for item_name in pantry_items:
+        if not is_pantry_item(item_name):
+            skipped_items.append(item_name.title())
+            continue
         category = categorize_pantry_item(item_name)
         try:
             response = supabase.table("pantry_items").insert({
@@ -165,6 +179,8 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
     return {
         "added_items": added_items,
         "added_count": len(added_items),
+        "skipped_items": skipped_items,
+        "skipped_count": len(skipped_items),
         "query_type": "pantry_add"
     }
 
