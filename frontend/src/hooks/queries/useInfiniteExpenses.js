@@ -1,3 +1,10 @@
+/**
+ * useInfiniteExpenses.js
+ * React Query infinite-scroll hook for loading expenses page-by-page.
+ * Wraps useInfiniteQuery with search, category, and sort filters.
+ * Automatically resolves the next page param from the `has_next` flag
+ * and uses keepPreviousData for seamless filter transitions.
+ */
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

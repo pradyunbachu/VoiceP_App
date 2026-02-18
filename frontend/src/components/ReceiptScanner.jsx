@@ -1,3 +1,11 @@
+/*
+ * ReceiptScanner.jsx
+ * Modal component for scanning receipts via camera capture, file upload, or
+ * drag-and-drop. Supports HEIC/HEIF conversion and image compression before
+ * sending to the backend for vision-based expense extraction. Cycles through
+ * select -> camera -> preview -> processing -> result modes, and allows the
+ * user to retake, flip the camera, or scan another receipt.
+ */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Camera, Upload, X, Loader2, CheckCircle, AlertCircle, RotateCcw } from "lucide-react";
 import { useScanReceipt } from "../hooks";

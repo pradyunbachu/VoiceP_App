@@ -1,3 +1,18 @@
+"""Budget CRUD and status-check routes.
+
+  GET    /budgets          — List budgets (defaults to current month)
+  POST   /budgets          — Create a budget, optionally recurring (auto-creates
+                             future-month entries up to a year out)
+  PUT    /budgets/{id}     — Update amount, category, or recurrence settings
+  DELETE /budgets/{id}     — Delete a single budget
+  GET    /budgets/check    — Returns each budget with actual spending, remaining
+                             balance, percentage used, and an alert level
+                             (ok / caution / warning / exceeded)
+
+Budget-vs-actual matching is case-insensitive and handles comma-separated
+expense categories (e.g. "Home, Utilities" matches a "Home" budget).
+"""
+
 # ============================================================================
 # BUDGET ROUTES
 # ============================================================================

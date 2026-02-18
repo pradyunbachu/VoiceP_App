@@ -1,3 +1,9 @@
+/**
+ * PantryBulkActions.jsx - Toolbar for entering selection mode and bulk-deleting items.
+ *
+ * Toggles between a "Select Items" button and an action bar showing the
+ * selected count with Delete and Cancel buttons.
+ */
 import { CheckSquare, Trash2, X } from "lucide-react";
 import "./Pantry.css";
 

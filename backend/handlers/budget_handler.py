@@ -1,3 +1,18 @@
+"""Chat-driven budget and list-sharing handlers.
+
+  handle_budget_set  — Parses a dollar amount and category from the user's
+                       message ("Set a $200 budget for groceries"), resolves
+                       the target month, and creates or updates the budget row.
+  handle_share_list  — Shares the user's shopping list with another user by
+                       looking up the target by display_name or email, then
+                       creating a shared group (or reusing an existing one)
+                       with both users as members.
+
+Helpers:
+  parse_budget_amount   — Extracts $XX.XX or "XX dollars/bucks" from text.
+  parse_budget_category — Maps common food/spending keywords to a category.
+"""
+
 # ============================================================================
 # BUDGET & SHARING HANDLERS
 # ============================================================================

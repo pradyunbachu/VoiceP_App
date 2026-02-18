@@ -1,3 +1,10 @@
+/**
+ * useContainerColumns.js
+ * ResizeObserver-based hook that calculates how many grid columns fit in a container.
+ * Accepts minWidth and gap parameters, attaches a ResizeObserver via a callback ref,
+ * and returns { columnCount, containerRef }. Automatically recalculates on resize
+ * and cleans up the observer on unmount.
+ */
 import { useState, useCallback, useRef, useEffect } from 'react';
 
 /**

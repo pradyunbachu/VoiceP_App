@@ -1,3 +1,9 @@
+/**
+ * ToastContainer.jsx - Fixed-position container that stacks active toast notifications.
+ *
+ * Receives the array of toast objects and a removal callback from the parent.
+ * Renders nothing when there are no toasts to avoid an empty DOM node.
+ */
 import Toast from "./Toast";
 import "./Toast.css";
 
@@ -21,4 +27,3 @@ const ToastContainer = ({ toasts, removeToast }) => {
 };
 
 export default ToastContainer;
-

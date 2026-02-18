@@ -1,3 +1,20 @@
+"""Pure expense extraction and validation logic (no network calls).
+
+Used by both the LLM-based and regex-based extraction routes.
+
+  validate_expense       — Normalizes an expense dict from Groq output:
+      cleans the items field (strips prices, articles, action words), fixes
+      Apple product capitalization, validates category/amount/date, and
+      appends a "Recurring" tag to the category when applicable.
+
+  post_process_extraction — Light cleanup pass on a list of extracted expenses.
+
+  extract_expense_simple  — Full regex-based extraction pipeline (no LLM).
+      Handles multi-item "$X worth of Y" patterns, "item1 for $X and item2
+      for $Y" patterns, and single-item extraction with fuzzy amount parsing.
+      Falls back to keyword-based item detection and store-name inference.
+"""
+
 # ============================================================================
 # EXPENSE EXTRACTION FUNCTIONS
 # ============================================================================

@@ -1,3 +1,10 @@
+/**
+ * queryKeys.js
+ * Centralized query key factory for React Query cache management.
+ * Exports a single `queryKeys` object with namespaced key builders for every
+ * domain (expenses, analytics, budgets, pantry, shopping list, insights, etc.).
+ * Ensures consistent, hierarchical cache keys across all queries and mutations.
+ */
 // Query Keys Factory for consistent cache key management
 export const queryKeys = {
   // Expenses

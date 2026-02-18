@@ -1,3 +1,10 @@
+/*
+ * ManualInput.jsx
+ * Text-based alternative to voice recording for logging expenses or asking
+ * questions. Renders a multi-line textarea with placeholder examples and a
+ * submit button. The button is disabled while processing or when the input
+ * is empty, providing clear affordance to the user.
+ */
 const ManualInput = ({ manualInput, onInputChange, onSubmit, loading }) => {
   return (
     <div className="manual-input-section">

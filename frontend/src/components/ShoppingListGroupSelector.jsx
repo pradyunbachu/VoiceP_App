@@ -1,3 +1,11 @@
+/**
+ * ShoppingListGroupSelector.jsx - Dropdown for switching between personal
+ * and shared shopping lists.
+ *
+ * Allows users to select a shared list group, create new groups, join via
+ * invite code, invite members by email, copy invite codes, and delete groups.
+ * Only group owners see the invite and delete actions.
+ */
 import { useState } from "react";
 import {
   Users,
@@ -38,6 +46,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
 
   const selectedGroup = groups.find((g) => g.id === selectedGroupId);
 
+  // Create a new shared shopping list group
   const handleCreate = async () => {
     if (!newGroupName.trim()) return;
     try {
@@ -49,6 +58,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
     }
   };
 
+  // Join an existing group using an invite code
   const handleJoin = async () => {
     if (!inviteCode.trim()) return;
     try {
@@ -63,6 +73,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
     }
   };
 
+  // Send an email invitation for a specific group
   const handleInvite = async (groupId) => {
     if (!inviteEmail.trim()) return;
     try {
@@ -74,6 +85,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
     }
   };
 
+  // Delete a group (owner-only); resets selection if the deleted group was active
   const handleDelete = async (groupId) => {
     try {
       await deleteMutation.mutateAsync(groupId);
@@ -86,6 +98,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
     setConfirmDeleteGroupId(null);
   };
 
+  // Copy invite code to clipboard with brief visual feedback
   const handleCopyCode = (code) => {
     navigator.clipboard.writeText(code);
     setCopiedCode(code);
@@ -138,6 +151,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
                   </span>
                 </div>
               </button>
+              {/* Show management actions only for the currently selected group */}
               {selectedGroupId === group.id && (
                 <div className="group-actions">
                   <div className="invite-code-display">
@@ -155,6 +169,7 @@ const ShoppingListGroupSelector = ({ selectedGroupId, onSelectGroup, showToast }
                       )}
                     </button>
                   </div>
+                  {/* Owner-only actions: invite by email and delete */}
                   {group.user_role === "owner" && (
                     <>
                       <button

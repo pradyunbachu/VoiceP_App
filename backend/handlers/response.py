@@ -1,3 +1,15 @@
+"""Natural-language response generation for the chat assistant.
+
+Takes the resolved intent, sub-intent, handler data payload, and extracted
+entities, and produces a human-readable reply string. Each intent branch
+formats the data differently — e.g. pantry_query shows item counts and
+stock status, expense_query shows dollar totals with transaction counts,
+meal_suggestion lists numbered recipe ideas, etc.
+
+Called as the final step of the chat pipeline:
+  intent detection → domain handler → generate_response()
+"""
+
 # ============================================================================
 # RESPONSE GENERATION
 # ============================================================================

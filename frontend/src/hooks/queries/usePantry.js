@@ -1,3 +1,10 @@
+/**
+ * usePantry.js
+ * React Query hooks for pantry data.
+ * - usePantryItems: fetches a filterable, sortable list of pantry items
+ *   (supports optional pagination). Returns items array or paginated response.
+ * - usePantryStats: fetches aggregate pantry statistics from /api/pantry/stats.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

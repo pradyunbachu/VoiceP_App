@@ -1,3 +1,16 @@
+"""Recurring expense materialization service.
+
+Called on app startup (via lifespan) and on-demand via POST /recurring/process.
+
+process_due_recurring_expenses() scans all parent recurring expenses
+(is_recurring=1, parent_recurring_id IS NULL), calculates the next due date
+from the most recent occurrence, and creates new child expense rows for every
+period that has elapsed. Supports daily, weekly, monthly, and yearly intervals.
+
+Duplicate detection prevents double-creation if the function runs multiple
+times on the same day.
+"""
+
 # ============================================================================
 # RECURRING EXPENSE SERVICE
 # ============================================================================

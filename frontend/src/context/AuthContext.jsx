@@ -1,3 +1,9 @@
+/**
+ * AuthContext.jsx — Supabase authentication context provider.
+ * Manages user, session, and loading state. Subscribes to onAuthStateChange
+ * to keep auth state in sync. Exposes signUp, signIn, signOut, signInWithGoogle,
+ * and getToken helpers via the useAuth() hook.
+ */
 import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 

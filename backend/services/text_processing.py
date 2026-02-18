@@ -1,3 +1,22 @@
+"""Low-level text processing helpers for expense extraction.
+
+Shared by both the LLM-based and regex-based extraction pipelines.
+
+  parse_relative_date — Resolves "yesterday", "3 days ago", "last week", etc.
+                        to a YYYY-MM-DD string. Defaults to today.
+  parse_amount        — Converts an amount string to float, with special
+                        handling for 4-5 digit numbers (2350 → 23.50).
+  extract_store       — Extracts a store name from "at Walmart" / "from Target"
+                        patterns using capitalization heuristics.
+  clean_item_name     — Strips articles, action words, store names, and
+                        prepositions, then capitalizes (with Apple-product
+                        special cases like iPad, MacBook).
+  categorize_item     — Maps an item to a spending category via keyword lookup,
+                        falling back to store-name heuristics.
+  detect_recurring    — Scans for recurring keywords ("monthly", "every 2
+                        weeks", "subscription") and returns interval/unit.
+"""
+
 # ============================================================================
 # TEXT PROCESSING HELPER FUNCTIONS
 # ============================================================================

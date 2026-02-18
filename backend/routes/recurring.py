@@ -1,3 +1,13 @@
+"""Recurring expense management routes.
+
+  POST   /recurring/process  — Manually trigger creation of any overdue
+         recurring expenses for the authenticated user.
+  GET    /recurring          — List all recurring expense templates (parent
+         rows where is_recurring=1 and parent_recurring_id IS NULL).
+  DELETE /recurring/{id}     — Stop a recurring expense by flipping
+         is_recurring to 0 on the parent row.
+"""
+
 # ============================================================================
 # RECURRING EXPENSE ROUTES
 # ============================================================================

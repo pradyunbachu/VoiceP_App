@@ -1,3 +1,11 @@
+/*
+ * VoiceRecorder.jsx
+ * Main voice recording UI and central input hub for the app. Renders mic
+ * start/stop controls, a manual text entry toggle, and a receipt scanner
+ * launcher. Delegates audio processing to useAudioRecorder and useVoiceProcessor
+ * hooks, and displays the transcript, extracted expense result, chat response,
+ * and an optional "Add to Pantry" modal after successful input.
+ */
 import { useState } from "react";
 import { Mic, Square, Loader2, Type, Camera, HelpCircle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";

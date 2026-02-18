@@ -1,3 +1,18 @@
+"""Expense CRUD routes.
+
+Provides standard create / read / update / delete operations for expenses:
+  POST   /expenses       — Create a single expense (manual entry)
+  GET    /expenses       — List expenses with search, filters, sorting, and
+                           cursor-based pagination. Supports CSV export mode.
+  PUT    /expenses/{id}  — Update an expense (ownership-checked)
+  DELETE /expenses/{id}  — Delete a single expense + linked pantry items
+  DELETE /expenses/bulk  — Delete multiple expenses by ID list
+  DELETE /expenses       — Delete ALL expenses for the current user
+
+Every mutation invalidates the analytics and insights caches so dashboards
+stay in sync.
+"""
+
 # ============================================================================
 # EXPENSE CRUD ROUTES
 # ============================================================================

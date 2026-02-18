@@ -1,4 +1,8 @@
-// Shared categories for expenses and budgets
+/**
+ * categories.js — Expense and budget category definitions.
+ * Exports the CATEGORIES array used across the app for categorizing expenses
+ * and setting budget limits (e.g., Groceries, Dining, Entertainment, etc.).
+ */
 export const CATEGORIES = [
   "Electronics",
   "Groceries",

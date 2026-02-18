@@ -1,3 +1,10 @@
+/**
+ * AddToPantryModal.jsx - Modal for adding grocery expense items to the pantry.
+ *
+ * Parses the comma-separated items string from an expense, attempts to extract
+ * quantities/units (e.g. "2 lbs chicken", "eggs x12"), auto-detects categories,
+ * and lets the user review/edit before submitting selected items to the pantry.
+ */
 import { useState } from "react";
 import { Package, X, Check, Plus, Trash2 } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
@@ -6,17 +13,18 @@ import { useAddFromExpense } from "../hooks";
 import "./AddToPantryModal.css";
 
 const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
-  // Parse quantity and unit from item string like "6 chocolates", "2 lbs chicken", "12 eggs"
+  // Extract quantity, unit, and name from a single item string.
+  // Supports patterns like "6 chocolates", "2 lbs chicken", "eggs x12", "eggs (12)".
   const parseQuantityFromItem = (itemStr) => {
     const trimmed = itemStr.trim();
 
-    // Pattern 1: "6 chocolates", "12 eggs", "2 bags of chips"
+    // Pattern 1: leading number -- "6 chocolates", "2 lbs chicken"
     const leadingNumMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(.+)$/);
     if (leadingNumMatch) {
       const qty = parseFloat(leadingNumMatch[1]);
       let rest = leadingNumMatch[2].trim();
 
-      // Check for unit words: "2 lbs chicken", "3 bags of rice"
+      // Check for unit words between quantity and name
       const unitMatch = rest.match(
         /^(lbs?|oz|kg|g|gallons?|liters?|bags?|boxes?|cans?|bottles?|packs?|dozen)\s+(?:of\s+)?(.+)$/i
       );
@@ -26,7 +34,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
       return { quantity: qty, unit: "", name: rest };
     }
 
-    // Pattern 2: "chocolates x6", "eggs x12"
+    // Pattern 2: trailing "x" multiplier -- "chocolates x6"
     const trailingXMatch = trimmed.match(/^(.+?)\s*x\s*(\d+(?:\.\d+)?)$/i);
     if (trailingXMatch) {
       return {
@@ -36,7 +44,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
       };
     }
 
-    // Pattern 3: "chocolates (6)", "eggs (12)"
+    // Pattern 3: parenthesized quantity -- "chocolates (6)"
     const parenMatch = trimmed.match(/^(.+?)\s*\((\d+(?:\.\d+)?)\)$/);
     if (parenMatch) {
       return {
@@ -46,11 +54,12 @@ const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
       };
     }
 
-    // No quantity found
+    // No quantity found -- default to 1
     return { quantity: 1, unit: "", name: trimmed };
   };
 
-  // Parse items from expense.items (comma-separated)
+  // Split the comma-separated expense items string and parse each one.
+  // Non-pantry items (e.g. cleaning supplies) are pre-deselected via isPantryItem.
   const parseItems = (itemsString) => {
     if (!itemsString) return [];
     return itemsString.split(",").map((item, index) => {
@@ -103,6 +112,7 @@ const AddToPantryModal = ({ expense, onClose, onSuccess }) => {
     ]);
   };
 
+  // Submit only the selected, non-empty items to the pantry API
   const handleSubmit = async () => {
     const selectedItems = items.filter((i) => i.selected && i.name.trim());
 

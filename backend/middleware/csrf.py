@@ -1,8 +1,17 @@
+"""CSRF protection middleware using the double-submit cookie pattern.
+
+Implements defense-in-depth alongside JWT authentication. On state-changing
+requests (POST/PUT/DELETE/PATCH), the middleware requires the client to echo
+the CSRF cookie value back via the X-CSRF-Token header. Because the
+same-origin policy prevents third-party sites from reading the cookie, only
+legitimate first-party JavaScript can supply the matching header.
+
+All /api/ routes are exempt because they rely on Bearer-token auth, which is
+inherently not vulnerable to CSRF (tokens must be explicitly attached by JS).
+"""
+
 # ============================================================================
 # CSRF PROTECTION MIDDLEWARE
-# ============================================================================
-# Implements the double-submit cookie pattern for CSRF protection.
-# Works alongside JWT authentication for defense in depth.
 # ============================================================================
 
 import os

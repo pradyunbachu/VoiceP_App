@@ -1,3 +1,11 @@
+/*
+ * SpendingInsights.jsx
+ * AI-generated spending insights dashboard. Fetches summary stats, period-
+ * over-period comparisons, top categories/stores, and budget health for a
+ * selectable time window (7/30/90 days). Displays an AI panel with headline,
+ * spending personality, key findings, and prioritized savings recommendations.
+ * Supports manual refresh to re-generate insights.
+ */
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {

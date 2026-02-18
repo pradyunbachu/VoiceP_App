@@ -1,3 +1,9 @@
+/**
+ * queryClient.js — TanStack React Query client configuration.
+ * Sets default query options: 2-minute stale time, 10-minute garbage collection,
+ * 3 retries with exponential backoff, and refetch on window focus. Mutations
+ * retry once on failure.
+ */
 import { QueryClient } from '@tanstack/react-query';
 
 export const queryClient = new QueryClient({

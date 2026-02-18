@@ -1,3 +1,13 @@
+/**
+ * LoadingSkeleton.jsx - Animated placeholder skeletons shown while content loads.
+ *
+ * Supports three layout types:
+ *   - "card"  : Title + two text lines (used by pantry grid)
+ *   - "list"  : Title + one text line (used by shopping list)
+ *   - "chart" : Title + random-height bars (used by expense charts)
+ *
+ * The `count` prop controls how many skeleton instances to render.
+ */
 import "./LoadingSkeleton.css";
 
 const LoadingSkeleton = ({ type = "card", count = 1 }) => {
@@ -47,4 +57,3 @@ const LoadingSkeleton = ({ type = "card", count = 1 }) => {
 };
 
 export default LoadingSkeleton;
-

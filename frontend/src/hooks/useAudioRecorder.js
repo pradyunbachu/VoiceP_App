@@ -1,3 +1,10 @@
+/**
+ * useAudioRecorder.js
+ * Hook that manages microphone recording via the MediaRecorder API.
+ * Returns isRecording, recordingTime (seconds), startRecording(onStop),
+ * stopRecording, and formatTime. Handles MIME-type negotiation (webm/opus,
+ * mp4, ogg) and cleans up media streams on stop.
+ */
 import { useState, useRef, useEffect, useCallback } from "react";
 
 const useAudioRecorder = () => {

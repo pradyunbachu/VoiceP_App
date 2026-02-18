@@ -1,3 +1,12 @@
+/**
+ * QuickRecordPopup.jsx - Global voice recording overlay for Voxal.
+ *
+ * Activated by holding the spacebar (push-to-talk). Records audio via the
+ * MediaRecorder API, sends it to the backend for transcription, then routes
+ * the transcript through the chat/intent endpoint. Expense inputs are parsed
+ * and displayed; grocery expenses prompt the user to add items to the pantry.
+ * Non-expense intents (queries, suggestions) render inline chat responses.
+ */
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
@@ -22,6 +31,7 @@ const QuickRecordPopup = ({ showToast }) => {
   const audioChunksRef = useRef([]);
   const streamRef = useRef(null);
   const timerRef = useRef(null);
+  // Tracks whether the spacebar is currently held to prevent repeat triggers
   const isSpaceHeldRef = useRef(false);
 
   // React Query mutations
@@ -29,10 +39,10 @@ const QuickRecordPopup = ({ showToast }) => {
   const createExpenseSimpleMutation = useCreateExpenseSimple();
   const chatMutation = useChat();
 
-  // Combined processing state
+  // Unified processing flag across all async stages
   const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
-  // Recording timer
+  // Increment a visible recording timer every second while recording
   useEffect(() => {
     if (isRecording) {
       setRecordingTime(0);
@@ -56,6 +66,8 @@ const QuickRecordPopup = ({ showToast }) => {
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  // After an expense is created, check if it's a grocery category
+  // and offer to add items to the pantry.
   const checkForPantryItems = (expenseData) => {
     let expenses = [];
     if (expenseData.expenses) {
@@ -74,6 +86,7 @@ const QuickRecordPopup = ({ showToast }) => {
     }
   };
 
+  // Request microphone access and start recording audio chunks
   const startRecording = useCallback(async () => {
     if (isRecording || isProcessing) return;
 
@@ -85,6 +98,7 @@ const QuickRecordPopup = ({ showToast }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
+      // Pick the best supported audio MIME type for this browser
       let mimeType = "audio/webm";
       if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
@@ -102,10 +116,12 @@ const QuickRecordPopup = ({ showToast }) => {
         }
       };
 
+      // When recording stops, assemble the audio blob and process it
       mediaRecorder.onstop = async () => {
         const blobType = mediaRecorder.mimeType || "audio/webm";
         const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
         await processAudio(audioBlob, blobType);
+        // Release the microphone
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
@@ -132,6 +148,11 @@ const QuickRecordPopup = ({ showToast }) => {
     }
   }, [isRecording]);
 
+  // Three-step audio processing pipeline:
+  //   1. Transcribe the audio blob via the /api/transcribe endpoint
+  //   2. Send the transcript to the chat endpoint for intent detection
+  //   3. Route based on intent -- expense inputs go to expense creation,
+  //      everything else renders as a chat response
   const processAudio = async (audioBlob, mimeType = "audio/webm") => {
     setIsTranscribing(true);
     setChatResponse(null);
@@ -174,12 +195,12 @@ const QuickRecordPopup = ({ showToast }) => {
 
       // Step 3: Route based on intent
       if (chatResult.intent === "expense_input" && chatResult.data?.route_to_expense) {
-        // Process as expense input
+        // Process as expense input -- try structured extraction first,
+        // fall back to simple extraction on failure
         try {
           const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
           handleExpenseData(expenseData);
         } catch (extractError) {
-          // Try simple extraction fallback
           const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptData.transcript);
           handleExpenseData(expenseData);
         }
@@ -195,6 +216,7 @@ const QuickRecordPopup = ({ showToast }) => {
     }
   };
 
+  // Normalize expense response into a consistent shape and check for pantry items
   const handleExpenseData = (expenseData) => {
     if (expenseData.expenses) {
       setExtractedExpense(expenseData);
@@ -221,10 +243,10 @@ const QuickRecordPopup = ({ showToast }) => {
     handleDismiss();
   };
 
-  // Global spacebar listener
+  // Global spacebar push-to-talk: keydown starts recording, keyup stops it.
+  // Skips activation when the user is focused on a text input or textarea.
   useEffect(() => {
     const handleKeyDown = (e) => {
-      // Don't trigger if user is typing in an input/textarea
       if (
         e.target.tagName === "INPUT" ||
         e.target.tagName === "TEXTAREA" ||
@@ -298,7 +320,7 @@ const QuickRecordPopup = ({ showToast }) => {
             </div>
           )}
 
-          {/* Result State */}
+          {/* Result State -- extracted expense details */}
           {extractedExpense && !isProcessing && (
             <div className="quick-record-result">
               <h3>Expense Added</h3>
@@ -332,6 +354,7 @@ const QuickRecordPopup = ({ showToast }) => {
                   <Check size={18} />
                   <span>Done</span>
                 </button>
+                {/* Show "Add to Pantry" only for grocery expenses */}
                 {pendingPantryExpense && (
                   <button
                     className="pantry-btn"
@@ -348,7 +371,7 @@ const QuickRecordPopup = ({ showToast }) => {
             </div>
           )}
 
-          {/* Chat Response State */}
+          {/* Chat Response State -- non-expense intents (queries, suggestions) */}
           {chatResponse && !isProcessing && !extractedExpense && (
             <div className="quick-record-result quick-record-chat">
               <h3>
@@ -376,7 +399,7 @@ const QuickRecordPopup = ({ showToast }) => {
         </div>
       </div>
 
-      {/* Pantry Modal */}
+      {/* Pantry Modal -- shown after a grocery expense to add items to pantry */}
       {showPantryModal && pendingPantryExpense && (
         <AddToPantryModal
           expense={pendingPantryExpense}

@@ -1,3 +1,10 @@
+/**
+ * useExpenseMutations.js
+ * React Query mutations for the full expense lifecycle.
+ * Exports useCreateExpense (AI extraction), useCreateExpenseSimple (fallback),
+ * useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, and useClearAllExpenses.
+ * All mutations invalidate both expenses and analytics caches on settle/success.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

@@ -1,3 +1,14 @@
+"""Configuration and external service client initialization.
+
+Loads environment variables and initializes clients for:
+  - Supabase (database + auth + JWKS key fetching)
+  - Groq    (LLM for expense extraction, chat, insights)
+  - Deepgram (speech-to-text for voice transcription)
+
+Each client gracefully degrades with a warning if its API key is missing,
+allowing partial functionality during local development.
+"""
+
 # ============================================================================
 # CONFIGURATION & CLIENT INITIALIZATION
 # ============================================================================
@@ -16,8 +27,8 @@ load_dotenv()
 # SUPABASE CONFIGURATION
 # ============================================================================
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")           # anon/public key for client SDK
+SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")  # used for HS256 JWT verification
 
 # Initialize Supabase client
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -31,10 +42,16 @@ else:
 # ============================================================================
 # JWKS CACHE FOR JWT VALIDATION
 # ============================================================================
+# In-memory cache: key ID (kid) -> public key object.
+# Populated lazily on first ES256 token validation and reused thereafter.
 jwks_cache = {}
 
 def get_jwks_key(kid: str):
-    """Fetch and cache JWKS keys from Supabase using httpx"""
+    """Fetch the public key for a given key ID from Supabase's JWKS endpoint.
+
+    Keys are cached in jwks_cache so the JWKS endpoint is only hit once
+    per key ID for the lifetime of the process.
+    """
     global jwks_cache
     if kid in jwks_cache:
         return jwks_cache[kid]
@@ -42,12 +59,14 @@ def get_jwks_key(kid: str):
     if not SUPABASE_URL:
         return None
 
+    # Supabase exposes a standard JWKS endpoint for ES256 public keys
     jwks_url = f"{SUPABASE_URL}/auth/v1/.well-known/jwks.json"
     try:
         response = httpx.get(jwks_url)
         response.raise_for_status()
         jwks_data = response.json()
 
+        # Cache all keys from the response (there may be multiple/rotated keys)
         for key_data in jwks_data.get("keys", []):
             key_id = key_data.get("kid")
             if key_id:

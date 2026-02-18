@@ -1,3 +1,17 @@
+"""Chat-driven expense handlers.
+
+These are invoked by the chat route when the intent is expense-related:
+
+  handle_expense_query      — Queries expenses by time period, category, or
+                              store. Also handles the spending_comparison
+                              sub-intent (current vs. previous month).
+  handle_store_trip         — When the user says "I just got back from Costco",
+                              finds the most recent expense for that store and
+                              auto-adds its line items to the pantry.
+  handle_mark_subscription  — Marks the user's most recent expense as a
+                              recurring subscription (is_recurring = True).
+"""
+
 # ============================================================================
 # EXPENSE HANDLERS
 # ============================================================================

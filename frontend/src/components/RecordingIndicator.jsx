@@ -1,3 +1,9 @@
+/*
+ * RecordingIndicator.jsx
+ * Visual feedback component displayed while the microphone is actively
+ * recording. Shows an elapsed-time counter, animated pulsing dots, and
+ * a "Recording... Speak now" prompt to guide the user.
+ */
 const RecordingIndicator = ({ recordingTime, formatTime }) => {
   return (
     <div className="recording-indicator">

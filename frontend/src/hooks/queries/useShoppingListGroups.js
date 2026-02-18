@@ -1,3 +1,9 @@
+/**
+ * useShoppingListGroups.js
+ * React Query hook that fetches all shopping list groups the user belongs to.
+ * Returns an array of group objects from /api/shopping-list/groups.
+ * Uses a 30 s stale time and refetches on mount.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

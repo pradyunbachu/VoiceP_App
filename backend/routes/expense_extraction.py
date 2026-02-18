@@ -1,3 +1,18 @@
+"""Expense extraction routes.
+
+POST /extract-expense        — Primary endpoint. Sends the voice transcript to
+     Groq (Llama 3.3 70B) with a detailed system prompt that covers multi-item
+     expenses, recurring detection, date parsing, and item-name cleanup.
+     On Groq failure it retries with a simpler prompt, then falls back to
+     regex-based extraction (extract_expense_simple).
+
+POST /extract-expense-simple — Regex-only extraction (no LLM call). Useful
+     when the Groq API is unavailable or for very simple transcripts.
+
+Both endpoints validate extracted data, persist to Supabase, and invalidate
+the analytics/insights cache so dashboards reflect the new expense immediately.
+"""
+
 # ============================================================================
 # EXPENSE EXTRACTION ROUTES - LLM-based expense extraction from transcripts
 # ============================================================================

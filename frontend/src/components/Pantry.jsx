@@ -1,3 +1,10 @@
+/**
+ * Pantry.jsx - Main pantry management component for Voxal.
+ *
+ * Provides two view modes (shelf with drag-and-drop, list with infinite scroll),
+ * CRUD operations for pantry items, bulk actions, filtering/sorting, CSV export,
+ * and an auto-recategorize feature that deduplicates items and backfills dates.
+ */
 import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
@@ -75,7 +82,7 @@ const Pantry = ({ showToast }) => {
   const [selectedItems, setSelectedItems] = useState(new Set());
   const [isSelectMode, setIsSelectMode] = useState(false);
 
-  // Debounce search
+  // Debounce search input by 300ms to avoid excessive API calls
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(searchQuery);
@@ -83,7 +90,8 @@ const Pantry = ({ showToast }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // Shelf view: fetch all items (no pagination) for drag-and-drop
+  // Shelf view fetches all items at once (no pagination) because
+  // dnd-kit requires all draggable items to be in the DOM simultaneously.
   const { data: shelfItems = [], isLoading: shelfLoading } = usePantryItems({
     category: categoryFilter || undefined,
     stock_status: statusFilter || undefined,
@@ -92,7 +100,8 @@ const Pantry = ({ showToast }) => {
     sort_order: sortOrder,
   });
 
-  // List view: infinite scroll
+  // List view uses cursor-based infinite scrolling for better performance
+  // with large pantries -- pages are fetched as the user scrolls down.
   const {
     data: listInfiniteData,
     isLoading: listLoading,
@@ -107,8 +116,11 @@ const Pantry = ({ showToast }) => {
     sort_order: sortOrder,
   });
 
+  // Flatten all loaded infinite-scroll pages into a single array
   const listItems = listInfiniteData?.pages?.flatMap((p) => p.items) ?? [];
 
+  // Unify data/loading behind the active view mode so the rest of the
+  // component can reference `items` and `loading` without branching.
   const items = viewMode === 'shelf' ? shelfItems : listItems;
   const loading = viewMode === 'shelf' ? shelfLoading : listLoading;
 
@@ -123,20 +135,23 @@ const Pantry = ({ showToast }) => {
   const backfillDatesMutation = useBackfillDates();
   const { scheduleDelete } = useUndoDelete(showToast);
 
-  // For shelf view, use items directly (server handles search now)
+  // Server-side filtering has already been applied via query params,
+  // so no additional client-side filtering is needed.
   const filteredItems = items;
 
-  // Grid virtualization for list view
+  // Dynamically compute how many columns fit in the container
+  // (280px min card width, 16px gap) for responsive grid virtualization.
   const { columnCount, containerRef: gridContainerRef } = useContainerColumns(280, 16);
   const listScrollRef = useRef(null);
 
-  // Combine refs for list scroll container
+  // Merge the virtualizer scroll ref and the column-measuring ref
+  // so both libraries can observe the same scroll container.
   const setListScrollRef = useCallback((node) => {
     listScrollRef.current = node;
     gridContainerRef(node);
   }, [gridContainerRef]);
 
-  // Chunk items into rows for virtualization
+  // Chunk flat item list into rows of `columnCount` for grid virtualization
   const rows = useMemo(() => {
     const result = [];
     for (let i = 0; i < listItems.length; i += columnCount) {
@@ -153,7 +168,8 @@ const Pantry = ({ showToast }) => {
     measureElement: (el) => el?.getBoundingClientRect().height ?? 280,
   });
 
-  // Infinite scroll trigger for list view
+  // Trigger the next page fetch when the user scrolls near the bottom.
+  // Fires when the last visible virtual row is within 2 rows of the end.
   const listVirtualItems = listVirtualizer.getVirtualItems();
   useEffect(() => {
     if (viewMode !== 'list' || listVirtualItems.length === 0) return;
@@ -163,7 +179,9 @@ const Pantry = ({ showToast }) => {
     }
   }, [viewMode, listVirtualItems, rows.length, listHasNextPage, listIsFetchingNextPage, listFetchNextPage]);
 
-  // Group items by category for shelf view - show ALL categories
+  // Group items by category for the shelf view. We initialize every
+  // known category (even empty ones) so empty shelves render as
+  // valid drag-and-drop targets.
   const itemsByCategory = useMemo(() => {
     const grouped = {};
     PANTRY_CATEGORIES.forEach(cat => {
@@ -174,14 +192,15 @@ const Pantry = ({ showToast }) => {
       if (grouped[cat]) {
         grouped[cat].push(item);
       } else {
+        // Fall back to "Other" for unrecognized categories
         grouped["Other"].push(item);
       }
     });
-    // Return ALL categories (including empty ones)
     return Object.entries(grouped);
   }, [filteredItems]);
 
-  // Drag and drop sensors
+  // Configure dnd-kit sensors: pointer requires 5px movement to
+  // distinguish drags from clicks; keyboard sensor for accessibility.
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
@@ -191,7 +210,8 @@ const Pantry = ({ showToast }) => {
     useSensor(KeyboardSensor)
   );
 
-  // Handle drag end - update category when dropped on different shelf
+  // When a shelf item is dropped on a different category shelf,
+  // persist the category change via an optimistic mutation.
   const handleDragEnd = (event) => {
     const { active, over } = event;
 
@@ -219,7 +239,7 @@ const Pantry = ({ showToast }) => {
     );
   };
 
-  // CRUD handlers
+  // Create a new pantry item from the add-item form and reset form fields
   const handleCreate = async (e) => {
     e.preventDefault();
     try {
@@ -241,6 +261,7 @@ const Pantry = ({ showToast }) => {
     }
   };
 
+  // Persist edits to an existing pantry item
   const handleUpdate = async (id) => {
     try {
       await updateMutation.mutateAsync({ id, data: editForm });
@@ -252,6 +273,8 @@ const Pantry = ({ showToast }) => {
     }
   };
 
+  // Soft-delete with undo: optimistically removes from cache and
+  // defers the real API call until the undo window expires.
   const handleDelete = (id) => {
     scheduleDelete({
       id,
@@ -293,6 +316,7 @@ const Pantry = ({ showToast }) => {
     statusMutation.mutate({ id, status: newStatus });
   };
 
+  // Delete all currently selected items at once via undo-able bulk delete
   const handleBulkDelete = () => {
     if (selectedItems.size === 0) {
       if (showToast) showToast("Please select items to delete", "warning");
@@ -321,6 +345,11 @@ const Pantry = ({ showToast }) => {
     });
   };
 
+  // Recategorize performs a two-pass cleanup of the pantry:
+  //   Pass 1 - Deduplicates items with the same name (merges quantities).
+  //   Pass 2 - Moves "Other" items to their detected category, merging
+  //            with any existing item on the target shelf.
+  // Afterwards, backfills missing purchase/expiration dates on the server.
   const handleRecategorize = () => {
     let mergedCount = 0;
     let movedCount = 0;
@@ -412,11 +441,11 @@ const Pantry = ({ showToast }) => {
         if (filled > 0) {
           const dateParts = [];
           if (result.purchase_filled > 0) dateParts.push(`${result.purchase_filled} purchase date(s) added`);
-          if (result.expiration_filled > 0) dateParts.push(`${result.expiration_filled} expiration date(s) added`);
+          if (result.expiration_filled > 0) dateParts.push(`${result.expiration_filled} expiration(s) updated`);
           if (result.expiration_cleared > 0) dateParts.push(`${result.expiration_cleared} non-food expiration(s) cleared`);
           if (showToast) showToast(dateParts.join(", "), "success");
         } else if (total === 0) {
-          if (showToast) showToast("All items are up to date", "info");
+          if (showToast) showToast("All items are up to date", "success");
         }
       },
       onError: () => {
@@ -425,26 +454,10 @@ const Pantry = ({ showToast }) => {
     });
   };
 
-  // Check if button should be enabled (Other items exist OR duplicates exist OR missing dates)
-  const hasRecategorizeWork = useMemo(() => {
-    const hasOther = shelfItems.some((item) => item.category === "Other");
-    if (hasOther) return true;
-    const hasMissingDates = shelfItems.some((item) =>
-      !item.purchase_date ||
-      (!item.expiration_date && isPantryItem(item.name)) ||
-      (item.expiration_date && !isPantryItem(item.name))
-    );
-    if (hasMissingDates) return true;
-    const seen = new Set();
-    return shelfItems.some((item) => {
-      const key = item.name.toLowerCase().trim();
-      if (seen.has(key)) return true;
-      seen.add(key);
-      return false;
-    });
-  }, [shelfItems]);
+  // Recategorize is always available — it deduplicates, re-categorizes,
+  // and resyncs all expiration dates so predicted shelf lives stay accurate.
 
-  // Helper functions
+  // Populate the edit form with the selected item's current values
   const startEdit = (item) => {
     setEditingId(item.id);
     setEditForm({
@@ -460,6 +473,7 @@ const Pantry = ({ showToast }) => {
     });
   };
 
+  // Toggle an item's membership in the bulk-selection set
   const toggleItemSelection = (id) => {
     const newSelected = new Set(selectedItems);
     if (newSelected.has(id)) {
@@ -507,8 +521,7 @@ const Pantry = ({ showToast }) => {
           <button
             className="recategorize-button"
             onClick={handleRecategorize}
-            disabled={!hasRecategorizeWork}
-            title="Re-categorize items in Other shelf"
+            title="Re-categorize, deduplicate, and resync expiration dates"
           >
             <RefreshCw size={18} />
             <span>Re-categorize</span>

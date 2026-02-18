@@ -1,3 +1,10 @@
+/**
+ * useDailyRecs.js
+ * React Query hook that fetches AI-generated daily meal recommendations.
+ * Sends the user's timezone to /api/daily-recs so results are date-aware.
+ * Uses a 30-minute stale time and disables refetch-on-focus to avoid
+ * unnecessary re-generation of recommendations.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

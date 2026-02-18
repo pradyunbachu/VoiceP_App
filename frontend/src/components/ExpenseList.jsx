@@ -1,3 +1,11 @@
+/*
+ * ExpenseList.jsx
+ * Paginated, virtualized list of the user's expenses with search, category
+ * filtering, and sorting (by date, amount, or store name). Uses TanStack
+ * Virtual for windowed rendering and infinite scroll to load more pages on
+ * demand. Supports inline editing, single/bulk delete with undo, select-all,
+ * CSV export, and an "Add to Pantry" action for grocery-category items.
+ */
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download, Loader } from "lucide-react";

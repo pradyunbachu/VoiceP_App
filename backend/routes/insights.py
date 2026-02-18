@@ -1,3 +1,17 @@
+"""AI-powered spending insights and month-over-month comparison routes.
+
+POST /insights — Aggregates expenses for a chosen time window (7/30/90 days),
+    computes category and store trends vs. the previous equivalent period,
+    then feeds everything to Groq (Llama 3.3 70B) for a personalized
+    narrative with key findings, recommendations, and a spending personality.
+
+POST /spending-comparison — Side-by-side breakdown of two calendar months
+    with per-category and per-store deltas plus natural-language summary
+    sentences (e.g. "You saved 12% on Groceries this month").
+
+Both endpoints are cached to avoid repeated AI calls on quick refreshes.
+"""
+
 # ============================================================================
 # INSIGHTS ROUTES - AI-Powered Spending Analysis
 # ============================================================================
@@ -119,7 +133,7 @@ def get_date_range(time_period: str) -> Tuple[datetime, datetime, int]:
     else:  # last_30_days (default)
         days = 30
 
-    start_date = today - timedelta(days=days - 1)
+    start_date = today - timedelta(days=days - 1)  # Inclusive: gives exactly N days including today
     return start_date, today, days
 
 
@@ -131,6 +145,7 @@ def calculate_category_trends(current_expenses: list, previous_expenses: list) -
     for exp in current_expenses:
         categories_str = exp.get("category") or "Other"
         amount = float(exp.get("amount") or 0)
+        # Expenses may have comma-separated multi-category tags; split and tally each
         for cat in [c.strip() for c in categories_str.split(",")]:
             if cat:
                 current_by_cat[cat] = current_by_cat.get(cat, 0) + amount
@@ -197,6 +212,7 @@ async def get_insights(
 
     # Calculate date ranges
     start_date, end_date, period_days = get_date_range(time_period)
+    # Previous period of equal length for apples-to-apples comparison
     prev_start = start_date - timedelta(days=period_days)
     prev_end = start_date - timedelta(days=1)
 
@@ -299,6 +315,7 @@ async def get_insights(
             "spent": round(actual_spending, 2),
             "remaining": round(remaining, 2),
             "percentage_used": round(percentage_used, 1),
+            # "over" = exceeded budget, "warning" = >= 75% used, "ok" = within budget
             "status": "over" if remaining < 0 else ("warning" if percentage_used >= 75 else "ok")
         })
 
@@ -349,7 +366,7 @@ async def get_insights(
         "ai_insights": ai_insights,
         "generated_at": datetime.now().isoformat()
     }
-    api_cache.set(cache_key, result, ttl=300)
+    api_cache.set(cache_key, result, ttl=300)  # Cache for 5 min to avoid repeated AI calls
     return result
 
 
@@ -510,7 +527,7 @@ async def get_spending_comparison(
                 "percent_change": round(pct, 1),
             })
 
-    # Sort sentences by magnitude of change
+    # Sort by magnitude of change so the most dramatic shifts appear first
     sentences.sort(key=lambda x: abs(x["percent_change"]), reverse=True)
 
     # Biggest increase / decrease
@@ -551,11 +568,11 @@ async def get_spending_comparison(
         },
         "category_comparisons": category_comparisons,
         "store_comparisons": store_comparisons,
-        "sentences": sentences[:8],
+        "sentences": sentences[:8],  # Cap at 8 to keep response concise
         "biggest_increase": biggest_increase,
         "biggest_decrease": biggest_decrease,
         "generated_at": datetime.now().isoformat(),
     }
 
-    api_cache.set(cache_key, result, ttl=60)
+    api_cache.set(cache_key, result, ttl=60)  # Short 1-min cache since data may change during active editing
     return result

@@ -1,3 +1,9 @@
+/**
+ * useExpenses.js
+ * React Query hook for fetching a paginated, filterable list of expenses.
+ * Supports search, category filter, sorting, and an export-all flag.
+ * Uses keepPreviousData so the UI does not flash empty between page transitions.
+ */
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

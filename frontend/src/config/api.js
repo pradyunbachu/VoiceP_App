@@ -1,7 +1,9 @@
-// API Configuration
-// Uses VITE_API_URL environment variable if set, otherwise defaults based on environment
-// - Development: http://localhost:8000
-// - Production (Docker): empty string (nginx proxies /api to backend)
+/**
+ * api.js — API base URL configuration.
+ * Resolves the backend URL from the VITE_API_URL environment variable. Falls
+ * back to localhost:8000 in development and an empty string in production
+ * (where nginx reverse-proxies /api to the backend).
+ */
 
 const getBaseUrl = () => {
   // Check for explicit environment variable first

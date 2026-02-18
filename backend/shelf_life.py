@@ -1,3 +1,15 @@
+"""Shelf life prediction for pantry items.
+
+Estimates expiration dates by matching an item name against a tiered lookup:
+  1. Exact match in the shelf-life database
+  2. Longest-substring match (e.g. "chicken" matches "organic chicken breast")
+  3. Category-level default (e.g. "Meat & Seafood" -> 5 days)
+  4. Global fallback (30 days)
+
+Non-food household items (detected via keyword list) return no expiration.
+Data is loaded once at module import from JSON files in backend/data/.
+"""
+
 # ============================================================================
 # SHELF LIFE PREDICTION UTILITY
 # ============================================================================
@@ -9,8 +21,8 @@ _data_path = os.path.join(os.path.dirname(__file__), "data", "shelf_life.json")
 with open(_data_path, "r") as _f:
     _shelf_life_data = json.load(_f)
 
-_ITEM_SHELF_LIFE = _shelf_life_data["items"]
-_CATEGORY_DEFAULTS = _shelf_life_data["category_defaults"]
+_ITEM_SHELF_LIFE = _shelf_life_data["items"]          # item name -> days
+_CATEGORY_DEFAULTS = _shelf_life_data["category_defaults"]  # category -> days
 
 # Pre-sort keys by length descending for longest-substring-first matching
 _SORTED_KEYS = sorted(_ITEM_SHELF_LIFE.keys(), key=len, reverse=True)
@@ -25,6 +37,7 @@ def _is_non_pantry(name: str) -> bool:
     """Return True if the item is a non-food household item that doesn't expire."""
     name_lower = name.lower().strip()
     for keyword in _NON_PANTRY_KEYWORDS:
+        # Bidirectional check: "trash bags" in "tall trash bags" OR vice-versa
         if keyword in name_lower or name_lower in keyword:
             return True
     return False

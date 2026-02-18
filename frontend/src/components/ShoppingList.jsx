@@ -1,3 +1,11 @@
+/**
+ * ShoppingList.jsx - Shopping list with autocomplete and pantry integration.
+ *
+ * Lets users add items via a text input with grocery autocomplete suggestions,
+ * view/delete items, and see real-time pantry stock info next to each shopping
+ * item (via AI-powered semantic matching). Also surfaces low/out-of-stock
+ * pantry items as one-click "add to list" chips at the bottom.
+ */
 import { useState, useRef, useEffect, useMemo } from "react";
 import {
   ShoppingCart,
@@ -33,13 +41,14 @@ const ShoppingList = ({ showToast }) => {
   const editInputRef = useRef(null);
   const suggestionsRef = useRef(null);
 
-  // React Query hooks
+  // Fetch shopping items, optionally scoped to a shared group
   const { data: shoppingItems = [], isLoading: loading } = useShoppingList(
     selectedGroupId ? { group_id: selectedGroupId } : {}
   );
   const { data: pantryItems = [] } = usePantryItems({});
 
-  // Semantic matching of shopping items to pantry items (uses AI)
+  // AI-powered semantic matching: maps each shopping item to its closest
+  // pantry counterpart (e.g. "2% milk" matches pantry's "Milk").
   const { data: pantryMatches = {} } = useShoppingPantryMatches(shoppingItems, pantryItems);
 
   // Mutations
@@ -48,7 +57,7 @@ const ShoppingList = ({ showToast }) => {
   const clearMutation = useClearShoppingList();
   const { scheduleDelete } = useUndoDelete(showToast);
 
-  // Grocery autocomplete suggestions
+  // Grocery autocomplete suggestions hook
   const {
     selectedIndex,
     isOpen: suggestionsOpen,
@@ -59,7 +68,7 @@ const ShoppingList = ({ showToast }) => {
     applySuggestion,
   } = useGrocerySuggestions();
 
-  // Click outside to dismiss suggestions
+  // Dismiss the autocomplete dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (e) => {
       if (
@@ -76,7 +85,7 @@ const ShoppingList = ({ showToast }) => {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [resetSelection]);
 
-  // Low/out of stock pantry items as suggestions
+  // Derive pantry items that are low or out of stock for the "Running Low" section
   const pantryNeeds = useMemo(() => {
     return pantryItems.filter(
       (item) =>
@@ -84,7 +93,7 @@ const ShoppingList = ({ showToast }) => {
     );
   }, [pantryItems]);
 
-  // Focus edit input when editing starts
+  // Auto-focus edit input when inline editing starts
   useEffect(() => {
     if (editingId && editInputRef.current) {
       editInputRef.current.focus();
@@ -92,11 +101,12 @@ const ShoppingList = ({ showToast }) => {
     }
   }, [editingId]);
 
+  // Parse optional quantity from input text (e.g. "2 milk" or "milk x3")
+  // then create the shopping list item via API.
   const handleAddItem = async (text) => {
     const trimmedText = text.trim();
     if (!trimmedText) return;
 
-    // Parse quantity if present (e.g., "2 milk" or "milk x3")
     let name = trimmedText;
     let quantity = 1;
     let unit = "";
@@ -109,7 +119,7 @@ const ShoppingList = ({ showToast }) => {
     }
 
     // Check for "milk x3" or "milk (3)" pattern
-    const trailingNumMatch = trimmedText.match(/^(.+?)\s*[x×]\s*(\d+\.?\d*)$/i);
+    const trailingNumMatch = trimmedText.match(/^(.+?)\s*[x\u00d7]\s*(\d+\.?\d*)$/i);
     if (trailingNumMatch) {
       name = trailingNumMatch[1];
       quantity = parseFloat(trailingNumMatch[2]);
@@ -137,6 +147,7 @@ const ShoppingList = ({ showToast }) => {
     }
   };
 
+  // Update suggestions as the user types
   const handleInputChange = (e) => {
     const value = e.target.value;
     setNewItemText(value);
@@ -144,6 +155,7 @@ const ShoppingList = ({ showToast }) => {
     setSuggestions(results);
   };
 
+  // Apply a selected autocomplete suggestion to the input
   const handleSelectSuggestion = (suggestion) => {
     const newText = applySuggestion(newItemText, suggestion.name);
     setNewItemText(newText);
@@ -154,6 +166,7 @@ const ShoppingList = ({ showToast }) => {
     }
   };
 
+  // Keyboard navigation for the autocomplete dropdown and Enter-to-add
   const handleKeyDown = (e) => {
     if (suggestionsOpen && suggestions.length > 0) {
       if (e.key === "ArrowDown") {
@@ -172,6 +185,7 @@ const ShoppingList = ({ showToast }) => {
         setSuggestions([]);
         return;
       }
+      // Enter with a highlighted suggestion applies it instead of adding
       if (e.key === "Enter" && !e.shiftKey && selectedIndex >= 0) {
         e.preventDefault();
         handleSelectSuggestion(suggestions[selectedIndex]);
@@ -184,6 +198,7 @@ const ShoppingList = ({ showToast }) => {
     }
   };
 
+  // Undo-able delete for a single shopping list item
   const handleDelete = (id) => {
     scheduleDelete({
       id,
@@ -202,6 +217,7 @@ const ShoppingList = ({ showToast }) => {
     });
   };
 
+  // Clear the entire shopping list with undo support
   const handleClearAll = () => {
     if (shoppingItems.length === 0) return;
 
@@ -210,7 +226,7 @@ const ShoppingList = ({ showToast }) => {
     scheduleDelete({
       id: `clear-shopping-${Date.now()}`,
       queryKeyPrefix: ["shoppingList"],
-      filterFn: () => false, // remove all items
+      filterFn: () => false, // remove all items from the optimistic cache
       dataKey: null,
       onDelete: async () => {
         try {
@@ -224,6 +240,7 @@ const ShoppingList = ({ showToast }) => {
     });
   };
 
+  // One-click add a low/out-of-stock pantry item to the shopping list
   const handleAddFromPantry = async (pantryItem) => {
     try {
       await createMutation.mutateAsync({
@@ -238,15 +255,15 @@ const ShoppingList = ({ showToast }) => {
     }
   };
 
-  // Check if a pantry item is already in the shopping list (using semantic matching)
+  // Check if a pantry item is already represented in the shopping list
+  // using the semantic match map (compares as strings for type safety).
   const isItemInShoppingList = (pantryItemId) => {
-    // Check if any shopping item matches this pantry item
-    // Compare as strings since JSON keys/IDs can be inconsistent types
     return Object.values(pantryMatches).some(
       (matchedPantry) => String(matchedPantry?.id) === String(pantryItemId)
     );
   };
 
+  // Format display text with quantity and unit when present
   const formatItemDisplay = (item) => {
     let display = item.name;
     if (item.quantity && item.quantity !== 1) {
@@ -257,13 +274,13 @@ const ShoppingList = ({ showToast }) => {
     return display;
   };
 
-  // Get pantry match for a shopping item (uses AI-powered semantic matching)
-  // Note: JSON keys are strings, so convert ID to string for lookup
+  // Look up the pantry match for a shopping item by ID.
+  // JSON keys are always strings, so we check both string and raw ID.
   const getPantryMatch = (shoppingItemId) => {
     return pantryMatches[String(shoppingItemId)] || pantryMatches[shoppingItemId] || null;
   };
 
-  // Get stock status icon and color
+  // Map stock status to icon, label, and CSS class
   const getStockStatusInfo = (status) => {
     switch (status) {
       case "full":
@@ -311,7 +328,7 @@ const ShoppingList = ({ showToast }) => {
 
       {/* Modern List Card */}
       <div className="list-card">
-        {/* Add item input */}
+        {/* Add item input with autocomplete */}
         <div className="add-item-container" role="combobox" aria-expanded={suggestionsOpen} aria-haspopup="listbox">
           <Plus size={20} className="add-item-icon" />
           <input
@@ -377,6 +394,7 @@ const ShoppingList = ({ showToast }) => {
                     <Circle size={18} className="item-bullet" />
                     <div className="item-content">
                       <span className="item-text">{formatItemDisplay(item)}</span>
+                      {/* Show pantry stock info when a semantic match exists */}
                       {pantryMatch && (
                         <div className={`pantry-stock-info ${stockInfo?.className || ''}`}>
                           <Package size={12} />
@@ -417,7 +435,7 @@ const ShoppingList = ({ showToast }) => {
         )}
       </div>
 
-      {/* Pantry Needs Section */}
+      {/* Pantry Needs Section -- surfaces low/out-of-stock items as quick-add chips */}
       {pantryNeeds.length > 0 && (
         <div className="pantry-needs-section">
           <h3>

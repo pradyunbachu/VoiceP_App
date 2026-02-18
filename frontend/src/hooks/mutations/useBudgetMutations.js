@@ -1,3 +1,10 @@
+/**
+ * useBudgetMutations.js
+ * React Query mutations for budget CRUD operations.
+ * Exports useCreateBudget, useUpdateBudget, and useDeleteBudget.
+ * Each mutation invalidates both the budgets and analytics query caches
+ * on success so dependent views stay in sync.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

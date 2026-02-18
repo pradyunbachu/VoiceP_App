@@ -1,3 +1,11 @@
+/**
+ * useShoppingListMutations.js
+ * React Query mutations for shopping list item operations.
+ * Exports useCreateShoppingListItem, useUpdateShoppingListItem,
+ * useDeleteShoppingListItem, useBulkDeleteShoppingListItems,
+ * useClearShoppingList, and useRemovePurchasedItems.
+ * All mutations invalidate the shopping list cache on success.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

@@ -1,3 +1,9 @@
+/**
+ * categoryDetection.js — Automatic category detection for pantry items.
+ * Uses keyword-based regex matching to classify an item name into a grocery
+ * category (Dairy, Produce, Meat & Seafood, etc.). Also provides isPantryItem()
+ * to filter out non-food items (cleaning supplies, toiletries, pet food, etc.).
+ */
 const singularize = (w) => {
   if (w.endsWith('ies') && w.length > 4) return w.slice(0, -3) + 'y';
   if (w.endsWith('oes')) return w.slice(0, -2);

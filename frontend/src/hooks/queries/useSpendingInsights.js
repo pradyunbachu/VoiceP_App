@@ -1,3 +1,10 @@
+/**
+ * useSpendingInsights.js
+ * React Query hook for AI-powered spending insights.
+ * POSTs a time period (e.g. "last_30_days") to /api/insights and returns
+ * the generated report. Uses CSRF headers and a 5-minute stale time to
+ * avoid frequent re-generation of the AI analysis.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

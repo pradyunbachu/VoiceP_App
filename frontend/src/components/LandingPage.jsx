@@ -1,3 +1,12 @@
+/*
+ * LandingPage.jsx
+ * Public marketing page shown before the user logs in. Composed of a hero
+ * section with tagline and CTA, a voice-demo showing how one sentence logs
+ * an expense / updates the pantry / checks off a shopping list, a feature
+ * card grid (Smart Pantry, Recipes, Shopping Lists, Insights), a step-by-step
+ * "Loop" flow diagram, and a bottom call-to-action. Adapts the primary CTA
+ * label based on authentication state.
+ */
 import {
   Mic,
   LogIn,

@@ -1,3 +1,8 @@
+/**
+ * imageCompression.js — Image compression and HEIC conversion utilities.
+ * Provides canvas-based resizing to configurable max dimensions and JPEG quality,
+ * plus HEIC/HEIF-to-JPEG conversion via heic2any for receipt scanning support.
+ */
 import heic2any from "heic2any";
 
 /**

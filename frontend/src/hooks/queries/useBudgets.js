@@ -1,3 +1,9 @@
+/**
+ * useBudgets.js
+ * React Query hook that fetches budget check data for a given month/year.
+ * Accepts optional { month, year } filters and returns an array of budget
+ * objects from the /api/budgets/check endpoint via useQuery.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

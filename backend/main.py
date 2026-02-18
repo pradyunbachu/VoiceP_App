@@ -1,3 +1,9 @@
+"""Voxal API — FastAPI application entry point.
+
+Configures middleware (CORS, CSRF, rate limiting), registers all route modules
+under the /api prefix, and runs a one-time recurring-expense check on startup.
+"""
+
 # ============================================================================
 # VOXAL API - MAIN ENTRY POINT
 # ============================================================================
@@ -87,8 +93,9 @@ if os.getenv("DISABLE_CSRF", "false").lower() != "true":
     app.add_middleware(CSRFMiddleware)
 
 # ============================================================================
-# INCLUDE ROUTERS
+# ROUTE REGISTRATION
 # ============================================================================
+# All routers are mounted under /api. Each module handles one domain area.
 
 app.include_router(transcription.router, prefix="/api", tags=["Transcription"])
 app.include_router(expenses.router, prefix="/api", tags=["Expenses"])
@@ -110,6 +117,7 @@ app.include_router(daily_recs.router, prefix="/api", tags=["Daily Recs"])
 
 @app.get("/")
 async def root():
+    """Health-check endpoint. Returns a simple JSON acknowledgment."""
     return {"message": "voxal API"}
 
 

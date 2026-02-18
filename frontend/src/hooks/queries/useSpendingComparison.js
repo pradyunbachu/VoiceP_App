@@ -1,3 +1,9 @@
+/**
+ * useSpendingComparison.js
+ * React Query hook for month-over-month spending comparison.
+ * POSTs two month/year pairs to /api/spending-comparison and returns
+ * the comparison breakdown. Includes CSRF headers and uses a 5-minute stale time.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

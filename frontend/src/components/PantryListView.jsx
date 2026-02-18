@@ -1,3 +1,10 @@
+/**
+ * PantryListView.jsx - Virtualized grid list view for pantry items.
+ *
+ * Uses @tanstack/react-virtual to render only the visible rows of pantry
+ * cards, supporting infinite scroll. Each card shows item details, inline
+ * editing, stock status controls, and expiration/purchase date badges.
+ */
 import {
   Trash2,
   Edit2,
@@ -35,6 +42,8 @@ const PantryListView = ({
 }) => {
   return (
     <div ref={scrollRef} className="pantry-list-scroll-container">
+      {/* Outer container sized to the total virtual height so the
+          scrollbar reflects the full list length */}
       <div
         style={{
           height: virtualizer.getTotalSize(),
@@ -55,6 +64,7 @@ const PantryListView = ({
                 top: 0,
                 left: 0,
                 width: '100%',
+                // Position each row via translateY for smooth virtual scrolling
                 transform: `translateY(${virtualRow.start}px)`,
               }}
             >
@@ -64,6 +74,7 @@ const PantryListView = ({
                     key={item.id}
                     className={`pantry-card ${item.stock_status} ${selectedItems.has(item.id) ? 'selected' : ''} ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring-soon' : ''}`}
                   >
+                    {/* Bulk-select checkbox shown only in select mode */}
                     {isSelectMode && (
                       <button
                         className="checkbox-button"
@@ -205,6 +216,7 @@ const PantryListView = ({
                             <span className={`expiration ${isExpired(item.expiration_date) ? 'expired' : ''} ${isExpiringSoon(item.expiration_date) ? 'expiring' : ''}`}>
                               <Calendar size={14} />
                               {isExpired(item.expiration_date) ? 'Expired: ' : 'Exp: '}
+                              {/* Append T00:00:00 to avoid timezone-shift issues with date-only strings */}
                               {new Date(item.expiration_date + 'T00:00:00').toLocaleDateString()}
                               {item.expiration_predicted && <span className="predicted-badge">est.</span>}
                             </span>

@@ -1,7 +1,19 @@
+"""Receipt OCR parsing via Groq Vision API.
+
+Accepts a base64-encoded receipt image, sends it to Groq's multimodal
+model (Llama 4 Scout 17B), and extracts structured expense data:
+store name, consolidated item list, total amount, date, and category.
+
+  parse_receipt_with_vision — Main entry point. Strips data-URL prefix,
+      calls the Vision API, and validates the JSON response.
+  validate_receipt_data     — Normalizes store/items/amount/date/category
+      and rejects invalid entries (e.g. amount <= 0).
+  normalize_date            — Converts a variety of date formats (US, EU,
+      named months) to YYYY-MM-DD.
+"""
+
 # ============================================================================
 # RECEIPT PARSING SERVICE
-# ============================================================================
-# Uses Groq Vision API to read and parse receipt images directly.
 # ============================================================================
 
 import re

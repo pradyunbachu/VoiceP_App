@@ -1,3 +1,18 @@
+"""Chat-driven suggestion handlers (shopping, meals, weekly plans, budget meals).
+
+  handle_suggestion       — Merges the user's shopping list with low/out-of-stock
+                            pantry items to build a consolidated shopping suggestion.
+  handle_meal_suggestion  — Uses Groq to suggest 3 meals based on the user's
+                            pantry, prioritizing expiring items and respecting
+                            the requested meal type (breakfast/lunch/dinner/snack).
+  handle_reminder_check   — Looks up a specific pantry item and reports its
+                            quantity, stock status, and days until expiration.
+  handle_meal_plan_week   — Uses Groq to generate a full 7-day meal plan
+                            (breakfast/lunch/dinner) from pantry ingredients.
+  handle_budget_meal      — Uses Groq to suggest 3 meals under a given price
+                            limit, distinguishing ingredients on-hand vs. to-buy.
+"""
+
 # ============================================================================
 # SUGGESTION HANDLERS (Shopping + Meal)
 # ============================================================================

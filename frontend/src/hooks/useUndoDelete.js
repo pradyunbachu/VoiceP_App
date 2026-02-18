@@ -1,3 +1,11 @@
+/**
+ * useUndoDelete.js
+ * Hook for undo-able deletes with toast notifications.
+ * Optimistically removes items from the React Query cache, starts a 5 s timer,
+ * and only fires the real API delete when the timer expires. If the user clicks
+ * "Undo" in the toast, the cache snapshots are restored and the delete is cancelled.
+ * Pending deletes are flushed immediately on unmount to prevent data loss.
+ */
 import { useRef, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 

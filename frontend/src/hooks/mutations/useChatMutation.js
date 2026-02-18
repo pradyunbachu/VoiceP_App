@@ -1,3 +1,10 @@
+/**
+ * useChatMutation.js
+ * React Query mutation for sending chat messages to /api/chat.
+ * On success, selectively invalidates caches based on the returned intent
+ * (e.g. shopping_complete, pantry_add, budget_set) so that side-effects
+ * from voice/chat commands are immediately reflected in the UI.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

@@ -1,3 +1,13 @@
+"""Analytics route.
+
+GET /analytics — Aggregates the current user's expenses into totals by store,
+    category, and date. Supports filtering by category, month/year, or a
+    custom date range. Results are cached for 60 seconds to reduce DB load.
+
+Multi-category expenses (comma-separated) are counted toward each category
+individually (i.e. a $100 "Electronics, Groceries" expense adds $100 to both).
+"""
+
 # ============================================================================
 # ANALYTICS ROUTES
 # ============================================================================

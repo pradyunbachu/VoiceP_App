@@ -1,3 +1,11 @@
+/**
+ * RecipeDetailModal.jsx - Panel displaying full recipe details.
+ *
+ * Shown inside the DailyRecs slide-out when a meal card is clicked.
+ * Renders the recipe name, description, servings/timing metadata,
+ * ingredient list, and step-by-step instructions. Handles loading
+ * and error states while the AI generates the recipe.
+ */
 import { X, Clock, Users, Loader, ChevronLeft } from 'lucide-react';
 import './RecipeDetailModal.css';
 

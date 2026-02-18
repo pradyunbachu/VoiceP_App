@@ -1,3 +1,10 @@
+"""Pydantic request/response schemas for the Voxal API.
+
+Defines all data models used for request validation and response serialization
+across the API. Organized by domain: expenses, budgets, pantry, shopping lists,
+chat, insights, and receipt scanning.
+"""
+
 # ============================================================================
 # PYDANTIC MODELS (Request/Response Schemas)
 # ============================================================================
@@ -113,7 +120,7 @@ class ShoppingListItemCreate(BaseModel):
     unit: Optional[str] = Field(default=None, max_length=50)
     category: Optional[str] = Field(default=None, max_length=100)
     notes: Optional[str] = Field(default=None, max_length=500)
-    group_id: Optional[int] = None
+    group_id: Optional[int] = None  # If set, adds to a shared group list instead of personal
 
 class ShoppingListItemUpdate(BaseModel):
     name: Optional[str] = Field(default=None, max_length=200)
@@ -151,9 +158,15 @@ class ShoppingListJoinByCode(BaseModel):
 # ============================================================================
 
 class ChatRequest(BaseModel):
+    """User message sent to the Voxal chat assistant."""
     message: str = Field(max_length=2000)
 
 class ChatResponse(BaseModel):
+    """Structured response from the chat assistant.
+
+    intent/sub_intent indicate what action was taken, response_text is the
+    human-readable reply, and data carries any structured payload.
+    """
     intent: str
     sub_intent: Optional[str] = None
     response_text: str
@@ -187,7 +200,8 @@ class InsightsResponse(BaseModel):
 # ============================================================================
 
 class ReceiptScanRequest(BaseModel):
-    image_base64: str = Field(max_length=10_000_000)
+    """Base64-encoded receipt image for OCR-based expense creation."""
+    image_base64: str = Field(max_length=10_000_000)  # ~7.5 MB decoded limit
 
 class ReceiptScanResponse(BaseModel):
     store: str

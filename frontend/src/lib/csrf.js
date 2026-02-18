@@ -1,8 +1,9 @@
-// ============================================================================
-// CSRF Token Management
-// ============================================================================
-// Handles CSRF token retrieval and storage for the double-submit cookie pattern.
-// ============================================================================
+/**
+ * csrf.js — CSRF token management for the double-submit cookie pattern.
+ * Reads the CSRF token from document.cookie and attaches it as an X-CSRF-Token
+ * header on state-changing requests (POST, PUT, DELETE, PATCH). Exports a
+ * secureFetch wrapper that handles this automatically.
+ */
 
 const CSRF_COOKIE_NAME = 'csrf_token';
 const CSRF_HEADER_NAME = 'X-CSRF-Token';

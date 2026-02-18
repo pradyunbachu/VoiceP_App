@@ -1,3 +1,11 @@
+/**
+ * useShoppingListGroupMutations.js
+ * React Query mutations for shopping list group management.
+ * Exports useCreateShoppingListGroup, useJoinShoppingListGroup,
+ * useInviteToGroup, useRemoveGroupMember, and useDeleteShoppingListGroup.
+ * Mutations invalidate the shopping list groups (or full shopping list)
+ * cache on success to keep the UI in sync.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

@@ -1,3 +1,12 @@
+"""Shopping list CRUD routes.
+
+Provides personal and group shopping list management: create, read, update,
+delete (single, bulk, by-name, clear-all). Also includes an AI-powered
+pantry-matching endpoint that uses a two-pass strategy — first a fast
+deterministic matcher (case-insensitive, substring, word-overlap) and then
+Groq LLM for any remaining unmatched items.
+"""
+
 # ============================================================================
 # SHOPPING LIST ROUTES
 # ============================================================================
@@ -50,6 +59,7 @@ async def get_shopping_list(
     if category:
         query = query.eq("category", category)
 
+    # Whitelist sortable columns to prevent SQL injection
     valid_sort_fields = {"name", "category", "created_at", "quantity"}
     sort_field = sort_by if sort_by in valid_sort_fields else "created_at"
     query = query.order(sort_field, desc=(sort_order.lower() == "desc"))
@@ -255,7 +265,7 @@ async def remove_purchased_items(
     # Handle common separators: comma, "and", newlines
     import re
     items_text_clean = items_text.lower()
-    # Split by comma, "and", or newlines
+    # Split on commas, newlines, or the word "and" to handle natural-language lists
     parsed_items = re.split(r'[,\n]|\band\b', items_text_clean)
     parsed_items = [item.strip().strip('.') for item in parsed_items if item.strip()]
 
@@ -273,6 +283,7 @@ async def remove_purchased_items(
 
     for purchased in parsed_items:
         purchased_clean = purchased.lower().strip()
+        # Skip single-char fragments left over after splitting
         if len(purchased_clean) < 2:
             continue
 
@@ -281,7 +292,7 @@ async def remove_purchased_items(
                 continue
 
             item_name = shopping_item.get("name", "").lower()
-            # Check for partial match (either direction)
+            # Bidirectional partial match: "milk" matches "almond milk" and vice versa
             if purchased_clean in item_name or item_name in purchased_clean:
                 response = supabase.table("shopping_list").delete().eq("id", shopping_item["id"]).eq("user_id", current_user["id"]).execute()
                 if response.data:
@@ -360,7 +371,7 @@ async def match_shopping_to_pantry(
     if not shopping_items or not pantry_items:
         return {"matches": {}, "method": "no_items"}
 
-    # First, try simple matching (exact match, case-insensitive)
+    # Pass 1 — fast deterministic matching (exact, substring, word-overlap)
     simple_matches = {}
     unmatched_shopping = []
 
@@ -383,12 +394,12 @@ async def match_shopping_to_pantry(
                 matched = True
                 break
 
-            # Check for word overlap (handles "Iceberg Lettuce" vs "Lettuce Iceberg")
+            # Word-overlap heuristic: if >= 50% of the shorter name's words overlap, treat as match
+            # Handles reordered names like "Iceberg Lettuce" vs "Lettuce Iceberg"
             shop_words = set(shop_name.split())
             pantry_words = set(pantry_name.split())
             if shop_words and pantry_words:
                 overlap = shop_words & pantry_words
-                # If significant overlap (more than half the words match)
                 min_words = min(len(shop_words), len(pantry_words))
                 if len(overlap) >= min_words * 0.5 and len(overlap) >= 1:
                     simple_matches[shop_item["id"]] = pantry_item
@@ -402,7 +413,7 @@ async def match_shopping_to_pantry(
     if not unmatched_shopping:
         return {"matches": simple_matches, "method": "simple"}
 
-    # Use Groq for remaining unmatched items
+    # Pass 2 — send remaining unmatched items to Groq for semantic matching
     if not groq_client:
         return {"matches": simple_matches, "method": "simple_only"}
 

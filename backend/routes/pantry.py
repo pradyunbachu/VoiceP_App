@@ -1,3 +1,21 @@
+"""Pantry item CRUD, auto-population, and maintenance routes.
+
+  GET    /pantry                — List pantry items with filters (category,
+         stock status, search, expiring-within-N-days) and optional pagination.
+  POST   /pantry                — Create a pantry item. Merges quantity if an
+         item with the same name already exists.
+  POST   /pantry/from-expense   — Auto-populate pantry from a grocery expense.
+         Predicts expiration dates via shelf_life module.
+  PUT    /pantry/{id}           — Update a pantry item's fields.
+  PUT    /pantry/{id}/status    — Quick stock-status toggle (full/low/out).
+  DELETE /pantry/{id}           — Delete a single pantry item.
+  DELETE /pantry/bulk           — Bulk-delete pantry items by ID list.
+  GET    /pantry/stats          — Summary stats: counts by status, expiring
+         within 7 days, and breakdown by category.
+  POST   /pantry/backfill-dates — One-shot migration: fills missing
+         purchase/expiration dates and clears bogus dates on non-food items.
+"""
+
 # ============================================================================
 # PANTRY ROUTES
 # ============================================================================
@@ -427,7 +445,9 @@ async def backfill_pantry_dates(
         is_non_food = _is_non_pantry(item["name"])
 
         # Backfill purchase_date from created_at or today
-        if not item.get("purchase_date"):
+        # Skip items explicitly added as pre-existing (unknown purchase date)
+        is_preexisting = "pre-existing" in (item.get("notes") or "")
+        if not item.get("purchase_date") and not is_preexisting:
             created = item.get("created_at")
             if created:
                 try:
@@ -443,8 +463,15 @@ async def backfill_pantry_dates(
             update_data["expiration_date"] = None
             update_data["expiration_predicted"] = False
             expiration_cleared += 1
-        # Backfill expiration_date for food items only
-        elif not is_non_food and not item.get("expiration_date"):
+        # Recalculate predicted expiration dates (shelf life data may have improved)
+        elif not is_non_food and item.get("expiration_predicted"):
+            purchase = update_data.get("purchase_date") or item.get("purchase_date") or datetime.now().strftime("%Y-%m-%d")
+            predicted = predict_expiration(item["name"], item.get("category"), purchase)
+            if predicted and predicted != item.get("expiration_date"):
+                update_data["expiration_date"] = predicted
+                expiration_filled += 1
+        # Backfill expiration_date for food items with a known purchase date
+        elif not is_non_food and not item.get("expiration_date") and not is_preexisting:
             purchase = update_data.get("purchase_date") or item.get("purchase_date") or datetime.now().strftime("%Y-%m-%d")
             predicted = predict_expiration(item["name"], item.get("category"), purchase)
             if predicted:

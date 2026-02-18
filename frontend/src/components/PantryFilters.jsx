@@ -1,3 +1,10 @@
+/**
+ * PantryFilters.jsx - Search, category, status, and sort controls for the pantry.
+ *
+ * A controlled component that receives filter/sort state and callbacks from the
+ * parent Pantry component. All filtering is server-side; these controls update
+ * the query parameters passed to the pantry data hooks.
+ */
 import { Search, ArrowUpDown } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
 import "./Pantry.css";

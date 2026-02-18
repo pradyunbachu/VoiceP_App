@@ -1,3 +1,11 @@
+/*
+ * Navigation.jsx
+ * Main app navigation bar rendered at the top of the authenticated layout.
+ * Contains the logo/home link, a light/dark theme toggle, and grouped
+ * dropdown menus for Finance (Dashboard, Expenses, Budgets, Insights,
+ * Compare) and Kitchen (Pantry, Shopping List) sections. Dropdowns close
+ * on outside click. Also shows the current username and a logout button.
+ */
 import { useState, useRef, useEffect } from "react";
 import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";

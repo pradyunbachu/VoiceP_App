@@ -1,3 +1,11 @@
+/*
+ * BudgetManagement.jsx
+ * Full CRUD interface for monthly category budgets. Users can create, edit,
+ * and delete budgets with optional recurring schedules (weekly, monthly, or
+ * yearly). Displays each budget as a card with spent/remaining stats and a
+ * color-coded progress bar. Supports month/year filtering, CSV export, and
+ * uses a confirmation dialog before deleting.
+ */
 import { useState } from "react";
 import { DollarSign, Plus, Trash2, Edit2, Check, X, Download } from "lucide-react";
 import { CATEGORIES } from "../constants/categories";

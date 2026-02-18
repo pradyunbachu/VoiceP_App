@@ -1,3 +1,9 @@
+/**
+ * useAnalytics.js
+ * React Query hook that fetches the analytics summary (spending totals,
+ * category breakdowns, etc.) from the /api/analytics endpoint.
+ * Returns the standard useQuery result. Data is considered stale after 60 s.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

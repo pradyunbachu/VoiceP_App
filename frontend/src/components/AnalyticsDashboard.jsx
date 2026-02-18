@@ -1,3 +1,11 @@
+/*
+ * AnalyticsDashboard.jsx
+ * Charts and summary statistics for the user's spending data. Renders a stats
+ * grid (total expenses, purchase count, average, stores visited), a Recharts
+ * line chart for expenses over time, a bar chart for top stores, a pie chart
+ * for category breakdown, and a budget-vs-actual spending section with
+ * color-coded progress bars and month/year filters.
+ */
 import { useState } from 'react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, Wallet, AlertTriangle } from 'lucide-react'

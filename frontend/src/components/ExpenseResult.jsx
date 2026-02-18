@@ -1,3 +1,10 @@
+/*
+ * ExpenseResult.jsx
+ * Displays the extracted expense details immediately after a voice, manual,
+ * or receipt input is processed. Renders store, items, category, amount, and
+ * date for one or more saved expenses, and offers an "Add to Pantry" button
+ * so the user can optionally stock their pantry from the same transaction.
+ */
 import { Package } from "lucide-react";
 
 const ExpenseResult = ({ extractedExpense, pendingPantryExpense, showPantryModal, onShowPantryModal, onSetPendingExpense }) => {

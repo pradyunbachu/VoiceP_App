@@ -1,3 +1,11 @@
+/**
+ * usePantryMutations.js
+ * React Query mutations for pantry CRUD and utility operations.
+ * Exports useCreatePantryItem, useUpdatePantryItem, useUpdatePantryStatus,
+ * useDeletePantryItem, useBulkDeletePantryItems, useBackfillDates, and useAddFromExpense.
+ * useUpdatePantryItem and useUpdatePantryStatus use optimistic updates with
+ * rollback on error across both flat-array and infinite-query cache shapes.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

@@ -1,3 +1,9 @@
+/**
+ * useInfinitePantryItems.js
+ * React Query infinite-scroll hook for loading pantry items page-by-page.
+ * Wraps useInfiniteQuery with category, stock status, search, and sort filters.
+ * Uses keepPreviousData and resolves the next page from the `has_next` flag.
+ */
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

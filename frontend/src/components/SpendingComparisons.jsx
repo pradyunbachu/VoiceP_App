@@ -1,3 +1,11 @@
+/*
+ * SpendingComparisons.jsx
+ * Month-over-month spending comparison view. Lets the user pick two months
+ * (current vs. compare) and displays summary cards, key-change sentences,
+ * biggest increase/decrease highlights, side-by-side category bars, and a
+ * store comparison grid. All percentage changes are color-coded so increases
+ * in spending stand out as negative signals.
+ */
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import {

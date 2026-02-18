@@ -1,3 +1,9 @@
+/**
+ * useReceiptMutation.js
+ * React Query mutation for scanning a receipt image via /api/scan-receipt.
+ * Accepts a base64-encoded image string, sends it for AI extraction, and
+ * invalidates expenses + analytics caches on success so the new expense appears.
+ */
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

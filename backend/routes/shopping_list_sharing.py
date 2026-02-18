@@ -1,3 +1,14 @@
+"""Shopping list group collaboration routes.
+
+Supports shared/group shopping lists with owner-managed membership:
+  - Group CRUD (create, list, detail, delete)
+  - Invite by email or join by invite code
+  - Member removal (owner kicks member, or member leaves)
+
+Roles: "owner" (full control) and "editor" (can add/edit items).
+Ownership transfer is not supported — the owner must delete the group.
+"""
+
 # ============================================================================
 # SHOPPING LIST SHARING ROUTES
 # ============================================================================
@@ -51,7 +62,7 @@ async def create_group(
 
     group = group_response.data[0]
 
-    # Add creator as owner member
+    # Auto-add the creator as the "owner" member of the new group
     supabase.table("shopping_list_members").insert({
         "group_id": group["id"],
         "user_id": user_id,
@@ -82,7 +93,7 @@ async def list_groups(
         return {"groups": [], "count": 0}
 
     group_ids = [m["group_id"] for m in memberships]
-    role_map = {m["group_id"]: m["role"] for m in memberships}
+    role_map = {m["group_id"]: m["role"] for m in memberships}  # group_id -> user's role
 
     # Fetch group details
     groups_response = supabase.table("shopping_list_groups").select("*").in_("id", group_ids).execute()
@@ -125,7 +136,7 @@ async def get_group_detail(
     members_response = supabase.table("shopping_list_members").select("*").eq("group_id", group_id).execute()
     members = members_response.data if members_response.data else []
 
-    # Try to get user emails from profiles/auth
+    # Enrich each member record with display name and email from profiles table
     for member in members:
         try:
             profile_response = supabase.table("profiles").select("email, full_name").eq("id", member["user_id"]).execute()
@@ -243,7 +254,7 @@ async def remove_member(
     if not is_owner and not is_self:
         raise HTTPException(status_code=403, detail="Only the group owner can remove members")
 
-    # Owner cannot remove themselves (must delete group instead)
+    # Prevent the owner from leaving — they must delete the group to dissolve it
     if is_self and is_owner:
         raise HTTPException(status_code=400, detail="Group owner cannot leave. Delete the group instead.")
 

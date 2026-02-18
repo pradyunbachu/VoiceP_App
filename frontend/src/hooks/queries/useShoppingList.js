@@ -1,3 +1,11 @@
+/**
+ * useShoppingList.js
+ * React Query hooks for the shopping list feature.
+ * - useShoppingList: fetches shopping list items with category/group/sort filters.
+ *   Uses staleTime=0 and aggressive refetch to keep the list fresh.
+ * - useShoppingPantryMatches: POST-based query that uses AI to semantically match
+ *   shopping list items against pantry items, cached for 30 s.
+ */
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

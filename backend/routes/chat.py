@@ -1,3 +1,14 @@
+"""Chat router — the single entry point for the Voxal voice assistant.
+
+Every user message hits POST /chat, which runs through a three-step pipeline:
+  1. Intent detection  — NLP classification of the raw message (25+ intents)
+  2. Handler dispatch  — delegates to the correct domain handler
+  3. Response generation — formats handler output into user-facing text
+
+The expense_input intent is special-cased: instead of being handled here, it
+returns a routing flag so the frontend can redirect to the expense-entry UI.
+"""
+
 # ============================================================================
 # CHAT ROUTES - Thin router for conversational voice assistant
 # ============================================================================
@@ -46,7 +57,7 @@ async def chat(
     if not message:
         raise HTTPException(status_code=400, detail="Empty message")
 
-    # Step 1: Detect intent
+    # Step 1: Detect intent — returns intent name, optional sub-intent, and entities
     intent_result = detect_intent(message)
     intent = intent_result.get("intent", "general")
     sub_intent = intent_result.get("sub_intent")
@@ -56,6 +67,7 @@ async def chat(
     user_id = current_user["id"]
     data = {}
 
+    # Expense input is handled client-side; return a redirect flag instead
     if intent == "expense_input":
         return ChatResponse(
             intent=intent,
@@ -64,6 +76,7 @@ async def chat(
             data={"route_to_expense": True, "original_message": message}
         )
 
+    # --- Pantry domain ---
     elif intent == "pantry_query":
         data = await handle_pantry_query(user_id, sub_intent, entities)
 
@@ -76,6 +89,7 @@ async def chat(
     elif intent == "cooking_deduct":
         data = await handle_cooking_deduct(user_id, entities, message)
 
+    # --- Expense / budget domain ---
     elif intent == "expense_query":
         data = await handle_expense_query(user_id, sub_intent, entities)
 
@@ -85,6 +99,7 @@ async def chat(
     elif intent == "mark_subscription":
         data = await handle_mark_subscription(user_id, entities)
 
+    # --- Suggestions and meal planning ---
     elif intent == "suggestion":
         data = await handle_suggestion(user_id, sub_intent, entities)
 
@@ -100,6 +115,7 @@ async def chat(
     elif intent == "budget_meal":
         data = await handle_budget_meal(user_id, entities, message)
 
+    # --- Shopping list domain ---
     elif intent == "shopping_complete":
         data = await handle_shopping_complete(user_id, entities, message)
 
@@ -112,7 +128,7 @@ async def chat(
     elif intent == "share_list":
         data = await handle_share_list(user_id, entities, message)
 
-    # Step 3: Generate response
+    # Step 3: Generate natural-language response from structured handler data
     response_text = generate_response(intent, sub_intent, data, entities)
 
     return ChatResponse(

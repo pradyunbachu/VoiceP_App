@@ -1,3 +1,18 @@
+"""Chat-driven shopping list handlers.
+
+  handle_shopping_complete  — When the user says "I bought milk and eggs",
+      parses the purchased items, removes matching entries from the shopping
+      list, and optionally auto-adds them to the pantry (if the user says
+      "add these to my pantry").
+  handle_shopping_list_add  — When the user says "Add milk to my shopping
+      list", parses item names and inserts them into the shopping_list table.
+
+Helpers:
+  parse_purchased_items           — Strips filler phrases from a purchase
+                                    message and splits on commas/and.
+  parse_shopping_items_from_message — Same idea for "add to list" messages.
+"""
+
 # ============================================================================
 # SHOPPING HANDLERS
 # ============================================================================

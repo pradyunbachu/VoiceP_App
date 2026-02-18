@@ -1,3 +1,8 @@
+/**
+ * pantryUtils.jsx — Utility functions for pantry item display and status.
+ * Provides stock status icon/label helpers (full, low, out_of_stock) and
+ * expiration date checks (isExpiringSoon within 7 days, isExpired).
+ */
 import { CheckCircle, AlertTriangle, Circle } from "lucide-react";
 
 export const getStatusIcon = (status) => {

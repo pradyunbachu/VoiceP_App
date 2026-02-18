@@ -1,3 +1,11 @@
+/*
+ * TutorialOverlay.jsx
+ * Step-through onboarding overlay for first-time users. Highlights UI
+ * elements with a spotlight cutout (positioned dynamically via
+ * getBoundingClientRect) while displaying an explanatory card. Supports
+ * keyboard navigation (arrow keys, Escape), dot indicators for direct
+ * step access, and repositions on window resize/scroll.
+ */
 import { useState, useEffect, useCallback } from "react";
 import { X, ChevronLeft, ChevronRight } from "lucide-react";
 import "./TutorialOverlay.css";

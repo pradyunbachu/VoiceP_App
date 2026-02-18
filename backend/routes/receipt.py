@@ -1,3 +1,12 @@
+"""Receipt scanning route.
+
+POST /scan-receipt accepts a base64-encoded receipt image, sends it through
+the Groq Vision API (via services.receipt_parsing) to extract store name,
+line items, total amount, date, and category, then persists the result as
+a new expense row in Supabase. Invalidates analytics and insights caches
+so dashboards reflect the new expense immediately.
+"""
+
 # ============================================================================
 # RECEIPT SCANNING ROUTES
 # ============================================================================
@@ -62,6 +71,7 @@ async def scan_receipt(
 
         saved_expense = result.data[0]
 
+        # Bust analytics and insights caches so dashboards reflect the new expense
         api_cache.invalidate_prefix(f"analytics:{user_id}")
         api_cache.invalidate_prefix(f"insights:{user_id}")
 

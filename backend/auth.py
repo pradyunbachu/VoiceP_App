@@ -1,3 +1,13 @@
+"""Authentication and JWT validation.
+
+Provides the get_current_user_dependency FastAPI dependency that extracts and
+validates a Supabase JWT from the Authorization header. Supports two algorithms:
+  - ES256: Verified via JWKS public keys fetched from Supabase (preferred)
+  - HS256: Fallback using the shared JWT secret from environment variables
+
+Returns a user dict with id, username, and email for use in route handlers.
+"""
+
 # ============================================================================
 # AUTHENTICATION HELPER FUNCTIONS
 # ============================================================================
@@ -11,7 +21,14 @@ from config import supabase, SUPABASE_JWT_SECRET, get_jwks_key
 security = HTTPBearer()
 
 async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    """Get the current authenticated user from Supabase JWT token"""
+    """Validate the JWT and return the authenticated user's info.
+
+    Peeks at the JWT header to determine ES256 vs HS256, validates the token,
+    then looks up the username from the profiles table.
+
+    Returns: dict with keys "id" (UUID str), "username" (str), "email" (str or None).
+    Raises: HTTPException 401 if the token is missing, expired, or invalid.
+    """
     credentials_exception = HTTPException(
         status_code=401,
         detail="Could not validate credentials",
@@ -20,6 +37,7 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
 
     try:
         token = credentials.credentials
+        # Peek at the header (without verifying) to determine which algorithm to use
         header = jwt.get_unverified_header(token)
         alg = header.get('alg')
 
@@ -44,7 +62,7 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
                 audience="authenticated",
             )
 
-        user_id = payload.get("sub")  # UUID string
+        user_id = payload.get("sub")  # "sub" claim holds the Supabase user UUID
         email = payload.get("email")
         if not user_id:
             raise credentials_exception
@@ -54,7 +72,7 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
         print(f"JWT Error: {e}")
         raise credentials_exception
 
-    # Get username from profiles table
+    # Look up display name from profiles; fall back to email prefix if no profile exists
     if supabase is None:
         raise credentials_exception
 

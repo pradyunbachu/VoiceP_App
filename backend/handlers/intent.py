@@ -1,3 +1,19 @@
+"""Intent detection for the Voxal chat assistant.
+
+Classifies a user's natural-language message into one of ~18 intents
+(expense_input, pantry_query, meal_suggestion, budget_set, etc.) plus
+optional sub-intents and extracted entities (item names, amounts, dates).
+
+Two strategies:
+  1. LLM-based (detect_intent) — Sends the message to Groq with a detailed
+     system prompt containing disambiguation rules and examples.
+  2. Keyword-based (simple_intent_detection) — Rule-based fallback using
+     ordered keyword/phrase matching. Used when Groq is unavailable or fails.
+
+The intent dict is consumed by the chat route (routes/chat.py), which
+dispatches to the appropriate domain handler.
+"""
+
 # ============================================================================
 # INTENT DETECTION
 # ============================================================================

@@ -1,3 +1,24 @@
+"""Chat-driven pantry handlers.
+
+Invoked by the chat route for pantry-related intents:
+
+  handle_pantry_query    — Queries pantry by sub-intent: item_quantity,
+                           low_stock, out_of_stock, expiring (7-day window),
+                           or list_all.
+  handle_pantry_add      — Parses item names from the user's message
+                           ("I have flour, oil, and salt") and inserts them
+                           into the pantry. Skips non-food items.
+  handle_pantry_remove   — Fuzzy-matches an item name and deletes all
+                           matching pantry rows.
+  handle_cooking_deduct  — Uses Groq to identify which pantry items a recipe
+                           requires, then decrements their quantities.
+
+Helper utilities:
+  is_pantry_item         — Filters out non-food keywords (household, pet, etc.)
+  categorize_pantry_item — Auto-categorizes items using grocery_categories.json
+  parse_pantry_items_from_message — Strips filler phrases and splits on commas/and
+"""
+
 # ============================================================================
 # PANTRY HANDLERS
 # ============================================================================
@@ -143,7 +164,6 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
         }
 
     now = datetime.now().isoformat()
-    today = datetime.now().strftime("%Y-%m-%d")
     added_items = []
     skipped_items = []
 
@@ -160,7 +180,7 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
                 "unit": None,
                 "category": category,
                 "expiration_date": None,
-                "purchase_date": today,
+                "purchase_date": None,
                 "stock_status": "full",
                 "notes": "Added via voice - pre-existing item",
                 "created_at": now,

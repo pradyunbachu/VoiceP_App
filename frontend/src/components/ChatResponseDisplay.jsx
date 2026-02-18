@@ -1,3 +1,11 @@
+/**
+ * ChatResponseDisplay.jsx - Renders structured voice assistant responses.
+ *
+ * Takes the parsed chatResponse object (intent, response text, data) from
+ * the voice assistant and renders an intent-specific card. Supports pantry
+ * queries, pantry additions, expense queries, shopping suggestions, and
+ * meal suggestions -- each with a tailored data layout.
+ */
 import { ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle, UtensilsCrossed, Clock, CheckCircle } from "lucide-react";
 import "./ChatResponseDisplay.css";
 
@@ -6,6 +14,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
 
   const { intent, sub_intent, response_text, data } = chatResponse;
 
+  // Map intent to its corresponding icon
   const getIcon = () => {
     switch (intent) {
       case "pantry_query":
@@ -23,12 +32,14 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     }
   };
 
+  // Capitalize the meal type for the section heading (e.g. "Dinner Ideas")
   const getMealTypeLabel = () => {
     const mealType = data?.meal_type;
     if (!mealType) return "Meal Ideas";
     return `${mealType.charAt(0).toUpperCase() + mealType.slice(1)} Ideas`;
   };
 
+  // Map intent to a human-readable section title
   const getTitle = () => {
     switch (intent) {
       case "pantry_query":
@@ -46,6 +57,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     }
   };
 
+  // Render a list of pantry items returned by a pantry query
   const renderPantryData = () => {
     if (!data?.items || data.items.length === 0) return null;
 
@@ -66,6 +78,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  // Render expense summary with total, transaction count, and optional item list
   const renderExpenseData = () => {
     if (!data) return null;
 
@@ -81,6 +94,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
           {data.category && <span>{data.category}</span>}
           {data.store && <span>{data.store}</span>}
         </div>
+        {/* Only show individual expenses for small result sets to avoid clutter */}
         {data.expenses && data.expenses.length > 0 && data.expenses.length <= 5 && (
           <div className="chat-data-list">
             {data.expenses.map((expense, index) => (
@@ -98,6 +112,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  // Render shopping suggestions split into out-of-stock and low-stock sections
   const renderSuggestionData = () => {
     if (!data?.items || data.items.length === 0) return null;
 
@@ -134,6 +149,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  // Render items that were just added to the pantry via voice command
   const renderPantryAdd = () => {
     if (!data?.added_items || data.added_items.length === 0) return null;
 
@@ -149,6 +165,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  // Render meal suggestion cards with ingredient chips (have vs. need)
   const renderMealSuggestions = () => {
     if (!data?.meals || data.meals.length === 0) return null;
 
@@ -177,9 +194,11 @@ const ChatResponseDisplay = ({ chatResponse }) => {
               </div>
             </div>
             <div className="meal-ingredients">
+              {/* Green chips = ingredients user already has */}
               {meal.ingredients_used && meal.ingredients_used.map((ing, i) => (
                 <span key={i} className="ingredient-chip have">{ing}</span>
               ))}
+              {/* Red/neutral chips = ingredients user still needs */}
               {meal.ingredients_needed && meal.ingredients_needed.map((ing, i) => (
                 <span key={`need-${i}`} className="ingredient-chip need">{ing}</span>
               ))}
@@ -204,6 +223,7 @@ const ChatResponseDisplay = ({ chatResponse }) => {
     );
   };
 
+  // Route to the appropriate data renderer based on intent
   const renderData = () => {
     switch (intent) {
       case "pantry_query":

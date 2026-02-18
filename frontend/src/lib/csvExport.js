@@ -1,6 +1,7 @@
 /**
- * CSV Export utilities for voxal App
- * Handles RFC 4180 compliant CSV generation and download
+ * csvExport.js — CSV export utilities for the Voxal application.
+ * Converts expense, budget, and pantry data into RFC 4180-compliant CSV strings
+ * and triggers browser downloads via a temporary Blob URL and anchor element.
  */
 
 /**

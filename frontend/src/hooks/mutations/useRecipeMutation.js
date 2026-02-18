@@ -1,3 +1,9 @@
+/**
+ * useRecipeMutation.js
+ * React Query mutation for fetching a detailed recipe from /api/recipe-detail.
+ * Accepts a meal name, description, and list of available ingredients, then
+ * returns AI-generated step-by-step cooking instructions.
+ */
 import { useMutation } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';

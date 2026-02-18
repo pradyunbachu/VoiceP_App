@@ -1,3 +1,11 @@
+"""
+Transcription & User Routes
+----------------------------
+Handles speech-to-text transcription via the Deepgram Nova-2 API and
+exposes a simple endpoint for retrieving the authenticated user's profile.
+Audio files are uploaded, validated for size, and sent to Deepgram for
+real-time transcription.
+"""
 # ============================================================================
 # TRANSCRIPTION & USER ROUTES
 # ============================================================================
@@ -10,12 +18,15 @@ from rate_limit import limiter
 
 router = APIRouter()
 
+# Return the authenticated user's profile info (id, email, etc.)
 @router.get("/me")
 @limiter.limit("60/minute")
 async def get_current_user_info(request: Request, current_user: dict = Depends(get_current_user_dependency)):
     """Get current user information"""
     return current_user
 
+# Accept an audio file upload and return its text transcription.
+# Uses Deepgram's Nova-2 model with smart formatting, punctuation, and numeral conversion.
 @router.post("/transcribe")
 @limiter.limit("10/minute")
 async def transcribe_audio(
@@ -31,7 +42,7 @@ async def transcribe_audio(
         )
 
     try:
-        # Read audio file content with size limit (10MB)
+        # Enforce a 10 MB upload limit to prevent abuse
         max_size = 10 * 1024 * 1024
         audio_content = await audio.read()
         if len(audio_content) > max_size:
@@ -46,7 +57,7 @@ async def transcribe_audio(
             "Authorization": f"Token {deepgram_api_key}",
         }
         params = {
-            "model": "nova-2",
+            "model": "nova-2",  # Deepgram's latest general-purpose STT model
             "smart_format": "true",
             "punctuate": "true",
             "numerals": "true",
@@ -63,7 +74,7 @@ async def transcribe_audio(
             response.raise_for_status()
             result = response.json()
 
-        # Extract transcript from response
+        # Deepgram returns results nested as: results -> channels[] -> alternatives[]
         if result.get("results") and result["results"].get("channels") and len(result["results"]["channels"]) > 0:
             transcript = result["results"]["channels"][0]["alternatives"][0]["transcript"]
             return {"transcript": transcript}

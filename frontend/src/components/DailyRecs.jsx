@@ -1,3 +1,11 @@
+/**
+ * DailyRecs.jsx - Slide-out panel for daily meal recommendations.
+ *
+ * Fetches personalized meal ideas from the backend based on the user's
+ * pantry contents, expiring items, and low-stock items. Clicking a meal
+ * card opens a nested RecipeDetailPanel with full recipe details (fetched
+ * on demand and cached in a ref to avoid redundant API calls).
+ */
 import { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X } from 'lucide-react';
 import { useDailyRecs, useRecipeDetail } from '../hooks';
@@ -8,13 +16,14 @@ const DailyRecs = () => {
   const [open, setOpen] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState(null);
   const [cachedRecipe, setCachedRecipe] = useState(null);
+  // In-memory recipe cache keyed by meal name to avoid re-fetching
   const recipeCacheRef = useRef({});
   const { data, isLoading, isError } = useDailyRecs();
   const recipeDetail = useRecipeDetail();
 
   const recipeOpen = !!selectedMeal;
 
-  // Close on Escape key
+  // Close panels on Escape: recipe panel first, then recommendations panel
   useEffect(() => {
     if (!open) return;
     const handleKey = (e) => {
@@ -38,6 +47,8 @@ const DailyRecs = () => {
   const greeting = data?.greeting || '';
   const hasContent = meals.length > 0 || low_stock.length > 0 || expiring.length > 0;
 
+  // Fetch full recipe details when a meal card is clicked.
+  // Serves from the in-memory cache if available to avoid redundant AI calls.
   const handleMealClick = (meal) => {
     setSelectedMeal(meal);
 
@@ -70,6 +81,7 @@ const DailyRecs = () => {
     recipeDetail.reset();
   };
 
+  // Render the main panel body based on loading/error/empty states
   const renderPanelContent = () => {
     if (isLoading) {
       return (
@@ -108,6 +120,7 @@ const DailyRecs = () => {
       <>
         <p className="daily-recs-greeting">{greeting}</p>
 
+        {/* Meal suggestion cards */}
         {meals.length > 0 && (
           <div className="daily-recs-meals">
             {meals.map((meal, i) => (
@@ -133,6 +146,7 @@ const DailyRecs = () => {
           </div>
         )}
 
+        {/* Expiring and low-stock alert chips */}
         {(low_stock.length > 0 || expiring.length > 0) && (
           <div className="daily-recs-alerts">
             {expiring.length > 0 && (
@@ -146,6 +160,7 @@ const DailyRecs = () => {
                     <span key={i} className="alert-chip expiring">
                       {item.name}
                       <span className="chip-detail">
+                        {/* Tilde prefix indicates the date was estimated, not user-provided */}
                         {item.expiration_predicted ? '~' : ''}{item.days_left === 0 ? 'today' : item.days_left === 1 ? '1d' : `${item.days_left}d`}
                       </span>
                     </span>
@@ -177,6 +192,7 @@ const DailyRecs = () => {
 
   return (
     <>
+      {/* Toggle button to open the slide-out panel */}
       <button
         className={`daily-recs-toggle ${open ? 'hidden' : ''}`}
         onClick={() => setOpen(true)}
@@ -188,6 +204,7 @@ const DailyRecs = () => {
 
       {open && (
         <>
+          {/* Backdrop overlay */}
           <div className="daily-recs-backdrop" onClick={() => setOpen(false)} />
 
           <button
@@ -198,6 +215,7 @@ const DailyRecs = () => {
             <ChevronRight size={18} />
           </button>
 
+          {/* Main recommendations panel -- shifts left when recipe panel is open */}
           <div className={`daily-recs-panel open ${recipeOpen ? 'recipe-shifted' : ''}`}>
             <div className="daily-recs-panel-header">
               <div className="daily-recs-title">
@@ -211,6 +229,7 @@ const DailyRecs = () => {
             {renderPanelContent()}
           </div>
 
+          {/* Nested recipe detail panel */}
           <div className={`recipe-panel ${recipeOpen ? 'open' : ''}`}>
             {recipeOpen && (
               <RecipeDetailPanel

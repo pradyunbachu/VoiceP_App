@@ -1,3 +1,12 @@
+/**
+ * useVoiceProcessor.js
+ * Orchestrates the full voice-to-expense pipeline: audio transcription via
+ * Deepgram, intent routing through the chat API, and expense extraction with
+ * automatic fallback from AI to simple extraction on rate-limit errors.
+ * Also auto-removes purchased items from the shopping list and prompts the
+ * user to add grocery expenses to the pantry. Returns state (transcript,
+ * extractedExpense, chatResponse, error, loading) and action functions.
+ */
 import { useState } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "./index";

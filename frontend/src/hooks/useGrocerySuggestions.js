@@ -1,3 +1,10 @@
+/**
+ * useGrocerySuggestions.js
+ * Hook for grocery item autocomplete powered by Fuse.js fuzzy search.
+ * Strips leading quantity prefixes (e.g. "2 mlk" -> search "mlk") before
+ * matching, and provides keyboard navigation helpers (navigateUp/Down).
+ * Returns getSuggestions, applySuggestion, selectedIndex, and isOpen state.
+ */
 import { useMemo, useState, useCallback } from "react";
 import Fuse from "fuse.js";
 import { GROCERY_ITEMS } from "../constants/groceryItems";

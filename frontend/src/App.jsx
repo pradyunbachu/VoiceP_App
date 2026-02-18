@@ -1,3 +1,9 @@
+/**
+ * App.jsx — Root React component for the Voxal application.
+ * Wraps the app in ThemeProvider and AuthProvider, then renders AppContent
+ * which handles auth-gated view routing (landing, login, record, dashboard,
+ * expenses, budgets, pantry, etc.), toast notifications, and tutorial overlay.
+ */
 import { useState, useEffect, useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Navigation from "./components/Navigation";

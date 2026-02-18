@@ -1,3 +1,11 @@
+/*
+ * Login.jsx
+ * Authentication page supporting email/password login, new account
+ * registration (with username), and Google OAuth sign-in via Supabase.
+ * Toggles between login and sign-up forms, validates input lengths, and
+ * displays inline error messages. On success, calls the onLogin callback
+ * with the session token and user data.
+ */
 import { useState } from "react";
 import { LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
