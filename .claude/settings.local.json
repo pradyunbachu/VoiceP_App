@@ -23,7 +23,9 @@
       "Bash(git check-ignore:*)",
       "Bash(python -c:*)",
       "Bash(done)",
-      "Bash(git checkout:*)"
+      "Bash(git checkout:*)",
+      "Bash(pip3 install:*)",
+      "Bash(python -m pytest tests/ -v --tb=short)"
     ]
   }
 }

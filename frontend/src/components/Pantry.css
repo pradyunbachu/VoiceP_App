@@ -561,7 +561,7 @@
 }
 
 .status-button:active {
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.15);
+  box-shadow: 0 0 0 2px rgba(196, 162, 101, 0.15);
 }
 
 .status-button.active {
@@ -739,7 +739,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(139, 92, 246, 0.12));
+  background: linear-gradient(135deg, var(--accent-primary-bg-hover), var(--accent-purple-bg));
   margin-bottom: var(--space-5);
 }
 
@@ -1044,8 +1044,8 @@
 
 /* Dark mode shelf status buttons */
 [data-theme="dark"] .shelf-status-btn {
-  background: rgba(60, 60, 60, 0.8);
-  border-color: rgba(255, 255, 255, 0.08);
+  background: rgba(38, 32, 24, 0.8);
+  border-color: rgba(200, 191, 178, 0.08);
   color: var(--text-secondary);
 }
 
@@ -1172,12 +1172,12 @@
 }
 
 [data-theme="dark"] .shelf-empty-hint {
-  color: rgba(180, 160, 140, 0.5);
+  color: rgba(150, 142, 130, 0.5);
 }
 
 [data-theme="dark"] .shelf.drag-over .shelf-surface {
-  background: #5A4A3A;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12), 0 0 0 2px var(--accent-primary);
+  background: #3D3228;
+  box-shadow: 0 4px 12px rgba(10, 8, 4, 0.15), 0 0 0 2px var(--accent-primary);
 }
 
 /* Shelf Edit Modal */
@@ -1248,21 +1248,21 @@
 
 /* Dark mode shelf adjustments */
 [data-theme="dark"] .shelf-surface {
-  background: linear-gradient(180deg, #55483A, #4A3D30 40%, #3F3428);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15), inset 0 1px 2px rgba(255, 255, 255, 0.05);
+  background: linear-gradient(180deg, #3D3228, #342B22 40%, #2C2418);
+  box-shadow: 0 4px 12px rgba(10, 8, 4, 0.2), inset 0 1px 2px rgba(200, 191, 178, 0.05);
 }
 
 [data-theme="dark"] .shelf-surface::after {
-  background: linear-gradient(180deg, #3D3228, #332A20);
+  background: linear-gradient(180deg, #2C2418, #241E14);
 }
 
 [data-theme="dark"] .shelf-bracket {
-  background: #3D3228;
+  background: #2C2418;
 }
 
 [data-theme="dark"] .shelf-item {
-  background: rgba(45, 45, 45, 0.95);
-  border-color: rgba(255, 255, 255, 0.06);
+  background: rgba(30, 26, 22, 0.95);
+  border-color: rgba(200, 191, 178, 0.06);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -1276,11 +1276,11 @@
 }
 
 [data-theme="dark"] .shelf-item.low {
-  background: rgba(55, 48, 35, 0.95);
+  background: rgba(40, 34, 22, 0.95);
 }
 
 [data-theme="dark"] .shelf-item.out_of_stock {
-  background: rgba(55, 40, 40, 0.95);
+  background: rgba(42, 28, 26, 0.95);
 }
 
 /* Pantry list scroll container (infinite scroll) */

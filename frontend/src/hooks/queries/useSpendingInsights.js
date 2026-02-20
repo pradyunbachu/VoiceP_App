@@ -12,12 +12,12 @@ import { getCsrfHeaders } from '../../lib/csrf';
 import { queryKeys } from './queryKeys';
 
 export const useSpendingInsights = (timePeriod = 'last_30_days') => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.insights.report(timePeriod),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE_URL}/api/insights`, {
@@ -40,7 +40,7 @@ export const useSpendingInsights = (timePeriod = 'last_30_days') => {
 
       return response.json();
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     staleTime: 5 * 60 * 1000, // 5 minutes - insights don't need constant refresh
     refetchOnWindowFocus: false,
   });

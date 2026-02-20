@@ -29,23 +29,23 @@
 
 /* Intent-specific styling */
 .chat-pantry_query .chat-response-header svg {
-  color: #8b5cf6; /* Purple for pantry */
+  color: var(--accent-purple);
 }
 
 .chat-expense_query .chat-response-header svg {
-  color: #f59e0b; /* Amber for expenses */
+  color: var(--accent-warning);
 }
 
 .chat-suggestion .chat-response-header svg {
-  color: #3b82f6; /* Blue for suggestions */
+  color: var(--accent-primary);
 }
 
 .chat-meal_suggestion .chat-response-header svg {
-  color: #f97316; /* Orange for meal suggestions */
+  color: var(--stat-orange);
 }
 
 .chat-general .chat-response-header svg {
-  color: #6b7280; /* Gray for general */
+  color: var(--stat-gray);
 }
 
 .chat-response-text {
@@ -204,7 +204,7 @@
 
 /* Pantry add styling */
 .chat-pantry_add .chat-response-header svg {
-  color: #22c55e; /* Green for pantry add */
+  color: var(--color-success);
 }
 
 .pantry-add-list {
@@ -212,8 +212,8 @@
 }
 
 .pantry-add-item {
-  background: rgba(34, 197, 94, 0.05);
-  border-color: rgba(34, 197, 94, 0.2);
+  background: rgba(90, 138, 106, 0.05);
+  border-color: rgba(90, 138, 106, 0.2);
 }
 
 .item-category-badge {
@@ -222,8 +222,8 @@
   border-radius: 12px;
   font-size: 0.75rem;
   font-weight: 500;
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+  background: var(--accent-purple-bg);
+  color: var(--accent-purple);
 }
 
 /* Meal suggestion styling */

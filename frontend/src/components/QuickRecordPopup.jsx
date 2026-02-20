@@ -158,7 +158,7 @@ const QuickRecordPopup = ({ showToast }) => {
     setChatResponse(null);
 
     try {
-      const token = getToken();
+      const token = await getToken();
 
       // Step 1: Transcribe
       const formData = new FormData();

@@ -10,12 +10,12 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useShoppingListGroups = () => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.shoppingList.groups(),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups`, {
@@ -33,7 +33,7 @@ export const useShoppingListGroups = () => {
       const data = await response.json();
       return data.groups || [];
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     staleTime: 30000,
     refetchOnMount: true,
   });

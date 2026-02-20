@@ -240,8 +240,23 @@ async def handle_pantry_remove(user_id: str, entities: dict, original_message: s
             .execute()
         )
         items = response.data if response.data else []
-        matching = [i for i in items if item_name.lower() in i.get("name", "").lower()]
+        search_lower = item_name.lower().strip()
 
+        # Prefer exact name match first, then fall back to word-boundary matching.
+        # Avoids "rice" deleting "Rice Vinegar", "Rice Krispies", etc.
+        exact = [i for i in items if i.get("name", "").lower().strip() == search_lower]
+        if not exact:
+            # Word-boundary match: check if search term matches a whole word in the name
+            import re
+            pattern = re.compile(r'\b' + re.escape(search_lower) + r'\b', re.IGNORECASE)
+            exact = [i for i in items if pattern.search(i.get("name", ""))]
+        if not exact:
+            # Last resort: substring match but only remove the single best match
+            substr = [i for i in items if search_lower in i.get("name", "").lower()]
+            if len(substr) == 1:
+                exact = substr
+
+        matching = exact
         if not matching:
             return {
                 "success": False,
@@ -352,8 +367,11 @@ Only include items that are actually in the pantry list above. Be practical abou
         used_items = json.loads(content)
 
         deducted = []
+        deducted_ids = set()  # Track already-deducted pantry items to prevent double-deduction
         for used_name in used_items:
             for pantry_item in pantry_items:
+                if pantry_item["id"] in deducted_ids:
+                    continue
                 if used_name.lower() in pantry_item["name"].lower() or pantry_item["name"].lower() in used_name.lower():
                     current_qty = pantry_item.get("quantity", 1)
                     new_qty = max(0, current_qty - 1)
@@ -364,6 +382,11 @@ Only include items that are actually in the pantry list above. Be practical abou
                         "stock_status": new_status,
                         "updated_at": datetime.now().isoformat()
                     }).eq("id", pantry_item["id"]).execute()
+
+                    # Update local copy so subsequent iterations see correct quantity
+                    pantry_item["quantity"] = new_qty
+                    pantry_item["stock_status"] = new_status
+                    deducted_ids.add(pantry_item["id"])
 
                     deducted.append({
                         "name": pantry_item["name"],

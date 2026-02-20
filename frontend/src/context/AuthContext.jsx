@@ -3,8 +3,11 @@
  * Manages user, session, and loading state. Subscribes to onAuthStateChange
  * to keep auth state in sync. Exposes signUp, signIn, signOut, signInWithGoogle,
  * and getToken helpers via the useAuth() hook.
+ *
+ * getToken() calls supabase.auth.getSession() which automatically refreshes
+ * expired tokens, ensuring API calls always use a valid access token.
  */
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 
 const AuthContext = createContext({});
@@ -24,7 +27,7 @@ export const AuthProvider = ({ children }) => {
       setLoading(false);
     });
 
-    // Listen for auth changes
+    // Listen for auth changes (including token refreshes)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
@@ -75,6 +78,16 @@ export const AuthProvider = ({ children }) => {
     return { data, error };
   };
 
+  // getToken calls supabase.auth.getSession() which automatically refreshes
+  // an expired token before returning it. This prevents 401 errors from stale tokens.
+  const getToken = useCallback(async () => {
+    const { data: { session: currentSession }, error } = await supabase.auth.getSession();
+    if (error || !currentSession) {
+      return null;
+    }
+    return currentSession.access_token;
+  }, []);
+
   const value = {
     user,
     session,
@@ -83,7 +96,7 @@ export const AuthProvider = ({ children }) => {
     signIn,
     signOut,
     signInWithGoogle,
-    getToken: () => session?.access_token,
+    getToken,
   };
 
   return (

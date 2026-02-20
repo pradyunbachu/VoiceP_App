@@ -16,7 +16,7 @@ export const useScanReceipt = () => {
 
   return useMutation({
     mutationFn: async (imageBase64) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/scan-receipt`, {
         method: 'POST',
         headers: getCsrfHeaders({

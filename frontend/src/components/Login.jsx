@@ -108,7 +108,7 @@ const Login = ({ onLogin }) => {
                 placeholder="Enter your username"
                 minLength={3}
               />
-              <small style={{ color: "#a0a0a0", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+              <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                 Must be at least 3 characters
               </small>
             </div>
@@ -138,7 +138,7 @@ const Login = ({ onLogin }) => {
               minLength={6}
             />
             {!isLogin && (
-              <small style={{ color: "#a0a0a0", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+              <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
                 Must be at least 6 characters
               </small>
             )}

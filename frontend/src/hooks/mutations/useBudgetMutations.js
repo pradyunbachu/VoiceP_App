@@ -17,7 +17,7 @@ export const useCreateBudget = () => {
 
   return useMutation({
     mutationFn: async (budgetData) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/budgets`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -48,7 +48,7 @@ export const useUpdateBudget = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
         method: 'PUT',
         headers: getCsrfHeaders({
@@ -79,7 +79,7 @@ export const useDeleteBudget = () => {
 
   return useMutation({
     mutationFn: async (id) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/budgets/${id}`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),

@@ -225,7 +225,7 @@ const ExpenseList = ({ showToast }) => {
 
   const handleExportCsv = async () => {
     try {
-      const token = getToken();
+      const token = await getToken();
       const urlParams = new URLSearchParams();
       urlParams.append('export', 'true');
       if (debouncedSearch) urlParams.append('search', debouncedSearch);

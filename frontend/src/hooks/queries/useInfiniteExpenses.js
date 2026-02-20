@@ -11,7 +11,7 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useInfiniteExpenses = (params = {}) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
   const { search, category, sortBy, sortOrder, pageSize = 20 } = params;
 
   const filters = { search, category, sortBy, sortOrder, pageSize };
@@ -19,7 +19,7 @@ export const useInfiniteExpenses = (params = {}) => {
   return useInfiniteQuery({
     queryKey: queryKeys.expenses.infinite(filters),
     queryFn: async ({ pageParam = 1 }) => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const urlParams = new URLSearchParams();
@@ -43,7 +43,7 @@ export const useInfiniteExpenses = (params = {}) => {
     initialPageParam: 1,
     getNextPageParam: (lastPage, allPages) =>
       lastPage.has_next ? allPages.length + 1 : undefined,
-    enabled: !!getToken(),
+    enabled: !!session,
     placeholderData: keepPreviousData,
   });
 };

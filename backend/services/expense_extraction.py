@@ -381,12 +381,11 @@ def extract_expense_simple(transcript: str):
                     continue
                 # Check if keyword appears before "from" or "at"
                 keyword_pos = transcript_lower.find(keyword)
-                store_marker_pos = min(
-                    transcript_lower.find(' from ', keyword_pos),
-                    transcript_lower.find(' at ', keyword_pos)
-                )
-                if store_marker_pos == -1:
-                    store_marker_pos = len(transcript_lower)
+                from_pos = transcript_lower.find(' from ', keyword_pos)
+                at_pos = transcript_lower.find(' at ', keyword_pos)
+                # Filter out -1 (not found) before taking min
+                positions = [p for p in (from_pos, at_pos) if p != -1]
+                store_marker_pos = min(positions) if positions else len(transcript_lower)
                 # If keyword is before store marker, it's likely an item
                 if keyword_pos < store_marker_pos:
                     found_items.append(keyword)

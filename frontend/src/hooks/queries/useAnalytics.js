@@ -10,12 +10,12 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useAnalytics = () => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.analytics.summary(),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE_URL}/api/analytics`, {
@@ -32,7 +32,7 @@ export const useAnalytics = () => {
 
       return response.json();
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     staleTime: 60 * 1000,
   });
 };

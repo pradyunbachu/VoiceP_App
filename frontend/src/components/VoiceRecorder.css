@@ -9,9 +9,10 @@
 .voice-recorder h2 {
   color: var(--text-primary);
   margin-bottom: var(--space-3);
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 2.25rem;
+  font-weight: 800;
   letter-spacing: -0.02em;
+  font-family: var(--font-brand);
 }
 
 .recorder-description {
@@ -98,7 +99,7 @@
 }
 
 .stop-button:hover {
-  background: #b91c1c;
+  background: var(--accent-danger-dark);
 }
 
 @keyframes pulse {

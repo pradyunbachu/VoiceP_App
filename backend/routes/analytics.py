@@ -56,6 +56,9 @@ async def get_analytics(
         query = query.lte("date", end_date)
 
     if month and year:
+        # Validate month range to prevent crashes
+        if not (1 <= month <= 12):
+            raise HTTPException(status_code=400, detail="Month must be between 1 and 12")
         # Filter by month and year
         start = f"{year}-{month:02d}-01"
         if month == 12:

@@ -206,7 +206,7 @@ const SpendingComparisons = ({ showToast }) => {
       {/* Summary Cards */}
       <div className="comparison-summary-cards">
         <div className="comparison-summary-card">
-          <div className="comparison-card-icon" style={{ background: '#3b82f6' }}>
+          <div className="comparison-card-icon" style={{ background: 'var(--stat-blue)' }}>
             <DollarSign size={20} />
           </div>
           <div className="comparison-card-content">
@@ -220,7 +220,7 @@ const SpendingComparisons = ({ showToast }) => {
         </div>
 
         <div className="comparison-summary-card">
-          <div className="comparison-card-icon" style={{ background: '#6b7280' }}>
+          <div className="comparison-card-icon" style={{ background: 'var(--stat-gray)' }}>
             <DollarSign size={20} />
           </div>
           <div className="comparison-card-content">
@@ -233,7 +233,7 @@ const SpendingComparisons = ({ showToast }) => {
         </div>
 
         <div className="comparison-summary-card">
-          <div className="comparison-card-icon" style={{ background: summary.total_difference > 0 ? '#ef4444' : '#22c55e' }}>
+          <div className="comparison-card-icon" style={{ background: summary.total_difference > 0 ? 'var(--stat-red)' : 'var(--stat-green)' }}>
             {summary.total_difference > 0 ? <TrendingUp size={20} /> : <TrendingDown size={20} />}
           </div>
           <div className="comparison-card-content">
@@ -248,7 +248,7 @@ const SpendingComparisons = ({ showToast }) => {
         </div>
 
         <div className="comparison-summary-card">
-          <div className="comparison-card-icon" style={{ background: '#8b5cf6' }}>
+          <div className="comparison-card-icon" style={{ background: 'var(--stat-purple)' }}>
             <ShoppingBag size={20} />
           </div>
           <div className="comparison-card-content">

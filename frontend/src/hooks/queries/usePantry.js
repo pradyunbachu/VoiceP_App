@@ -11,13 +11,13 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const usePantryItems = (filters = {}) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
   const { category, stock_status, sort_by = 'name', sort_order = 'asc', search, page, page_size, paginate } = filters;
 
   return useQuery({
     queryKey: queryKeys.pantry.items(filters),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const params = new URLSearchParams();
@@ -48,17 +48,17 @@ export const usePantryItems = (filters = {}) => {
       }
       return data.items || [];
     },
-    enabled: !!getToken(),
+    enabled: !!session,
   });
 };
 
 export const usePantryStats = () => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.pantry.stats(),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE_URL}/api/pantry/stats`, {
@@ -75,6 +75,6 @@ export const usePantryStats = () => {
 
       return response.json();
     },
-    enabled: !!getToken(),
+    enabled: !!session,
   });
 };

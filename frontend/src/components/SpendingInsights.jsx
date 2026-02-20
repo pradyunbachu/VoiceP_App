@@ -170,7 +170,7 @@ const SpendingInsights = ({ showToast }) => {
       {/* Summary Cards */}
       <div className="summary-cards">
         <div className="summary-card">
-          <div className="card-icon" style={{ background: '#3b82f6' }}>
+          <div className="card-icon" style={{ background: 'var(--stat-blue)' }}>
             <DollarSign size={20} />
           </div>
           <div className="card-content">
@@ -184,7 +184,7 @@ const SpendingInsights = ({ showToast }) => {
         </div>
 
         <div className="summary-card">
-          <div className="card-icon" style={{ background: '#3b82f6' }}>
+          <div className="card-icon" style={{ background: 'var(--stat-blue)' }}>
             <ShoppingBag size={20} />
           </div>
           <div className="card-content">
@@ -198,7 +198,7 @@ const SpendingInsights = ({ showToast }) => {
         </div>
 
         <div className="summary-card">
-          <div className="card-icon" style={{ background: '#8b5cf6' }}>
+          <div className="card-icon" style={{ background: 'var(--stat-purple)' }}>
             <Calendar size={20} />
           </div>
           <div className="card-content">
@@ -212,7 +212,7 @@ const SpendingInsights = ({ showToast }) => {
         </div>
 
         <div className="summary-card">
-          <div className="card-icon" style={{ background: '#f59e0b' }}>
+          <div className="card-icon" style={{ background: 'var(--stat-amber)' }}>
             <Target size={20} />
           </div>
           <div className="card-content">
@@ -391,8 +391,8 @@ const SpendingInsights = ({ showToast }) => {
                     className="budget-bar"
                     style={{
                       width: `${Math.min(budget.percentage_used, 100)}%`,
-                      backgroundColor: budget.status === 'over' ? '#ef4444' :
-                        budget.status === 'warning' ? '#f59e0b' : '#3b82f6'
+                      backgroundColor: budget.status === 'over' ? 'var(--budget-danger)' :
+                        budget.status === 'warning' ? 'var(--budget-warning)' : 'var(--budget-ok)'
                     }}
                   />
                 </div>

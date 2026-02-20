@@ -309,7 +309,7 @@ const BudgetManagement = ({ showToast }) => {
                 </select>
               </div>
               {formData.repeatInterval && formData.repeatUnit && (
-                <small style={{color: '#a0a0a0', marginTop: '0.5rem', display: 'block'}}>
+                <small style={{color: 'var(--text-muted)', marginTop: '0.5rem', display: 'block'}}>
                   This will automatically create the same budget every {formData.repeatInterval} {formData.repeatUnit}.
                 </small>
               )}
@@ -428,7 +428,7 @@ const BudgetManagement = ({ showToast }) => {
                         </select>
                       </div>
                       {editForm.repeatInterval && editForm.repeatUnit && (
-                        <small style={{color: '#a0a0a0', marginTop: '0.5rem', display: 'block'}}>
+                        <small style={{color: 'var(--text-muted)', marginTop: '0.5rem', display: 'block'}}>
                           This will automatically create the same budget every {editForm.repeatInterval} {editForm.repeatUnit}.
                         </small>
                       )}
@@ -497,10 +497,10 @@ const BudgetManagement = ({ showToast }) => {
                         style={{
                           width: `${Math.min(budget.percentage_used || 0, 100)}%`,
                           backgroundColor:
-                            (budget.percentage_used || 0) >= 100 ? '#dc2626' :
-                            (budget.percentage_used || 0) >= 90 ? '#eab308' :
-                            (budget.percentage_used || 0) >= 75 ? '#f59e0b' :
-                            '#3b82f6'
+                            (budget.percentage_used || 0) >= 100 ? 'var(--budget-danger)' :
+                            (budget.percentage_used || 0) >= 90 ? 'var(--budget-caution)' :
+                            (budget.percentage_used || 0) >= 75 ? 'var(--budget-warning)' :
+                            'var(--budget-ok)'
                         }}
                       />
                     </div>

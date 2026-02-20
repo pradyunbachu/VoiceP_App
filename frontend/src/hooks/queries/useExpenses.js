@@ -10,7 +10,7 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useExpenses = (params = {}) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
   const { page, pageSize, search, category, sortBy, sortOrder, exportAll } = params;
 
   const filters = { page, pageSize, search, category, sortBy, sortOrder, exportAll };
@@ -18,7 +18,7 @@ export const useExpenses = (params = {}) => {
   return useQuery({
     queryKey: queryKeys.expenses.list(filters),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const urlParams = new URLSearchParams();
@@ -46,7 +46,7 @@ export const useExpenses = (params = {}) => {
 
       return response.json();
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     placeholderData: keepPreviousData,
   });
 };

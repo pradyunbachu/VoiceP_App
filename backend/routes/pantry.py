@@ -51,7 +51,10 @@ def _find_existing_pantry_item(user_id: str, item_name: str):
 
 def _merge_pantry_item(existing, add_quantity: float, purchase_date: str = None):
     """Merge a new quantity into an existing pantry item, updating stock status."""
-    new_qty = (existing.get("quantity") or 1) + (add_quantity or 1)
+    existing_qty = existing.get("quantity")
+    existing_qty = existing_qty if existing_qty is not None else 1
+    add_qty = add_quantity if add_quantity is not None else 1
+    new_qty = existing_qty + add_qty
     update_data = {
         "quantity": new_qty,
         "stock_status": "full",
@@ -103,6 +106,41 @@ async def get_pantry_items(
     sort_field = sort_by if sort_by in valid_sort_fields else "name"
     query = query.order(sort_field, desc=(sort_order.lower() == "desc"))
 
+    # When filtering by expiring_within_days, apply to the FULL dataset first
+    # so pagination reflects the filtered count (not all items).
+    if expiring_within_days is not None:
+        today = datetime.now().date()
+        future_date = (today + timedelta(days=expiring_within_days)).date()
+        # Fetch all items (no pagination yet) and filter client-side
+        response = query.execute()
+        all_items = response.data if response.data else []
+        items = []
+        for item in all_items:
+            if item.get("expiration_date"):
+                try:
+                    exp_date = datetime.strptime(item["expiration_date"], "%Y-%m-%d").date()
+                    # Only include items expiring in the future window, NOT already expired
+                    if today <= exp_date <= future_date:
+                        items.append(item)
+                except (ValueError, TypeError):
+                    pass
+
+        if paginate:
+            total_count = len(items)
+            total_pages = pantry_math.ceil(total_count / page_size) if page_size > 0 else 1
+            start = (page - 1) * page_size
+            end = start + page_size
+            return {
+                "items": items[start:end],
+                "total_count": total_count,
+                "page": page,
+                "page_size": page_size,
+                "total_pages": total_pages,
+                "has_next": page < total_pages,
+                "has_prev": page > 1,
+            }
+        return {"items": items, "count": len(items)}
+
     if paginate:
         start = (page - 1) * page_size
         end = start + page_size - 1
@@ -110,13 +148,6 @@ async def get_pantry_items(
 
     response = query.execute()
     items = response.data if response.data else []
-
-    # Apply expiring_within_days filter
-    if expiring_within_days is not None:
-        future_date = (datetime.now() + timedelta(days=expiring_within_days)).date()
-        items = [item for item in items if
-                 item.get("expiration_date") and
-                 datetime.strptime(item["expiration_date"], "%Y-%m-%d").date() <= future_date]
 
     if paginate:
         total_count = response.count if response.count is not None else len(items)
@@ -335,24 +366,8 @@ async def update_pantry_item_status(
 
     return {"message": f"Status updated to {stock_status}"}
 
-@router.delete("/pantry/{item_id}")
-@limiter.limit("30/minute")
-async def delete_pantry_item(
-    request: Request,
-    item_id: int,
-    current_user: dict = Depends(get_current_user_dependency)
-):
-    """Delete a single pantry item"""
-    if supabase is None:
-        raise HTTPException(status_code=500, detail="Database not configured")
-
-    response = supabase.table("pantry_items").delete().eq("id", item_id).eq("user_id", current_user["id"]).execute()
-
-    if not response.data:
-        raise HTTPException(status_code=404, detail="Pantry item not found")
-
-    return {"message": "Pantry item deleted successfully"}
-
+# NOTE: /pantry/bulk MUST be registered before /pantry/{item_id} to avoid
+# FastAPI treating "bulk" as an int path parameter and returning 422.
 @router.delete("/pantry/bulk")
 @limiter.limit("10/minute")
 async def delete_pantry_items_bulk(
@@ -371,6 +386,24 @@ async def delete_pantry_items_bulk(
             deleted_count += 1
 
     return {"message": f"{deleted_count} item(s) deleted successfully", "deleted_count": deleted_count}
+
+@router.delete("/pantry/{item_id}")
+@limiter.limit("30/minute")
+async def delete_pantry_item(
+    request: Request,
+    item_id: int,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Delete a single pantry item"""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    response = supabase.table("pantry_items").delete().eq("id", item_id).eq("user_id", current_user["id"]).execute()
+
+    if not response.data:
+        raise HTTPException(status_code=404, detail="Pantry item not found")
+
+    return {"message": "Pantry item deleted successfully"}
 
 @router.get("/pantry/stats")
 @limiter.limit("30/minute")

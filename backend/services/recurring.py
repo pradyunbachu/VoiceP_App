@@ -14,8 +14,12 @@ times on the same day.
 # ============================================================================
 # RECURRING EXPENSE SERVICE
 # ============================================================================
+import calendar
 from datetime import datetime, timedelta
 from config import supabase
+
+# Safety limit: max number of catch-up entries per recurring expense per run
+MAX_CATCHUP_ITERATIONS = 52
 
 def process_due_recurring_expenses(user_id=None):
     """Check for recurring expenses that are due and create new entries.
@@ -41,87 +45,106 @@ def process_due_recurring_expenses(user_id=None):
     created_count = 0
 
     for expense_dict in recurring_expenses:
-        user_id = expense_dict["user_id"]
+        expense_user_id = expense_dict["user_id"]
         recurring_interval = expense_dict.get("recurring_interval", 1)
         recurring_unit = expense_dict.get("recurring_unit", "months")
+
+        # Guard: skip invalid intervals to prevent infinite loops
+        if not recurring_interval or recurring_interval <= 0:
+            continue
 
         # Parse the original expense date
         try:
             original_date = datetime.strptime(expense_dict["date"], "%Y-%m-%d").date()
-        except:
+        except (ValueError, TypeError, KeyError):
             continue
 
-        # Find the most recent occurrence for this recurring expense
-        response = supabase.table("expenses").select("date").or_(f"id.eq.{expense_dict['id']},parent_recurring_id.eq.{expense_dict['id']}").order("date", desc=True).limit(1).execute()
+        # Remember the original day-of-month for monthly recurrence to avoid drift
+        original_day = original_date.day
 
-        if response.data and response.data[0].get("date"):
+        # Find the most recent occurrence for this recurring expense
+        recent_response = supabase.table("expenses").select("date").or_(f"id.eq.{expense_dict['id']},parent_recurring_id.eq.{expense_dict['id']}").order("date", desc=True).limit(1).execute()
+
+        if recent_response.data and recent_response.data[0].get("date"):
             try:
-                last_date = datetime.strptime(response.data[0]["date"], "%Y-%m-%d").date()
-            except:
+                last_date = datetime.strptime(recent_response.data[0]["date"], "%Y-%m-%d").date()
+            except (ValueError, TypeError):
                 last_date = original_date
         else:
             last_date = original_date
 
         # Calculate next due date
-        if recurring_unit == "days":
-            next_due = last_date + timedelta(days=recurring_interval)
-        elif recurring_unit == "weeks":
-            next_due = last_date + timedelta(weeks=recurring_interval)
-        elif recurring_unit == "months":
-            month = last_date.month + recurring_interval
-            year = last_date.year
-            while month > 12:
-                month -= 12
-                year += 1
-            day = min(last_date.day, 28)
-            next_due = last_date.replace(year=year, month=month, day=day)
-        elif recurring_unit == "years":
-            next_due = last_date.replace(year=last_date.year + recurring_interval)
-        else:
+        next_due = _advance_date(last_date, recurring_interval, recurring_unit, original_day)
+        if next_due is None:
             continue
 
         # Create new expense if due date has arrived (today or past)
-        while next_due <= today:
+        iterations = 0
+        while next_due <= today and iterations < MAX_CATCHUP_ITERATIONS:
+            iterations += 1
             next_due_str = next_due.strftime("%Y-%m-%d")
 
             # Check if this expense already exists for this date
-            check_response = supabase.table("expenses").select("id").eq("user_id", user_id).eq("store", expense_dict["store"]).eq("items", expense_dict["items"]).eq("date", next_due_str).or_(f"id.eq.{expense_dict['id']},parent_recurring_id.eq.{expense_dict['id']}").execute()
+            check_response = supabase.table("expenses").select("id").eq("user_id", expense_user_id).eq("store", expense_dict["store"]).eq("items", expense_dict["items"]).eq("date", next_due_str).or_(f"id.eq.{expense_dict['id']},parent_recurring_id.eq.{expense_dict['id']}").execute()
 
             if not check_response.data:
                 # Create the new recurring expense entry
-                response = supabase.table("expenses").insert({
-                    "user_id": user_id,
-                    "store": expense_dict["store"],
-                    "items": expense_dict["items"],
-                    "category": expense_dict.get("category"),
-                    "amount": expense_dict["amount"],
-                    "date": next_due_str,
-                    "created_at": datetime.now().isoformat(),
-                    "is_recurring": 1,
-                    "recurring_interval": recurring_interval,
-                    "recurring_unit": recurring_unit,
-                    "parent_recurring_id": expense_dict["id"]
-                }).execute()
+                try:
+                    insert_response = supabase.table("expenses").insert({
+                        "user_id": expense_user_id,
+                        "store": expense_dict["store"],
+                        "items": expense_dict["items"],
+                        "category": expense_dict.get("category"),
+                        "amount": expense_dict["amount"],
+                        "date": next_due_str,
+                        "created_at": datetime.now().isoformat(),
+                        "is_recurring": 1,
+                        "recurring_interval": recurring_interval,
+                        "recurring_unit": recurring_unit,
+                        "parent_recurring_id": expense_dict["id"]
+                    }).execute()
 
-                if response.data:
-                    created_count += 1
+                    if insert_response.data:
+                        created_count += 1
+                except Exception as e:
+                    print(f"Error creating recurring expense: {e}")
 
-            # Calculate next due date for the loop
-            if recurring_unit == "days":
-                next_due = next_due + timedelta(days=recurring_interval)
-            elif recurring_unit == "weeks":
-                next_due = next_due + timedelta(weeks=recurring_interval)
-            elif recurring_unit == "months":
-                month = next_due.month + recurring_interval
-                year = next_due.year
-                while month > 12:
-                    month -= 12
-                    year += 1
-                day = min(next_due.day, 28)
-                next_due = next_due.replace(year=year, month=month, day=day)
-            elif recurring_unit == "years":
-                next_due = next_due.replace(year=next_due.year + recurring_interval)
-            else:
+            # Advance to next due date
+            next_due = _advance_date(next_due, recurring_interval, recurring_unit, original_day)
+            if next_due is None:
                 break
 
     return created_count
+
+
+def _advance_date(from_date, interval, unit, original_day=None):
+    """Advance a date by the given recurring interval.
+
+    For monthly recurrence, uses original_day to avoid permanent drift
+    (e.g., Jan 31 -> Feb 28 -> Mar 31, not Mar 28).
+    For yearly recurrence, handles Feb 29 -> Feb 28 gracefully.
+    """
+    if unit == "days":
+        return from_date + timedelta(days=interval)
+    elif unit == "weeks":
+        return from_date + timedelta(weeks=interval)
+    elif unit == "months":
+        month = from_date.month + interval
+        year = from_date.year
+        while month > 12:
+            month -= 12
+            year += 1
+        # Use the original day-of-month, clamped to the target month's max
+        target_day = original_day if original_day else from_date.day
+        max_day = calendar.monthrange(year, month)[1]
+        day = min(target_day, max_day)
+        return from_date.replace(year=year, month=month, day=day)
+    elif unit == "years":
+        target_year = from_date.year + interval
+        # Handle Feb 29 -> Feb 28 for non-leap years
+        if from_date.month == 2 and from_date.day == 29:
+            max_day = calendar.monthrange(target_year, 2)[1]
+            return from_date.replace(year=target_year, day=max_day)
+        return from_date.replace(year=target_year)
+    else:
+        return None

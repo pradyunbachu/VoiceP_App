@@ -17,7 +17,7 @@ export const useChat = () => {
 
   return useMutation({
     mutationFn: async (message) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/chat`, {
         method: 'POST',
         headers: getCsrfHeaders({

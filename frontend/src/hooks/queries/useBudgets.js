@@ -10,13 +10,13 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useBudgets = (filters = {}) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
   const { month, year } = filters;
 
   return useQuery({
     queryKey: queryKeys.budgets.check(month, year),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const params = new URLSearchParams();
@@ -40,6 +40,6 @@ export const useBudgets = (filters = {}) => {
       const data = await response.json();
       return data.budgets || [];
     },
-    enabled: !!getToken(),
+    enabled: !!session,
   });
 };

@@ -98,8 +98,12 @@ class CSRFMiddleware(BaseHTTPMiddleware):
         # Process the request
         response = await call_next(request)
 
-        # Set CSRF cookie if not present (on all responses)
-        if not csrf_cookie:
+        # Set CSRF cookie if not present (on all responses).
+        # Skip if the endpoint already set the cookie (e.g. the /csrf-token endpoint
+        # sets a flag via request.state to avoid the middleware generating a second token).
+        endpoint_set_cookie = getattr(request.state, "csrf_cookie_set", False)
+
+        if not csrf_cookie and not endpoint_set_cookie:
             new_token = generate_csrf_token()
             response.set_cookie(
                 key=CSRF_COOKIE_NAME,
@@ -115,15 +119,34 @@ class CSRFMiddleware(BaseHTTPMiddleware):
 
 
 # Simpler approach: CSRF token endpoint for SPAs
-async def get_csrf_token(request: Request) -> dict:
+async def get_csrf_token(request: Request) -> Response:
     """
     Endpoint to get a CSRF token.
     The token is also set in a cookie for the double-submit pattern.
+
+    When no cookie exists, this endpoint generates one token and both
+    returns it in the JSON body AND sets it in the cookie, ensuring
+    the client and cookie always agree.
     """
+    from fastapi.responses import JSONResponse
+
     csrf_cookie = request.cookies.get(CSRF_COOKIE_NAME)
 
     if csrf_cookie:
         return {"csrf_token": csrf_cookie}
 
-    # Generate new token - it will be set in cookie by middleware
-    return {"csrf_token": generate_csrf_token()}
+    # Generate a single new token — return it AND set the cookie ourselves.
+    # Signal the middleware not to generate a conflicting second token.
+    new_token = generate_csrf_token()
+    request.state.csrf_cookie_set = True
+    response = JSONResponse(content={"csrf_token": new_token})
+    response.set_cookie(
+        key=CSRF_COOKIE_NAME,
+        value=new_token,
+        max_age=CSRF_COOKIE_MAX_AGE,
+        httponly=False,
+        samesite="strict",
+        secure=os.getenv("ENVIRONMENT") == "production",
+        path="/"
+    )
+    return response

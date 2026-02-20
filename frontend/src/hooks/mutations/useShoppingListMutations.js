@@ -18,7 +18,7 @@ export const useCreateShoppingListItem = () => {
 
   return useMutation({
     mutationFn: async (itemData) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -48,7 +48,7 @@ export const useUpdateShoppingListItem = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/${id}`, {
         method: 'PUT',
         headers: getCsrfHeaders({
@@ -78,7 +78,7 @@ export const useDeleteShoppingListItem = () => {
 
   return useMutation({
     mutationFn: async (id) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/${id}`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
@@ -103,7 +103,7 @@ export const useBulkDeleteShoppingListItems = () => {
 
   return useMutation({
     mutationFn: async (itemIds) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/bulk`, {
         method: 'DELETE',
         headers: getCsrfHeaders({
@@ -132,7 +132,7 @@ export const useClearShoppingList = () => {
 
   return useMutation({
     mutationFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/clear`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
@@ -157,7 +157,7 @@ export const useRemovePurchasedItems = () => {
 
   return useMutation({
     mutationFn: async (itemsText) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/remove-purchased`, {
         method: 'POST',
         headers: getCsrfHeaders({

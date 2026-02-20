@@ -129,11 +129,11 @@
 }
 
 .comparison-card-change.positive {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .comparison-card-change.negative {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .comparison-card-change.neutral {
@@ -142,8 +142,8 @@
 
 /* Comparison Sentences */
 .sentences-section {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08), rgba(139, 92, 246, 0.08));
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, var(--accent-primary-bg), var(--accent-purple-bg));
+  border: 1px solid var(--accent-primary-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   margin-bottom: var(--space-8);
@@ -154,7 +154,7 @@
   align-items: center;
   gap: var(--space-2);
   margin-bottom: var(--space-4);
-  color: #3b82f6;
+  color: var(--accent-primary);
 }
 
 .sentences-header h3 {
@@ -184,11 +184,11 @@
 }
 
 .sentence-icon.increase {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .sentence-icon.decrease {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .sentence-text {
@@ -213,11 +213,11 @@
 }
 
 .highlight-card.increase {
-  border-left: 3px solid #ef4444;
+  border-left: 3px solid var(--color-danger);
 }
 
 .highlight-card.decrease {
-  border-left: 3px solid #22c55e;
+  border-left: 3px solid var(--color-success);
 }
 
 .highlight-label {
@@ -233,11 +233,11 @@
 }
 
 .highlight-label.increase {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .highlight-label.decrease {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .highlight-category {
@@ -313,11 +313,11 @@
 }
 
 .comparison-bar-change.positive {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .comparison-bar-change.negative {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .comparison-bar-change.neutral {
@@ -359,11 +359,11 @@
 }
 
 .dual-bar-fill.current {
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
+  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
 }
 
 .dual-bar-fill.compare {
-  background: linear-gradient(90deg, #6b7280, #4b5563);
+  background: linear-gradient(90deg, var(--stat-gray), var(--text-muted));
 }
 
 .dual-bar-amount {
@@ -437,11 +437,11 @@
 }
 
 .comparison-store-change.positive {
-  color: #22c55e;
+  color: var(--color-success);
 }
 
 .comparison-store-change.negative {
-  color: #ef4444;
+  color: var(--color-danger);
 }
 
 .comparison-store-change.neutral {

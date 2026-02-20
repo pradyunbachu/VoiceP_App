@@ -33,6 +33,10 @@
   letter-spacing: -0.02em;
 }
 
+.nav-logo span {
+  font-family: var(--font-brand);
+}
+
 .nav-logo:hover {
   opacity: 0.8;
 }

@@ -11,12 +11,12 @@ import { getCsrfHeaders } from '../../lib/csrf';
 import { queryKeys } from './queryKeys';
 
 export const useSpendingComparison = (currentMonth, currentYear, compareMonth, compareYear) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.comparison.months(currentMonth, currentYear, compareMonth, compareYear),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE_URL}/api/spending-comparison`, {
@@ -44,7 +44,7 @@ export const useSpendingComparison = (currentMonth, currentYear, compareMonth, c
 
       return response.json();
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     staleTime: 5 * 60 * 1000,
     refetchOnWindowFocus: false,
   });

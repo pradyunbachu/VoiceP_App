@@ -17,7 +17,7 @@ export const useCreateExpense = () => {
 
   return useMutation({
     mutationFn: async (transcript) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/extract-expense`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -48,7 +48,7 @@ export const useCreateExpenseSimple = () => {
 
   return useMutation({
     mutationFn: async (transcript) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/extract-expense-simple`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -78,7 +78,7 @@ export const useUpdateExpense = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
         method: 'PUT',
         headers: getCsrfHeaders({
@@ -109,7 +109,7 @@ export const useDeleteExpense = () => {
 
   return useMutation({
     mutationFn: async (id) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses/${id}`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
@@ -135,7 +135,7 @@ export const useBulkDeleteExpenses = () => {
 
   return useMutation({
     mutationFn: async (expenseIds) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses/bulk`, {
         method: 'DELETE',
         headers: getCsrfHeaders({
@@ -166,7 +166,7 @@ export const useClearAllExpenses = () => {
 
   return useMutation({
     mutationFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/expenses`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),

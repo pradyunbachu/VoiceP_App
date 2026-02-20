@@ -9,13 +9,26 @@
 import { useState } from 'react'
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts'
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, Wallet, AlertTriangle } from 'lucide-react'
+import { useTheme } from '../context/ThemeContext'
 import { useBudgets } from '../hooks'
 import LoadingSkeleton from './LoadingSkeleton'
 import './AnalyticsDashboard.css'
 
-const COLORS = ['#3b82f6', '#6366f1', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981', '#ef4444', '#06b6d4']
+const COLORS_DARK = ['#C4A265', '#D4A035', '#B898C8', '#D4726B', '#D48A45', '#6AAF7B', '#D4B87A', '#9470A8']
+const COLORS_LIGHT = ['#8B7355', '#5B5E8B', '#7B5E8B', '#8B5E7B', '#B8860B', '#5A8A6A', '#C45B5B', '#5A7A7A']
 
 const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
+  const { theme } = useTheme()
+  const isLight = theme === 'light'
+  const COLORS = isLight ? COLORS_LIGHT : COLORS_DARK
+  const chartAxis = isLight ? '#6B6B6B' : '#968E82'
+  const chartGrid = isLight ? 'rgba(139, 115, 85, 0.1)' : 'rgba(200, 191, 178, 0.1)'
+  const tooltipBg = isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(30, 26, 22, 0.95)'
+  const tooltipBorder = isLight ? 'rgba(139, 115, 85, 0.2)' : 'rgba(200, 191, 178, 0.15)'
+  const tooltipColor = isLight ? '#3D3D3D' : '#F0EBE3'
+  const lineColor = isLight ? '#8B7355' : '#C4A265'
+  const cursorFill = isLight ? 'rgba(139, 115, 85, 0.1)' : 'rgba(196, 162, 101, 0.1)'
+
   const [budgetMonth, setBudgetMonth] = useState(new Date().getMonth() + 1)
   const [budgetYear, setBudgetYear] = useState(new Date().getFullYear())
 
@@ -57,7 +70,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
 
       <div className="stats-grid">
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#3b82f6' }}>
+          <div className="stat-icon" style={{ background: 'var(--stat-blue)' }}>
             <DollarSign size={24} />
           </div>
           <div className="stat-content">
@@ -67,7 +80,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#2563eb' }}>
+          <div className="stat-icon" style={{ background: 'var(--stat-blue-dark)' }}>
             <ShoppingBag size={24} />
           </div>
           <div className="stat-content">
@@ -77,7 +90,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#1d4ed8' }}>
+          <div className="stat-icon" style={{ background: 'var(--stat-blue-darker)' }}>
             <TrendingUp size={24} />
           </div>
           <div className="stat-content">
@@ -91,7 +104,7 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
         </div>
 
         <div className="stat-card">
-          <div className="stat-icon" style={{ background: '#60a5fa' }}>
+          <div className="stat-icon" style={{ background: 'var(--stat-blue-light)' }}>
             <Calendar size={24} />
           </div>
           <div className="stat-content">
@@ -107,26 +120,26 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
           {dateData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <LineChart data={dateData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                <XAxis dataKey="date" stroke="#a0a0a0" />
-                <YAxis stroke="#a0a0a0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="date" stroke={chartAxis} />
+                <YAxis stroke={chartAxis} />
                 <Tooltip
                   formatter={(value) => `$${value.toFixed(2)}`}
                   contentStyle={{
-                    backgroundColor: 'rgba(26, 26, 26, 0.95)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backgroundColor: tooltipBg,
+                    border: `1px solid ${tooltipBorder}`,
                     borderRadius: '8px',
-                    color: '#e0e0e0'
+                    color: tooltipColor
                   }}
                 />
-                <Legend wrapperStyle={{ color: '#e0e0e0' }} />
+                <Legend wrapperStyle={{ color: tooltipColor }} />
                 <Line
                   type="monotone"
                   dataKey="amount"
-                  stroke="#3b82f6"
+                  stroke={lineColor}
                   strokeWidth={3}
                   name="Amount"
-                  dot={{ fill: '#3b82f6', r: 4 }}
+                  dot={{ fill: lineColor, r: 4 }}
                 />
               </LineChart>
             </ResponsiveContainer>
@@ -142,20 +155,20 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
           {storeData.length > 0 ? (
             <ResponsiveContainer width="100%" height={300}>
               <BarChart data={storeData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255, 255, 255, 0.1)" />
-                <XAxis dataKey="name" stroke="#a0a0a0" />
-                <YAxis stroke="#a0a0a0" />
+                <CartesianGrid strokeDasharray="3 3" stroke={chartGrid} />
+                <XAxis dataKey="name" stroke={chartAxis} />
+                <YAxis stroke={chartAxis} />
                 <Tooltip
                   formatter={(value) => `$${value.toFixed(2)}`}
-                  cursor={{ fill: 'rgba(255, 255, 255, 0.1)' }}
+                  cursor={{ fill: cursorFill }}
                   contentStyle={{
-                    backgroundColor: 'rgba(26, 26, 26, 0.95)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backgroundColor: tooltipBg,
+                    border: `1px solid ${tooltipBorder}`,
                     borderRadius: '8px',
-                    color: '#e0e0e0'
+                    color: tooltipColor
                   }}
                 />
-                <Legend wrapperStyle={{ color: '#e0e0e0' }} />
+                <Legend wrapperStyle={{ color: tooltipColor }} />
                 <Bar dataKey="value" name="Amount Spent" radius={[8, 8, 0, 0]}>
                   {storeData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
@@ -192,10 +205,10 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
                 <Tooltip
                   formatter={(value) => `$${value.toFixed(2)}`}
                   contentStyle={{
-                    backgroundColor: 'rgba(26, 26, 26, 0.95)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    backgroundColor: tooltipBg,
+                    border: `1px solid ${tooltipBorder}`,
                     borderRadius: '8px',
-                    color: '#e0e0e0'
+                    color: tooltipColor
                   }}
                 />
               </PieChart>
@@ -248,10 +261,10 @@ const AnalyticsDashboard = ({ analytics, onClearAll, showToast }) => {
             {budgets.map((budget) => {
               const percentage = budget.percentage_used || 0
               const alertColor =
-                percentage >= 100 ? '#dc2626' :
-                percentage >= 90 ? '#eab308' :
-                percentage >= 75 ? '#f59e0b' :
-                '#3b82f6'
+                percentage >= 100 ? (isLight ? '#A04040' : '#B85450') :
+                percentage >= 90 ? (isLight ? '#C4A035' : '#C4A035') :
+                percentage >= 75 ? (isLight ? '#B8860B' : '#D4A035') :
+                (isLight ? '#8B7355' : '#C4A265')
 
               return (
                 <div key={budget.id} className="budget-comparison-card">

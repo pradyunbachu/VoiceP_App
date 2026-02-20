@@ -11,12 +11,12 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useDailyRecs = () => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   return useQuery({
     queryKey: queryKeys.dailyRecs.all,
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -34,7 +34,7 @@ export const useDailyRecs = () => {
 
       return response.json();
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     staleTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
   });

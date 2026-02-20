@@ -18,7 +18,7 @@ export const useCreatePantryItem = () => {
 
   return useMutation({
     mutationFn: async (itemData) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -48,7 +48,7 @@ export const useUpdatePantryItem = () => {
 
   return useMutation({
     mutationFn: async ({ id, data }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/${id}`, {
         method: 'PUT',
         headers: getCsrfHeaders({
@@ -115,7 +115,7 @@ export const useUpdatePantryStatus = () => {
 
   return useMutation({
     mutationFn: async ({ id, status }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(
         `${API_BASE_URL}/api/pantry/${id}/status?stock_status=${status}`,
         {
@@ -184,7 +184,7 @@ export const useDeletePantryItem = () => {
 
   return useMutation({
     mutationFn: async (id) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/${id}`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
@@ -209,7 +209,7 @@ export const useBulkDeletePantryItems = () => {
 
   return useMutation({
     mutationFn: async (itemIds) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/bulk`, {
         method: 'DELETE',
         headers: getCsrfHeaders({
@@ -238,7 +238,7 @@ export const useBackfillDates = () => {
 
   return useMutation({
     mutationFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/backfill-dates`, {
         method: 'POST',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
@@ -263,7 +263,7 @@ export const useAddFromExpense = () => {
 
   return useMutation({
     mutationFn: async ({ expenseId, items }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/pantry/from-expense`, {
         method: 'POST',
         headers: getCsrfHeaders({

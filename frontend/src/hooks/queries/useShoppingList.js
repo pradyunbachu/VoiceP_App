@@ -12,13 +12,13 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 
 export const useShoppingList = (filters = {}) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
   const { category, group_id, sort_by = 'created_at', sort_order = 'desc' } = filters;
 
   return useQuery({
     queryKey: queryKeys.shoppingList.items(filters),
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const params = new URLSearchParams();
@@ -42,7 +42,7 @@ export const useShoppingList = (filters = {}) => {
       const data = await response.json();
       return data.items || [];
     },
-    enabled: !!getToken(),
+    enabled: !!session,
     // Don't cache shopping list aggressively - always refetch when component mounts
     staleTime: 0,
     refetchOnMount: true,
@@ -55,7 +55,7 @@ export const useShoppingList = (filters = {}) => {
  * Uses AI to match items even when names are in different order or have variations.
  */
 export const useShoppingPantryMatches = (shoppingItems = [], pantryItems = []) => {
-  const { getToken } = useAuth();
+  const { getToken, session } = useAuth();
 
   const hasShoppingItems = shoppingItems.length > 0;
   const hasPantryItems = pantryItems.length > 0;
@@ -64,7 +64,7 @@ export const useShoppingPantryMatches = (shoppingItems = [], pantryItems = []) =
     // Include item counts in query key to trigger refetch when lists change
     queryKey: [...queryKeys.shoppingList.pantryMatches(), shoppingItems.length, pantryItems.length],
     queryFn: async () => {
-      const token = getToken();
+      const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/match-pantry`, {
@@ -86,7 +86,7 @@ export const useShoppingPantryMatches = (shoppingItems = [], pantryItems = []) =
       const data = await response.json();
       return data.matches || {};
     },
-    enabled: !!getToken() && hasShoppingItems && hasPantryItems,
+    enabled: !!session && hasShoppingItems && hasPantryItems,
     // Cache for 30 seconds to avoid too many API calls
     staleTime: 30000,
     refetchOnMount: true,

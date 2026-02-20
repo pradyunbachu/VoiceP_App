@@ -58,23 +58,26 @@ function AppContent() {
 
   // Sync auth state with Supabase session
   useEffect(() => {
-    if (session && authUser) {
-      const currentToken = getToken();
-      setToken(currentToken);
-      setUser({
-        id: authUser.id,
-        email: authUser.email,
-        username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "User",
-      });
-      setIsAuthenticated(true);
-      if (currentView === "landing" || currentView === "login") {
-        setCurrentView("record");
+    const syncAuth = async () => {
+      if (session && authUser) {
+        const currentToken = await getToken();
+        setToken(currentToken);
+        setUser({
+          id: authUser.id,
+          email: authUser.email,
+          username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "User",
+        });
+        setIsAuthenticated(true);
+        if (currentView === "landing" || currentView === "login") {
+          setCurrentView("record");
+        }
+      } else if (!authLoading && !session) {
+        setToken(null);
+        setUser(null);
+        setIsAuthenticated(false);
       }
-    } else if (!authLoading && !session) {
-      setToken(null);
-      setUser(null);
-      setIsAuthenticated(false);
-    }
+    };
+    syncAuth();
   }, [session, authUser, authLoading, getToken, currentView]);
 
   // Auto-show tutorial for first-time users

@@ -18,7 +18,7 @@ export const useCreateShoppingListGroup = () => {
 
   return useMutation({
     mutationFn: async (name) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -48,7 +48,7 @@ export const useJoinShoppingListGroup = () => {
 
   return useMutation({
     mutationFn: async (inviteCode) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups/join`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -77,7 +77,7 @@ export const useInviteToGroup = () => {
 
   return useMutation({
     mutationFn: async ({ groupId, email }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups/${groupId}/invite`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -104,7 +104,7 @@ export const useRemoveGroupMember = () => {
 
   return useMutation({
     mutationFn: async ({ groupId, userId }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups/${groupId}/members/${userId}`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
@@ -130,7 +130,7 @@ export const useDeleteShoppingListGroup = () => {
 
   return useMutation({
     mutationFn: async (groupId) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/shopping-list/groups/${groupId}`, {
         method: 'DELETE',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),

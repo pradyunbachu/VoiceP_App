@@ -23,7 +23,7 @@
 
 .daily-recs-toggle:hover {
   width: 48px;
-  background: var(--accent-primary-hover, #2563eb);
+  background: var(--accent-primary-hover, #B08D50);
   color: #fff;
 }
 
@@ -45,8 +45,8 @@
 }
 
 @keyframes togglePulse {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(59, 130, 246, 0.2); }
-  50% { box-shadow: 0 0 12px 2px rgba(59, 130, 246, 0.15); }
+  0%, 100% { box-shadow: 0 0 0 0 var(--accent-primary-bg); }
+  50% { box-shadow: 0 0 12px 2px var(--accent-primary-bg); }
 }
 
 /* Backdrop */
@@ -71,8 +71,8 @@
   width: 340px;
   height: calc(100% - 56px);
   z-index: 900;
-  background: var(--bg-primary, #0f0f14);
-  border-left: 1px solid rgba(59, 130, 246, 0.2);
+  background: var(--bg-primary, #161210);
+  border-left: 1px solid var(--accent-primary-border);
   box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
   overflow-y: auto;
   padding: var(--space-5);
@@ -117,8 +117,8 @@
 
 .daily-recs-dismiss {
   padding: 4px 10px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(200, 191, 178, 0.06);
+  border: 1px solid rgba(200, 191, 178, 0.1);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   font-size: 0.7rem;
@@ -128,7 +128,7 @@
 }
 
 .daily-recs-dismiss:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(200, 191, 178, 0.12);
   color: var(--text-secondary);
 }
 
@@ -138,8 +138,8 @@
   justify-content: center;
   width: 30px;
   height: 30px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(200, 191, 178, 0.06);
+  border: 1px solid rgba(200, 191, 178, 0.1);
   border-radius: var(--radius-md);
   color: var(--text-muted);
   cursor: pointer;
@@ -147,7 +147,7 @@
 }
 
 .daily-recs-close:hover {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(200, 191, 178, 0.12);
   color: var(--text-secondary);
 }
 
@@ -196,24 +196,24 @@
   align-items: flex-start;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(200, 191, 178, 0.05);
   backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(200, 191, 178, 0.08);
   border-radius: var(--radius-md);
   cursor: pointer;
   transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .meal-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(59, 130, 246, 0.3);
+  background: rgba(200, 191, 178, 0.08);
+  border-color: var(--accent-primary-border);
 }
 
 .meal-card-icon {
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm);
-  background: rgba(59, 130, 246, 0.2);
+  background: var(--accent-primary-bg-hover);
   color: var(--accent-primary);
   display: flex;
   align-items: center;
@@ -254,8 +254,8 @@
 .meal-card-badge {
   flex-shrink: 0;
   padding: 2px 8px;
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
+  background: var(--accent-warning-bg);
+  color: var(--accent-warning);
   font-size: 0.65rem;
   font-weight: 600;
   border-radius: var(--radius-sm);
@@ -302,27 +302,27 @@
   border-radius: var(--radius-full);
   font-size: 0.75rem;
   font-weight: 500;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(200, 191, 178, 0.06);
+  border: 1px solid rgba(200, 191, 178, 0.1);
   color: var(--text-secondary);
 }
 
 .alert-chip.expiring {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.25);
-  color: #fbbf24;
+  background: var(--accent-warning-bg);
+  border-color: rgba(184, 134, 11, 0.25);
+  color: var(--accent-warning);
 }
 
 .alert-chip.low {
-  background: rgba(59, 130, 246, 0.1);
-  border-color: rgba(59, 130, 246, 0.25);
-  color: #60a5fa;
+  background: var(--accent-primary-bg);
+  border-color: var(--accent-primary-border);
+  color: var(--accent-primary-light);
 }
 
 .alert-chip.out {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.25);
-  color: #f87171;
+  background: var(--accent-danger-bg);
+  border-color: var(--accent-danger-border);
+  color: var(--accent-danger);
 }
 
 .chip-detail {
@@ -355,8 +355,8 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    background: rgba(255, 255, 255, 0.06);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(200, 191, 178, 0.06);
+    border: 1px solid rgba(200, 191, 178, 0.1);
     border-radius: var(--radius-md);
     color: var(--text-muted);
     cursor: pointer;
@@ -365,7 +365,7 @@
   }
 
   .daily-recs-mobile-close:hover {
-    background: rgba(255, 255, 255, 0.12);
+    background: rgba(200, 191, 178, 0.12);
     color: var(--text-secondary);
   }
 

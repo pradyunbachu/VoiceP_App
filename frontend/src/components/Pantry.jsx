@@ -537,7 +537,7 @@ const Pantry = ({ showToast }) => {
       {stats && (
         <div className="pantry-stats">
           <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#3b82f6' }}>
+            <div className="stat-icon" style={{ background: 'var(--stat-blue)' }}>
               <Package size={20} />
             </div>
             <div className="stat-content">
@@ -546,7 +546,7 @@ const Pantry = ({ showToast }) => {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#22c55e' }}>
+            <div className="stat-icon" style={{ background: 'var(--stat-green)' }}>
               <CheckCircle size={20} />
             </div>
             <div className="stat-content">
@@ -555,7 +555,7 @@ const Pantry = ({ showToast }) => {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#f59e0b' }}>
+            <div className="stat-icon" style={{ background: 'var(--stat-amber)' }}>
               <AlertTriangle size={20} />
             </div>
             <div className="stat-content">
@@ -564,7 +564,7 @@ const Pantry = ({ showToast }) => {
             </div>
           </div>
           <div className="stat-card">
-            <div className="stat-icon" style={{ background: '#ef4444' }}>
+            <div className="stat-icon" style={{ background: 'var(--stat-red)' }}>
               <Circle size={20} />
             </div>
             <div className="stat-content">
@@ -574,7 +574,7 @@ const Pantry = ({ showToast }) => {
           </div>
           {stats.expiring_soon > 0 && (
             <div className="stat-card">
-              <div className="stat-icon" style={{ background: '#f97316' }}>
+              <div className="stat-icon" style={{ background: 'var(--stat-orange)' }}>
                 <Calendar size={20} />
               </div>
               <div className="stat-content">

@@ -14,7 +14,7 @@ export const useRecipeDetail = () => {
 
   return useMutation({
     mutationFn: async ({ meal_name, meal_description, available_ingredients }) => {
-      const token = getToken();
+      const token = await getToken();
       const response = await fetch(`${API_BASE_URL}/api/recipe-detail`, {
         method: 'POST',
         headers: getCsrfHeaders({

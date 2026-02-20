@@ -116,7 +116,7 @@ const useVoiceProcessor = () => {
     setChatResponse(null);
 
     try {
-      const token = getToken();
+      const token = await getToken();
       const formData = new FormData();
       let extension = "webm";
       if (mimeType.includes("mp4")) extension = "mp4";
