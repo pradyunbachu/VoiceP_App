@@ -352,6 +352,24 @@
   gap: var(--space-3);
 }
 
+.select-expired-button {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--accent-danger-border, rgba(248, 113, 113, 0.3));
+  border-radius: var(--radius-md);
+  color: var(--accent-danger);
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.select-expired-button:hover {
+  background: var(--accent-danger-bg, rgba(248, 113, 113, 0.1));
+}
+
 .bulk-delete-button {
   display: flex;
   align-items: center;
