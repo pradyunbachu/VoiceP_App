@@ -24,6 +24,7 @@ const useVoiceProcessor = () => {
   const [error, setError] = useState("");
   const [pendingPantryExpense, setPendingPantryExpense] = useState<Expense | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
+  const [expenseJustCreated, setExpenseJustCreated] = useState(0);
 
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
@@ -33,6 +34,8 @@ const useVoiceProcessor = () => {
   const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
   const handleExpenseCreated = async (expenseData: ExpenseExtractionResult) => {
+    setExpenseJustCreated((c) => c + 1);
+
     let expenses: Expense[] = [];
     if (expenseData.expenses) {
       expenses = expenseData.expenses;
@@ -202,6 +205,7 @@ const useVoiceProcessor = () => {
     pendingPantryExpense,
     isTranscribing,
     loading,
+    expenseJustCreated,
     processAudio,
     processManualInput,
     clearState,

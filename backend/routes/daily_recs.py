@@ -110,10 +110,11 @@ async def get_daily_recs(
     request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     tz: str | None = Query(None),
+    refresh: bool = Query(False),
 ):
     """
     Generate daily recommendations: meal ideas + pantry alerts.
-    Cached for 30 minutes per user.
+    Cached for 30 minutes per user. Pass refresh=true to bypass cache.
     """
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -123,9 +124,13 @@ async def get_daily_recs(
     meal_type = detect_meal_type(tz)
     # Cache key includes meal_type so breakfast/lunch/dinner each get their own slot
     cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}")
-    cached = api_cache.get(cache_key)
-    if cached is not None:
-        return cached
+
+    if refresh:
+        api_cache.invalidate_prefix(cache_key)
+    else:
+        cached = api_cache.get(cache_key)
+        if cached is not None:
+            return cached
 
     # Single query for all pantry items
     pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
@@ -232,9 +237,9 @@ Description: {meal_description}
 Available ingredients: {available_ingredients}
 
 Return ONLY a JSON object with this exact structure:
-{{"name": "Recipe Name", "description": "Brief description", "servings": 2, "prep_minutes": 10, "cook_minutes": 20, "ingredients": [{{"item": "ingredient name", "amount": "1 cup"}}], "instructions": ["Step 1 text", "Step 2 text"]}}
+{{"name": "Recipe Name", "description": "Brief description", "servings": 2, "prep_minutes": 10, "cook_minutes": 20, "ingredients": [{{"item": "ingredient name", "amount": "1 cup"}}], "instructions": ["Step 1 text", "Step 2 text"], "nutrition": {{"calories": 350, "protein_g": 25, "carbs_g": 40, "fat_g": 12, "fiber_g": 5, "sugar_g": 8, "sodium_mg": 480}}}}
 
-Use the available ingredients where possible. Keep it practical and clear."""
+Estimate nutrition per serving. Use the available ingredients where possible. Keep it practical and clear."""
 
     try:
         response = groq_client.chat.completions.create(

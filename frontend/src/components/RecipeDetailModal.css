@@ -203,6 +203,56 @@
   font-weight: 600;
 }
 
+/* Nutrition grid */
+.recipe-nutrition-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+}
+
+.recipe-nutrition-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 0.5rem 0.25rem;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  text-align: center;
+}
+
+.recipe-nutrition-value {
+  color: var(--accent-primary);
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
+.recipe-nutrition-label {
+  color: var(--text-muted);
+  font-size: 0.65rem;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.recipe-nutrition-calories {
+  grid-column: 1 / -1;
+  flex-direction: row;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.6rem;
+  background: rgba(59, 130, 246, 0.08);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+.recipe-nutrition-calories .recipe-nutrition-value {
+  font-size: 1.1rem;
+}
+
+.recipe-nutrition-calories svg {
+  color: var(--accent-primary);
+}
+
 /* Responsive — stack panels on small screens */
 @media (max-width: 700px) {
   .recipe-panel {

@@ -106,4 +106,9 @@ export const queryKeys = {
     all: ['dailyRecs'] as const,
   },
 
+  // Streak
+  streak: {
+    all: ['streak'] as const,
+  },
+
 } as const;

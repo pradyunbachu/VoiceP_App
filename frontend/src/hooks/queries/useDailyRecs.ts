@@ -5,6 +5,7 @@
  * Uses a 30-minute stale time and disables refetch-on-focus to avoid
  * unnecessary re-generation of recommendations.
  */
+import { useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
@@ -13,15 +14,22 @@ import type { DailyRecs } from '../../types';
 
 export const useDailyRecs = () => {
   const { getToken, session } = useAuth();
+  const refreshRef = useRef(false);
 
-  return useQuery<DailyRecs>({
+  const query = useQuery<DailyRecs>({
     queryKey: queryKeys.dailyRecs.all,
     queryFn: async (): Promise<DailyRecs> => {
       const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
-      const response = await fetch(`${API_BASE_URL}/api/daily-recs?tz=${encodeURIComponent(tz)}`, {
+      const shouldRefresh = refreshRef.current;
+      refreshRef.current = false;
+
+      const params = new URLSearchParams({ tz });
+      if (shouldRefresh) params.set('refresh', 'true');
+
+      const response = await fetch(`${API_BASE_URL}/api/daily-recs?${params}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -39,4 +47,11 @@ export const useDailyRecs = () => {
     staleTime: 30 * 60 * 1000, // 30 minutes
     refetchOnWindowFocus: false,
   });
+
+  const refreshRecs = () => {
+    refreshRef.current = true;
+    query.refetch();
+  };
+
+  return { ...query, refreshRecs };
 };

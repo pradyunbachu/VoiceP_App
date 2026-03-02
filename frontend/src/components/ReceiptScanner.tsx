@@ -60,10 +60,8 @@ const ReceiptScanner: React.FC<Props> = ({ onClose, onSuccess }) => {
   const [error, setError] = useState<string>("");
   const [result, setResult] = useState<ReceiptScanResult | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
-  // Mobile devices (iPhone, etc.) default to back camera; laptops default to front camera
-  const [cameraFacing, setCameraFacing] = useState<"environment" | "user">(() =>
-    isMobileDevice() ? "environment" : "user"
-  );
+  // Default to back camera since we're scanning receipts
+  const [cameraFacing, setCameraFacing] = useState<"environment" | "user">("environment");
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -82,26 +80,43 @@ const ReceiptScanner: React.FC<Props> = ({ onClose, onSuccess }) => {
     };
   }, []);
 
-  const startCamera = async (): Promise<void> => {
+  const startCamera = async (facing?: "environment" | "user"): Promise<void> => {
+    const desiredFacing = facing ?? cameraFacing;
     try {
       setError("");
-      const constraints: MediaStreamConstraints = {
-        video: {
-          facingMode: cameraFacing,
-          width: { ideal: 1920 },
-          height: { ideal: 1080 },
-        },
-      };
 
-      const stream = await navigator.mediaDevices.getUserMedia(constraints);
-      streamRef.current = stream;
-
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play();
+      let stream: MediaStream;
+      try {
+        // Try exact constraint first to force the correct camera
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { exact: desiredFacing },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
+      } catch {
+        // Fall back to a soft preference if exact isn't supported
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: desiredFacing,
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
+          },
+        });
       }
 
+      streamRef.current = stream;
+
+      // Switch to camera mode first so the <video> element mounts,
+      // then attach the stream on the next frame
       setMode("camera");
+      requestAnimationFrame(() => {
+        if (videoRef.current && streamRef.current) {
+          videoRef.current.srcObject = streamRef.current;
+          videoRef.current.play();
+        }
+      });
     } catch (err) {
       const error = err as DOMException;
       console.error("Camera error:", error);
@@ -277,9 +292,10 @@ const ReceiptScanner: React.FC<Props> = ({ onClose, onSuccess }) => {
 
   const switchCamera = async (): Promise<void> => {
     stopCamera();
-    setCameraFacing((prev) => (prev === "environment" ? "user" : "environment"));
-    // Camera will restart with new facing mode
-    setTimeout(() => startCamera(), 100);
+    const newFacing = cameraFacing === "environment" ? "user" : "environment";
+    setCameraFacing(newFacing);
+    // Pass the new facing directly to avoid stale closure
+    setTimeout(() => startCamera(newFacing), 100);
   };
 
   return (
@@ -317,7 +333,7 @@ const ReceiptScanner: React.FC<Props> = ({ onClose, onSuccess }) => {
               </p>
 
               <div className="scanner-options">
-                <button className="scanner-option-button" onClick={startCamera}>
+                <button className="scanner-option-button" onClick={() => startCamera()}>
                   <Camera size={32} />
                   <span>Take Photo</span>
                 </button>

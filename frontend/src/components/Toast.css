@@ -49,6 +49,81 @@
   color: var(--accent-info);
 }
 
+.toast-celebration {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(168, 85, 247, 0.15));
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  color: var(--accent-warning);
+  animation: celebrationPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+  overflow: hidden;
+}
+
+.toast-celebration::before,
+.toast-celebration::after {
+  content: '';
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  animation: confettiDot 1.5s ease-out forwards;
+  pointer-events: none;
+}
+
+.toast-celebration::before {
+  background: rgba(251, 191, 36, 0.6);
+  top: 8px;
+  left: 20%;
+  animation-delay: 0.1s;
+}
+
+.toast-celebration::after {
+  background: rgba(168, 85, 247, 0.6);
+  top: 8px;
+  right: 30%;
+  animation-delay: 0.3s;
+}
+
+.toast-celebration .toast-icon {
+  animation: sparkSpin 1s ease-out;
+}
+
+@keyframes celebrationPop {
+  0% {
+    transform: translateX(100%) scale(0.8);
+    opacity: 0;
+  }
+  60% {
+    transform: translateX(-4%) scale(1.04);
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sparkSpin {
+  0% {
+    transform: rotate(0deg) scale(0.5);
+  }
+  50% {
+    transform: rotate(180deg) scale(1.2);
+  }
+  100% {
+    transform: rotate(360deg) scale(1);
+  }
+}
+
+@keyframes confettiDot {
+  0% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(20px) scale(0);
+  }
+}
+
 .toast-icon {
   flex-shrink: 0;
 }

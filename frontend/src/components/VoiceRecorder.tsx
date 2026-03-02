@@ -6,7 +6,7 @@
  * hooks, and displays the transcript, extracted expense result, chat response,
  * and an optional "Add to Pantry" modal after successful input.
  */
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Mic, Square, Loader2, Type, Camera, HelpCircle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ChatResponseDisplay from "./ChatResponseDisplay";
@@ -16,6 +16,7 @@ import ManualInput from "./ManualInput";
 import RecordingIndicator from "./RecordingIndicator";
 import useAudioRecorder from "../hooks/useAudioRecorder";
 import useVoiceProcessor from "../hooks/useVoiceProcessor";
+import { useStreak } from "../hooks";
 import type { ShowToast, Expense } from "../types";
 import "./VoiceRecorder.css";
 
@@ -42,6 +43,33 @@ const VoiceRecorder: React.FC<Props> = ({ showToast, onShowTutorial }) => {
 
   const { isRecording, recordingTime, startRecording, stopRecording, formatTime } = useAudioRecorder();
   const processor = useVoiceProcessor();
+  const { data: streakData } = useStreak();
+  const prevExpenseCountRef = useRef(processor.expenseJustCreated);
+
+  // Celebration toast when an expense is created
+  useEffect(() => {
+    if (processor.expenseJustCreated === 0 || processor.expenseJustCreated === prevExpenseCountRef.current) return;
+    prevExpenseCountRef.current = processor.expenseJustCreated;
+
+    // Build toast message from the latest extracted expense
+    const expenses = processor.extractedExpense?.expenses;
+    const totalAmount = expenses?.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    const amountStr = totalAmount ? `$${totalAmount.toFixed(2)} logged` : "Expense logged";
+
+    const streak = streakData?.current_streak ?? 0;
+    const streakStr = streak > 1 ? ` — ${streak}-day streak` : "";
+
+    // Check for milestone crossings
+    const total = streakData?.total_expenses ?? 0;
+    const milestones = [500, 250, 100, 50, 25, 10];
+    const milestone = milestones.find((m) => total >= m && total - (expenses?.length ?? 1) < m);
+
+    if (milestone) {
+      showToast(`${milestone} expenses! ${amountStr}${streakStr}`, "celebration", 5000);
+    } else {
+      showToast(`${amountStr}${streakStr}`, "celebration", 4000);
+    }
+  }, [processor.expenseJustCreated]);
 
   const handleStartRecording = async (): Promise<void> => {
     try {

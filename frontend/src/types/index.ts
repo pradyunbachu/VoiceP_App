@@ -323,6 +323,16 @@ export interface RecipeIngredient {
   item: string;
 }
 
+export interface NutritionInfo {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  sodium_mg: number;
+}
+
 export interface RecipeDetail {
   name: string;
   description?: string;
@@ -333,6 +343,7 @@ export interface RecipeDetail {
   cook_minutes?: number;
   time_minutes?: number;
   difficulty?: string;
+  nutrition?: NutritionInfo;
 }
 
 // ── Receipt Scanning ───────────────────────────────────────────────────
@@ -345,6 +356,15 @@ export interface ReceiptScanResult {
   category?: string;
 }
 
+// ── Streak ─────────────────────────────────────────────────────────────
+
+export interface UserStreak {
+  current_streak: number;
+  longest_streak: number;
+  total_expenses: number;
+  last_logged_date: string | null;
+}
+
 // ── Toast / UI ─────────────────────────────────────────────────────────
 
 export interface ToastAction {
@@ -355,7 +375,7 @@ export interface ToastAction {
 export interface Toast {
   id: number;
   message: string;
-  type: "info" | "success" | "error" | "warning";
+  type: "info" | "success" | "error" | "warning" | "celebration";
   duration: number;
   action?: ToastAction | null;
 }

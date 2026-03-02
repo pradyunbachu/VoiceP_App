@@ -59,6 +59,7 @@ async def create_expense(
 
         api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
         api_cache.invalidate_prefix(f"insights:{current_user['id']}")
+        api_cache.invalidate_prefix(f"streak:{current_user['id']}")
 
         return {
             "id": expense_id,

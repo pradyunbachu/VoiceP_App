@@ -7,7 +7,7 @@
  * on demand and cached in a ref to avoid redundant API calls).
  */
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X, RefreshCw } from 'lucide-react';
 import { useDailyRecs, useRecipeDetail } from '../hooks';
 import RecipeDetailPanel from './RecipeDetailModal';
 import type { MealSuggestion, ExpiringItem, LowStockItem, RecipeDetail, DailyRecs as DailyRecsType } from '../types';
@@ -24,7 +24,7 @@ const DailyRecs: React.FC = () => {
   const [cachedRecipe, setCachedRecipe] = useState<RecipeDetailResponse | null>(null);
   // In-memory recipe cache keyed by meal name to avoid re-fetching
   const recipeCacheRef = useRef<Record<string, RecipeDetailResponse>>({});
-  const { data, isLoading, isError } = useDailyRecs();
+  const { data, isLoading, isError, isFetching, refreshRecs } = useDailyRecs();
   const recipeDetail = useRecipeDetail();
 
   const recipeOpen = !!selectedMeal;
@@ -79,6 +79,11 @@ const DailyRecs: React.FC = () => {
         },
       }
     );
+  };
+
+  const handleRefresh = () => {
+    recipeCacheRef.current = {};
+    refreshRecs();
   };
 
   const closeRecipePanel = () => {
@@ -205,7 +210,9 @@ const DailyRecs: React.FC = () => {
         aria-label="Open daily recommendations"
         data-tutorial="daily-recs-toggle"
       >
-        <ChevronLeft size={18} />
+        <UtensilsCrossed size={14} />
+        <span className="daily-recs-toggle-label">Voxy's Picks</span>
+        <ChevronLeft size={14} />
       </button>
 
       {open && (
@@ -226,6 +233,16 @@ const DailyRecs: React.FC = () => {
             <div className="daily-recs-panel-header">
               <div className="daily-recs-title">
                 <span>Voxy's Recommendations</span>
+                {hasContent && !isLoading && (
+                  <button
+                    className="daily-recs-refresh"
+                    onClick={handleRefresh}
+                    disabled={isFetching}
+                    aria-label="Refresh recommendations"
+                  >
+                    <RefreshCw size={14} className={isFetching ? 'daily-recs-spinner' : ''} />
+                  </button>
+                )}
               </div>
               <button className="daily-recs-mobile-close" onClick={() => setOpen(false)} aria-label="Close recommendations">
                 <X size={18} />

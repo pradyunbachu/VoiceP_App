@@ -27,7 +27,7 @@ export const detectCategory = (itemName: string): PantryCategory => {
 
   if (
     matches(
-      /\b(apple|banana|orange|grape|strawberr|blueberr|raspberr|lemon|lime|mango|pineapple|watermelon|cantaloupe|peach|pear|plum|cherry|kiwi|avocado|tomato|potato|onion|garlic|carrot|celery|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|zuchini|zuchinni|squash|corn|bean|pea|mushroom|cabbage|asparagus|artichoke|beet|radish|turnip|eggplant|ginger|cilantro|parsley|basil|mint|fruit|vegetable|veggie|salad|greens|sprout|brussel|brussels)\b/
+      /\b(apple|banana|orange|grape|strawberry|blueberry|raspberry|blackberry|lemon|lime|mango|pineapple|watermelon|cantaloupe|peach|pear|plum|cherry|kiwi|avocado|tomato|potato|onion|garlic|carrot|celery|lettuce|spinach|kale|broccoli|cauliflower|pepper|cucumber|zucchini|zuchini|zuchinni|squash|corn|bean|pea|mushroom|cabbage|asparagus|artichoke|beet|radish|turnip|eggplant|ginger|cilantro|parsley|basil|mint|fruit|vegetable|veggie|salad|greens|sprout|brussel|brussels|mandarin|tangerine|clementine|nectarine|pomegranate|papaya|coconut|cranberry|melon|fig)\b/
     )
   ) {
     return "Produce";

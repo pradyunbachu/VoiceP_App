@@ -6,12 +6,22 @@
  * ingredient list, and step-by-step instructions. Handles loading
  * and error states while the AI generates the recipe.
  */
-import { X, Clock, Users, Loader, ChevronLeft } from 'lucide-react';
+import { X, Clock, Users, Loader, ChevronLeft, Flame } from 'lucide-react';
 import './RecipeDetailModal.css';
 
 interface RecipeIngredient {
   amount: string;
   item: string;
+}
+
+interface NutritionInfo {
+  calories: number;
+  protein_g: number;
+  carbs_g: number;
+  fat_g: number;
+  fiber_g: number;
+  sugar_g: number;
+  sodium_mg: number;
 }
 
 interface RecipeData {
@@ -22,6 +32,7 @@ interface RecipeData {
   cook_minutes?: number;
   ingredients?: (string | RecipeIngredient)[];
   instructions?: string[];
+  nutrition?: NutritionInfo;
 }
 
 interface Props {
@@ -83,6 +94,43 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose 
                 </span>
               )}
             </div>
+
+            {recipe.nutrition && (
+              <div className="recipe-section">
+                <h4>Nutrition (per serving)</h4>
+                <div className="recipe-nutrition-grid">
+                  <div className="recipe-nutrition-item recipe-nutrition-calories">
+                    <Flame size={16} />
+                    <span className="recipe-nutrition-value">{recipe.nutrition.calories}</span>
+                    <span className="recipe-nutrition-label">Calories</span>
+                  </div>
+                  <div className="recipe-nutrition-item">
+                    <span className="recipe-nutrition-value">{recipe.nutrition.protein_g}g</span>
+                    <span className="recipe-nutrition-label">Protein</span>
+                  </div>
+                  <div className="recipe-nutrition-item">
+                    <span className="recipe-nutrition-value">{recipe.nutrition.carbs_g}g</span>
+                    <span className="recipe-nutrition-label">Carbs</span>
+                  </div>
+                  <div className="recipe-nutrition-item">
+                    <span className="recipe-nutrition-value">{recipe.nutrition.fat_g}g</span>
+                    <span className="recipe-nutrition-label">Fat</span>
+                  </div>
+                  <div className="recipe-nutrition-item">
+                    <span className="recipe-nutrition-value">{recipe.nutrition.fiber_g}g</span>
+                    <span className="recipe-nutrition-label">Fiber</span>
+                  </div>
+                  <div className="recipe-nutrition-item">
+                    <span className="recipe-nutrition-value">{recipe.nutrition.sugar_g}g</span>
+                    <span className="recipe-nutrition-label">Sugar</span>
+                  </div>
+                  <div className="recipe-nutrition-item">
+                    <span className="recipe-nutrition-value">{recipe.nutrition.sodium_mg}mg</span>
+                    <span className="recipe-nutrition-label">Sodium</span>
+                  </div>
+                </div>
+              </div>
+            )}
 
             <div className="recipe-section">
               <h4>Ingredients</h4>

@@ -10,6 +10,7 @@ export { useShoppingListGroups } from './queries/useShoppingListGroups';
 export { useSpendingInsights } from './queries/useSpendingInsights';
 export { useSpendingComparison } from './queries/useSpendingComparison';
 export { useDailyRecs } from './queries/useDailyRecs';
+export { useStreak } from './queries/useStreak';
 export { queryKeys } from './queries/queryKeys';
 
 // Expense mutations

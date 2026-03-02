@@ -230,17 +230,24 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
 
   // Normalize expense response into a consistent shape and check for pantry items
   const handleExpenseData = (expenseData: ExtractedExpenseData): void => {
+    let expenses: Expense[];
     if (expenseData.expenses) {
+      expenses = expenseData.expenses;
       setExtractedExpense(expenseData);
-      checkForPantryItems(expenseData);
     } else {
+      expenses = [expenseData as unknown as Expense];
       setExtractedExpense({
-        expenses: [expenseData as unknown as Expense],
+        expenses,
         count: 1,
         message: expenseData.message,
       });
-      checkForPantryItems(expenseData);
     }
+    checkForPantryItems(expenseData);
+
+    // Celebration toast
+    const totalAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    const amountStr = totalAmount ? `$${totalAmount.toFixed(2)} logged` : "Expense logged";
+    showToast(amountStr, "celebration", 4000);
   };
 
   const handleDismiss = (): void => {

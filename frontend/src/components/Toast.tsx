@@ -7,13 +7,13 @@
  */
 import { useEffect } from "react";
 import type { FC } from "react";
-import { CheckCircle, XCircle, AlertCircle, Info, X } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Info, Sparkles, X } from "lucide-react";
 import type { ToastAction } from "../types";
 import "./Toast.css";
 
 interface Props {
   message: string;
-  type?: "info" | "success" | "error" | "warning";
+  type?: "info" | "success" | "error" | "warning" | "celebration";
   onClose: () => void;
   duration?: number;
   action?: ToastAction | null;
@@ -35,6 +35,7 @@ const Toast: FC<Props> = ({ message, type = "info", onClose, duration = 5000, ac
     error: XCircle,
     warning: AlertCircle,
     info: Info,
+    celebration: Sparkles,
   };
 
   const Icon = icons[type] || Info;

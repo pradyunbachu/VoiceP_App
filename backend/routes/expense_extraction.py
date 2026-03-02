@@ -70,6 +70,7 @@ async def extract_expense_simple_endpoint(
 
         api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
         api_cache.invalidate_prefix(f"insights:{current_user['id']}")
+        api_cache.invalidate_prefix(f"streak:{current_user['id']}")
 
         return {
             "id": expense_id,
@@ -298,6 +299,7 @@ Return JSON array only, no other text."""
             print(f"Groq extraction successful: {len(saved_expenses)} expense(s) saved")
             api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
             api_cache.invalidate_prefix(f"insights:{current_user['id']}")
+            api_cache.invalidate_prefix(f"streak:{current_user['id']}")
             return {
                 "expenses": saved_expenses,
                 "count": len(saved_expenses),
@@ -387,6 +389,7 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
 
                     api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
                     api_cache.invalidate_prefix(f"insights:{current_user['id']}")
+                    api_cache.invalidate_prefix(f"streak:{current_user['id']}")
                     return {
                         "expenses": saved_expenses,
                         "count": len(saved_expenses),
@@ -448,6 +451,7 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
 
     api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
     api_cache.invalidate_prefix(f"insights:{current_user['id']}")
+    api_cache.invalidate_prefix(f"streak:{current_user['id']}")
 
     return {
         "expenses": saved_expenses,
