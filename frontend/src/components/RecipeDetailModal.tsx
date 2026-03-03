@@ -6,7 +6,7 @@
  * ingredient list, and step-by-step instructions. Handles loading
  * and error states while the AI generates the recipe.
  */
-import { X, Clock, Users, Loader, ChevronLeft, Flame } from 'lucide-react';
+import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat } from 'lucide-react';
 import './RecipeDetailModal.css';
 
 interface RecipeIngredient {
@@ -40,9 +40,20 @@ interface Props {
   isLoading: boolean;
   error: boolean;
   onClose: () => void;
+  onCookMeal?: (name: string, ingredients: Array<{ item: string; amount: string }>) => void;
+  isCooking?: boolean;
 }
 
-const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose }) => {
+const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose, onCookMeal, isCooking }) => {
+  const handleCookClick = () => {
+    if (!recipe || !onCookMeal || isCooking) return;
+    const ingredients = (recipe.ingredients || []).map((ing) => {
+      if (typeof ing === 'string') return { item: ing, amount: '' };
+      return { item: ing.item, amount: ing.amount };
+    });
+    onCookMeal(recipe.name, ingredients);
+  };
+
   return (
     <>
       <div className="recipe-panel-header">
@@ -158,6 +169,23 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose 
                 ))}
               </ol>
             </div>
+
+            {onCookMeal && (
+              <div className="recipe-cook-action">
+                <button
+                  className="recipe-cook-btn"
+                  onClick={handleCookClick}
+                  disabled={isCooking}
+                >
+                  {isCooking ? (
+                    <Loader size={16} className="recipe-spinner" />
+                  ) : (
+                    <ChefHat size={16} />
+                  )}
+                  {isCooking ? 'Logging...' : 'I made this!'}
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

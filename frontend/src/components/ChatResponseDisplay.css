@@ -44,6 +44,55 @@
   color: var(--stat-orange);
 }
 
+.chat-pantry_add .chat-response-header svg,
+.chat-shopping_list_add .chat-response-header svg {
+  color: var(--color-success, var(--accent-success));
+}
+
+.chat-pantry_remove .chat-response-header svg,
+.chat-expense_delete .chat-response-header svg,
+.chat-shopping_clear .chat-response-header svg {
+  color: var(--accent-danger, #ef4444);
+}
+
+.chat-cooking_deduct .chat-response-header svg {
+  color: var(--stat-orange, #f97316);
+}
+
+.chat-shopping_complete .chat-response-header svg,
+.chat-shopping_list_remove .chat-response-header svg {
+  color: var(--accent-primary);
+}
+
+.chat-budget_set .chat-response-header svg,
+.chat-budget_query .chat-response-header svg {
+  color: var(--accent-warning, #f59e0b);
+}
+
+.chat-budget_meal .chat-response-header svg {
+  color: var(--accent-success, #22c55e);
+}
+
+.chat-store_trip .chat-response-header svg {
+  color: var(--accent-primary);
+}
+
+.chat-mark_subscription .chat-response-header svg {
+  color: var(--accent-purple, #8b5cf6);
+}
+
+.chat-reminder_check .chat-response-header svg {
+  color: var(--accent-warning, #f59e0b);
+}
+
+.chat-meal_plan_week .chat-response-header svg {
+  color: var(--stat-orange, #f97316);
+}
+
+.chat-share_list .chat-response-header svg {
+  color: var(--accent-primary);
+}
+
 .chat-general .chat-response-header svg {
   color: var(--stat-gray);
 }
@@ -203,10 +252,6 @@
 }
 
 /* Pantry add styling */
-.chat-pantry_add .chat-response-header svg {
-  color: var(--color-success);
-}
-
 .pantry-add-list {
   gap: 0.4rem;
 }

@@ -48,6 +48,87 @@ def parse_budget_category(message: str) -> str:
     return "groceries"
 
 
+async def handle_budget_query(user_id: str, sub_intent: str, entities: dict) -> dict:
+    """Handle querying budget status for the current month."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    now = datetime.now()
+    month = now.month
+    year = now.year
+
+    category = entities.get("category")
+
+    try:
+        query = (
+            supabase.table("budgets")
+            .select("*")
+            .eq("user_id", user_id)
+            .eq("month", month)
+            .eq("year", year)
+        )
+
+        if category:
+            query = query.ilike("category", f"%{category}%")
+
+        response = query.execute()
+        budgets = response.data if response.data else []
+
+        if not budgets:
+            return {
+                "budgets": [],
+                "count": 0,
+                "message": "You don't have any budgets set for this month. Try 'Set a $200 budget for groceries'.",
+                "query_type": "budget_query"
+            }
+
+        # For each budget, calculate actual spending
+        budget_results = []
+        for budget in budgets:
+            budget_category = budget.get("category", "Groceries")
+            budget_amount = float(budget.get("amount", 0))
+
+            # Query actual spending for this category this month
+            start_date = f"{year}-{month:02d}-01"
+            end_date = now.strftime("%Y-%m-%d")
+
+            spending_response = (
+                supabase.table("expenses")
+                .select("amount")
+                .eq("user_id", user_id)
+                .ilike("category", f"%{budget_category}%")
+                .gte("date", start_date)
+                .lte("date", end_date)
+                .execute()
+            )
+            expenses = spending_response.data or []
+            actual_spending = sum(float(e.get("amount", 0) or 0) for e in expenses)
+            remaining = budget_amount - actual_spending
+            percentage_used = (actual_spending / budget_amount * 100) if budget_amount > 0 else 0
+
+            budget_results.append({
+                "category": budget_category,
+                "amount": budget_amount,
+                "actual_spending": round(actual_spending, 2),
+                "remaining": round(remaining, 2),
+                "percentage_used": round(percentage_used, 1),
+            })
+
+        return {
+            "budgets": budget_results,
+            "count": len(budget_results),
+            "month": month,
+            "year": year,
+            "query_type": "budget_query"
+        }
+    except Exception as e:
+        print(f"Budget query error: {e}")
+        return {
+            "message": "Failed to check budget status. Please try again.",
+            "query_type": "budget_query"
+        }
+
+
 async def handle_budget_set(user_id: str, entities: dict, original_message: str) -> dict:
     """Handle setting or updating a budget."""
     if supabase is None:

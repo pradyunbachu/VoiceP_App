@@ -54,7 +54,7 @@ def get_greeting(meal_type: str) -> str:
     return greetings.get(meal_type, "Here are some meal ideas for you!")
 
 
-def generate_meal_recs(ingredient_list: str, expiring_list: str, meal_type: str):
+def generate_meal_recs(ingredient_list: str, expiring_list: str, meal_type: str, preference: str = ""):
     """Call Groq for 3 quick meal suggestions."""
     if not groq_client:
         return None
@@ -67,13 +67,17 @@ def generate_meal_recs(ingredient_list: str, expiring_list: str, meal_type: str)
         "snack": "snacks like dips, toast, trail mix, quick bites",
     }
 
+    preference_block = ""
+    if preference:
+        preference_block = f"\nUser preference: {preference}\nTailor your suggestions to match this preference.\n"
+
     prompt = f"""Suggest exactly 3 quick {meal_type} meals using these ingredients.
 
 Available: {ingredient_list}
 Expiring soon (prioritize): {expiring_list}
 
 Think: {meal_hints.get(meal_type, "simple practical meals")}
-
+{preference_block}
 Return ONLY a JSON array of 3 objects:
 [{{"name": "Meal Name", "description": "One sentence about the dish", "time_minutes": 15, "uses_expiring": true}}]
 
@@ -111,19 +115,23 @@ async def get_daily_recs(
     current_user: dict = Depends(get_current_user_dependency),
     tz: str | None = Query(None),
     refresh: bool = Query(False),
+    preference: str | None = Query(None),
 ):
     """
     Generate daily recommendations: meal ideas + pantry alerts.
     Cached for 30 minutes per user. Pass refresh=true to bypass cache.
+    Optionally accepts a preference string to steer meal suggestions.
     """
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
     user_id = current_user["id"]
+    pref = (preference or "").strip()
 
     meal_type = detect_meal_type(tz)
-    # Cache key includes meal_type so breakfast/lunch/dinner each get their own slot
-    cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}")
+    # Cache key includes meal_type and preference so each combo gets its own slot
+    pref_suffix = f"_{pref}" if pref else ""
+    cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}{pref_suffix}")
 
     if refresh:
         api_cache.invalidate_prefix(cache_key)
@@ -201,7 +209,7 @@ async def get_daily_recs(
     ingredient_list = ", ".join(i["name"] for i in available_items) or "none"
     expiring_list = ", ".join(i["name"] for i in expiring) or "none"
 
-    meals = generate_meal_recs(ingredient_list, expiring_list, meal_type) or []
+    meals = generate_meal_recs(ingredient_list, expiring_list, meal_type, pref) or []
 
     result = {
         "meal_type": meal_type,
@@ -211,6 +219,7 @@ async def get_daily_recs(
         "expiring": expiring[:5],
         "pantry_count": len(pantry_items),
         "available_ingredients": ingredient_list,
+        "preference": pref,
     }
 
     api_cache.set(cache_key, result, ttl=1800)  # 30-min cache to avoid repeated AI calls

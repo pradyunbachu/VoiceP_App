@@ -1,13 +1,16 @@
 /**
- * ChatResponseDisplay.jsx - Renders structured voice assistant responses.
+ * ChatResponseDisplay.tsx - Renders structured voice assistant responses.
  *
  * Takes the parsed chatResponse object (intent, response text, data) from
- * the voice assistant and renders an intent-specific card. Supports pantry
- * queries, pantry additions, expense queries, shopping suggestions, and
- * meal suggestions -- each with a tailored data layout.
+ * the voice assistant and renders an intent-specific card with tailored
+ * data layouts for all supported intents.
  */
 import type { FC, ReactNode } from "react";
-import { ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle, UtensilsCrossed, Clock, CheckCircle } from "lucide-react";
+import {
+  ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle,
+  UtensilsCrossed, Clock, CheckCircle, Trash2, Plus, Minus,
+  MapPin, Repeat, Bell, Calendar, Wallet, Share2, Flame,
+} from "lucide-react";
 import type { ChatResponse } from "../types";
 import "./ChatResponseDisplay.css";
 
@@ -27,18 +30,48 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
         return <Package size={24} />;
       case "pantry_add":
         return <CheckCircle size={24} />;
+      case "pantry_remove":
+        return <Trash2 size={24} />;
+      case "cooking_deduct":
+        return <Flame size={24} />;
       case "expense_query":
         return <DollarSign size={24} />;
+      case "expense_delete":
+        return <Trash2 size={24} />;
       case "suggestion":
         return <ShoppingCart size={24} />;
+      case "shopping_complete":
+        return <CheckCircle size={24} />;
+      case "shopping_list_add":
+        return <Plus size={24} />;
+      case "shopping_list_remove":
+        return <Minus size={24} />;
+      case "shopping_clear":
+        return <Trash2 size={24} />;
       case "meal_suggestion":
         return <UtensilsCrossed size={24} />;
+      case "meal_plan_week":
+        return <Calendar size={24} />;
+      case "budget_set":
+        return <Wallet size={24} />;
+      case "budget_query":
+        return <Wallet size={24} />;
+      case "budget_meal":
+        return <DollarSign size={24} />;
+      case "store_trip":
+        return <MapPin size={24} />;
+      case "mark_subscription":
+        return <Repeat size={24} />;
+      case "reminder_check":
+        return <Bell size={24} />;
+      case "share_list":
+        return <Share2 size={24} />;
       default:
         return <HelpCircle size={24} />;
     }
   };
 
-  // Capitalize the meal type for the section heading (e.g. "Dinner Ideas")
+  // Capitalize the meal type for the section heading
   const getMealTypeLabel = (): string => {
     const mealType = data?.meal_type;
     if (!mealType) return "Meal Ideas";
@@ -52,18 +85,48 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
         return "Pantry";
       case "pantry_add":
         return "Pantry Updated";
+      case "pantry_remove":
+        return "Pantry Updated";
+      case "cooking_deduct":
+        return "Cooking";
       case "expense_query":
         return "Spending";
+      case "expense_delete":
+        return "Expense Deleted";
       case "suggestion":
+        return "Shopping Suggestions";
+      case "shopping_complete":
+        return "Shopping Complete";
+      case "shopping_list_add":
         return "Shopping List";
+      case "shopping_list_remove":
+        return "Shopping List";
+      case "shopping_clear":
+        return "Shopping List Cleared";
       case "meal_suggestion":
         return getMealTypeLabel();
+      case "meal_plan_week":
+        return "Weekly Meal Plan";
+      case "budget_set":
+        return "Budget Set";
+      case "budget_query":
+        return "Budget Status";
+      case "budget_meal":
+        return "Budget Meals";
+      case "store_trip":
+        return "Store Trip";
+      case "mark_subscription":
+        return "Subscription";
+      case "reminder_check":
+        return "Item Status";
+      case "share_list":
+        return "List Shared";
       default:
-        return "Help";
+        return "Voxy";
     }
   };
 
-  // Render a list of pantry items returned by a pantry query
+  // --- Pantry query ---
   const renderPantryData = (): ReactNode => {
     if (!data?.items || data.items.length === 0) return null;
 
@@ -84,7 +147,59 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
     );
   };
 
-  // Render expense summary with total, transaction count, and optional item list
+  // --- Pantry add ---
+  const renderPantryAdd = (): ReactNode => {
+    if (!data?.added_items || data.added_items.length === 0) return null;
+
+    return (
+      <div className="chat-data-list pantry-add-list">
+        {data.added_items.map((item, index) => (
+          <div key={item.id || index} className="chat-data-item pantry-add-item">
+            <span className="item-name">{item.name}</span>
+            <span className="item-category-badge">{item.category}</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // --- Pantry remove ---
+  const renderPantryRemove = (): ReactNode => {
+    const removed = data?.removed_items as string[] | undefined;
+    if (!removed || removed.length === 0) return null;
+
+    return (
+      <div className="chat-data-list">
+        {removed.map((name: string, index: number) => (
+          <div key={index} className="chat-data-item">
+            <span className="item-name">{name}</span>
+            <span className="stock-badge out_of_stock">Removed</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // --- Cooking deduct ---
+  const renderCookingDeduct = (): ReactNode => {
+    const deducted = data?.deducted_items as Array<Record<string, unknown>> | undefined;
+    if (!deducted || deducted.length === 0) return null;
+
+    return (
+      <div className="chat-data-list">
+        {deducted.map((item: Record<string, unknown>, index: number) => (
+          <div key={index} className="chat-data-item">
+            <span className="item-name">{item.name as string}</span>
+            <span className="item-details">
+              {item.old_quantity as number} &rarr; {item.new_quantity as number}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // --- Expense query ---
   const renderExpenseData = (): ReactNode => {
     if (!data) return null;
 
@@ -100,7 +215,6 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
           {data.category && <span>{data.category}</span>}
           {data.store && <span>{data.store}</span>}
         </div>
-        {/* Only show individual expenses for small result sets to avoid clutter */}
         {data.expenses && data.expenses.length > 0 && data.expenses.length <= 5 && (
           <div className="chat-data-list">
             {data.expenses.map((expense, index) => (
@@ -118,7 +232,31 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
     );
   };
 
-  // Render shopping suggestions split into out-of-stock and low-stock sections
+  // --- Expense delete ---
+  const renderExpenseDelete = (): ReactNode => {
+    const deleted = data?.deleted_expense;
+    if (!deleted) return null;
+
+    return (
+      <div className="chat-data-list">
+        <div className="chat-data-item">
+          <span className="item-name">{deleted.store || "Expense"}</span>
+          <span className="item-details">
+            {deleted.amount != null && <span>${deleted.amount.toFixed(2)}</span>}
+            {deleted.date && <span className="expense-date">{deleted.date}</span>}
+          </span>
+        </div>
+        {deleted.items && (
+          <div className="chat-data-item">
+            <span className="item-name">Items</span>
+            <span className="item-details">{deleted.items}</span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // --- Suggestion ---
   const renderSuggestionData = (): ReactNode => {
     if (!data?.items || data.items.length === 0) return null;
 
@@ -155,23 +293,64 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
     );
   };
 
-  // Render items that were just added to the pantry via voice command
-  const renderPantryAdd = (): ReactNode => {
-    if (!data?.added_items || data.added_items.length === 0) return null;
+  // --- Shopping complete ---
+  const renderShoppingComplete = (): ReactNode => {
+    const removed = data?.removed_items as string[] | undefined;
+    const pantryAdded = data?.pantry_added as string[] | undefined;
+    if ((!removed || removed.length === 0) && (!pantryAdded || pantryAdded.length === 0)) return null;
 
     return (
-      <div className="chat-data-list pantry-add-list">
-        {data.added_items.map((item, index) => (
-          <div key={item.id || index} className="chat-data-item pantry-add-item">
-            <span className="item-name">{item.name}</span>
-            <span className="item-category-badge">{item.category}</span>
+      <div className="chat-data-list">
+        {removed && removed.length > 0 && removed.map((name: string, index: number) => (
+          <div key={`r-${index}`} className="chat-data-item">
+            <span className="item-name">{name}</span>
+            <span className="stock-badge low">Off list</span>
+          </div>
+        ))}
+        {pantryAdded && pantryAdded.length > 0 && pantryAdded.map((name: string, index: number) => (
+          <div key={`p-${index}`} className="chat-data-item pantry-add-item">
+            <span className="item-name">{name}</span>
+            <span className="stock-badge full">In pantry</span>
           </div>
         ))}
       </div>
     );
   };
 
-  // Render meal suggestion cards with ingredient chips (have vs. need)
+  // --- Shopping list add ---
+  const renderShoppingListAdd = (): ReactNode => {
+    if (!data?.added_items || data.added_items.length === 0) return null;
+
+    return (
+      <div className="chat-data-list">
+        {data.added_items.map((item, index) => (
+          <div key={item.id || index} className="chat-data-item">
+            <span className="item-name">{item.name}</span>
+            <span className="stock-badge full">Added</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // --- Shopping list remove ---
+  const renderShoppingListRemove = (): ReactNode => {
+    const removed = data?.removed_items as string[] | undefined;
+    if (!removed || removed.length === 0) return null;
+
+    return (
+      <div className="chat-data-list">
+        {removed.map((name: string, index: number) => (
+          <div key={index} className="chat-data-item">
+            <span className="item-name">{name}</span>
+            <span className="stock-badge out_of_stock">Removed</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
+  // --- Meal suggestions ---
   const renderMealSuggestions = (): ReactNode => {
     if (!data?.meals || data.meals.length === 0) return null;
 
@@ -200,11 +379,9 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
               </div>
             </div>
             <div className="meal-ingredients">
-              {/* Green chips = ingredients user already has */}
               {meal.ingredients_used && meal.ingredients_used.map((ing, i) => (
                 <span key={i} className="ingredient-chip have">{ing}</span>
               ))}
-              {/* Red/neutral chips = ingredients user still needs */}
               {meal.ingredients_needed && meal.ingredients_needed.map((ing, i) => (
                 <span key={`need-${i}`} className="ingredient-chip need">{ing}</span>
               ))}
@@ -229,6 +406,141 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
     );
   };
 
+  // --- Meal plan week ---
+  const renderMealPlanWeek = (): ReactNode => {
+    const mealPlan = data?.meal_plan;
+    if (!mealPlan || mealPlan.length === 0) return null;
+
+    return (
+      <div className="chat-data-list">
+        {mealPlan.map((day, index) => {
+          const dayName = String(day.day || `Day ${index + 1}`);
+          const bObj = day.breakfast as Record<string, unknown> | undefined;
+          const lObj = day.lunch as Record<string, unknown> | undefined;
+          const dObj = day.dinner as Record<string, unknown> | undefined;
+          const breakfast = String(bObj?.name || "\u2014");
+          const lunch = String(lObj?.name || "\u2014");
+          const dinner = String(dObj?.name || "\u2014");
+          return (
+            <div key={index} className="chat-data-item" style={{ flexDirection: "column", alignItems: "flex-start", gap: "0.25rem" }}>
+              <span className="item-name">{dayName}</span>
+              <span className="item-details" style={{ flexWrap: "wrap" }}>
+                <span>{breakfast}</span>
+                <span>/</span>
+                <span>{lunch}</span>
+                <span>/</span>
+                <span>{dinner}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // --- Budget query ---
+  const renderBudgetQuery = (): ReactNode => {
+    const budgets = data?.budgets;
+    if (!budgets || budgets.length === 0) return null;
+
+    return (
+      <div className="chat-data-list">
+        {budgets.map((budget, index) => {
+          const category = budget.category || "General";
+          const amount = budget.amount || 0;
+          const spent = budget.actual_spending || 0;
+          const remaining = budget.remaining || 0;
+          const pct = budget.percentage_used || 0;
+          const isOver = remaining < 0;
+
+          return (
+            <div key={index} className="chat-data-item" style={{ flexDirection: "column", alignItems: "stretch", gap: "0.5rem" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <span className="item-name">{category}</span>
+                <span className={`stock-badge ${isOver ? "out_of_stock" : pct > 80 ? "low" : "full"}`}>
+                  {isOver ? "Over budget" : `${pct.toFixed(0)}% used`}
+                </span>
+              </div>
+              <div style={{ width: "100%", height: "6px", background: "var(--bg-input)", borderRadius: "3px", overflow: "hidden" }}>
+                <div style={{
+                  width: `${Math.min(pct, 100)}%`,
+                  height: "100%",
+                  borderRadius: "3px",
+                  background: isOver ? "var(--accent-danger, #ef4444)" : pct > 80 ? "var(--accent-warning, #f59e0b)" : "var(--accent-success, #22c55e)",
+                }} />
+              </div>
+              <span className="item-details">
+                <span>${spent.toFixed(2)} spent</span>
+                <span>${amount.toFixed(2)} budget</span>
+                <span>${Math.abs(remaining).toFixed(2)} {isOver ? "over" : "left"}</span>
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // --- Budget meal ---
+  const renderBudgetMeal = (): ReactNode => {
+    const meals = data?.meals;
+    if (!meals || meals.length === 0) return null;
+
+    return (
+      <div className="chat-data-list meal-suggestions">
+        {meals.map((meal, index) => {
+          const m = meal as unknown as Record<string, unknown>;
+          const cost = m.estimated_cost ?? m.buy_cost_estimate;
+          const costStr = typeof cost === "number" ? `$${cost.toFixed(2)}` : `$${cost}`;
+          const onHand = m.ingredients_on_hand as string[] | undefined;
+          const toBuy = m.ingredients_to_buy as string[] | undefined;
+
+          return (
+            <div key={index} className="meal-card">
+              <div className="meal-header">
+                <span className="meal-name">{String(m.name || "Meal")}</span>
+                <span className="meal-time-badge">{costStr}</span>
+              </div>
+              <div className="meal-ingredients">
+                {onHand && onHand.map((ing: string, i: number) => (
+                  <span key={i} className="ingredient-chip have">{ing}</span>
+                ))}
+                {toBuy && toBuy.map((ing: string, i: number) => (
+                  <span key={`buy-${i}`} className="ingredient-chip need">{ing}</span>
+                ))}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
+  // --- Store trip ---
+  const renderStoreTrip = (): ReactNode => {
+    // store_trip data uses added_items as string[] (from backend), not the typed added_items
+    const addedItems = (data as Record<string, unknown>)?.added_items as string[] | undefined;
+    const skippedItems = data?.skipped_items;
+    if ((!addedItems || addedItems.length === 0) && (!skippedItems || skippedItems.length === 0)) return null;
+
+    return (
+      <div className="chat-data-list">
+        {addedItems && addedItems.map((name: string, index: number) => (
+          <div key={`a-${index}`} className="chat-data-item pantry-add-item">
+            <span className="item-name">{name}</span>
+            <span className="stock-badge full">Added to pantry</span>
+          </div>
+        ))}
+        {skippedItems && skippedItems.length > 0 && skippedItems.map((name: string, index: number) => (
+          <div key={`s-${index}`} className="chat-data-item">
+            <span className="item-name">{name}</span>
+            <span className="item-details">Skipped</span>
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   // Route to the appropriate data renderer based on intent
   const renderData = (): ReactNode => {
     switch (intent) {
@@ -236,12 +548,34 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
         return renderPantryData();
       case "pantry_add":
         return renderPantryAdd();
+      case "pantry_remove":
+        return renderPantryRemove();
+      case "cooking_deduct":
+        return renderCookingDeduct();
       case "expense_query":
         return renderExpenseData();
+      case "expense_delete":
+        return renderExpenseDelete();
       case "suggestion":
         return renderSuggestionData();
+      case "shopping_complete":
+        return renderShoppingComplete();
+      case "shopping_list_add":
+        return renderShoppingListAdd();
+      case "shopping_list_remove":
+        return renderShoppingListRemove();
       case "meal_suggestion":
         return renderMealSuggestions();
+      case "meal_plan_week":
+        return renderMealPlanWeek();
+      case "budget_query":
+        return renderBudgetQuery();
+      case "budget_meal":
+        return renderBudgetMeal();
+      case "store_trip":
+        return renderStoreTrip();
+      // These intents use only the response_text (no extra data rendering needed):
+      // shopping_clear, budget_set, mark_subscription, reminder_check, share_list
       default:
         return null;
     }

@@ -37,17 +37,40 @@ export const useChat = () => {
       return response.json();
     },
     onSuccess: (data: ChatResponse) => {
-      // Invalidate shopping list cache when items might have been removed
-      if (data.intent === 'shopping_complete' || data.intent === 'suggestion') {
+      const intent = data.intent;
+
+      // --- Shopping list mutations ---
+      if (
+        intent === 'shopping_complete' ||
+        intent === 'suggestion' ||
+        intent === 'shopping_list_add' ||
+        intent === 'shopping_list_remove' ||
+        intent === 'shopping_clear'
+      ) {
         queryClient.invalidateQueries({ queryKey: queryKeys.shoppingList.all });
       }
-      // Invalidate pantry cache when items are added via voice
-      if (data.intent === 'pantry_add') {
+
+      // --- Pantry mutations ---
+      if (
+        intent === 'pantry_add' ||
+        intent === 'pantry_remove' ||
+        intent === 'cooking_deduct' ||
+        intent === 'store_trip' ||
+        intent === 'shopping_complete'
+      ) {
         queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
       }
-      // Invalidate budget cache when a budget is set via voice
-      if (data.intent === 'budget_set') {
+
+      // --- Budget mutations ---
+      if (intent === 'budget_set') {
         queryClient.invalidateQueries({ queryKey: queryKeys.budgets.all });
+      }
+
+      // --- Expense mutations ---
+      if (intent === 'expense_delete' || intent === 'mark_subscription') {
+        queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.streak.all });
       }
     },
   });

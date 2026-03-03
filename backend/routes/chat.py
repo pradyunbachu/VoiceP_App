@@ -24,6 +24,7 @@ from handlers import (
     handle_pantry_remove,
     handle_cooking_deduct,
     handle_expense_query,
+    handle_expense_delete,
     handle_store_trip,
     handle_mark_subscription,
     handle_suggestion,
@@ -33,6 +34,9 @@ from handlers import (
     handle_budget_meal,
     handle_shopping_complete,
     handle_shopping_list_add,
+    handle_shopping_list_remove,
+    handle_shopping_clear,
+    handle_budget_query,
     handle_budget_set,
     handle_share_list,
     generate_response,
@@ -99,6 +103,12 @@ async def chat(
     elif intent == "mark_subscription":
         data = await handle_mark_subscription(user_id, entities)
 
+    elif intent == "expense_delete":
+        data = await handle_expense_delete(user_id, entities, message)
+
+    elif intent == "budget_query":
+        data = await handle_budget_query(user_id, sub_intent, entities)
+
     # --- Suggestions and meal planning ---
     elif intent == "suggestion":
         data = await handle_suggestion(user_id, sub_intent, entities)
@@ -121,6 +131,12 @@ async def chat(
 
     elif intent == "shopping_list_add":
         data = await handle_shopping_list_add(user_id, entities, message)
+
+    elif intent == "shopping_list_remove":
+        data = await handle_shopping_list_remove(user_id, entities, message)
+
+    elif intent == "shopping_clear":
+        data = await handle_shopping_clear(user_id)
 
     elif intent == "budget_set":
         data = await handle_budget_set(user_id, entities, message)

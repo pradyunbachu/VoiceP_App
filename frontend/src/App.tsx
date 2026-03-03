@@ -254,7 +254,7 @@ function AppContent() {
       <ErrorBoundary name="view" key={currentView}>
         <main className={isAuthenticated ? "app-main" : ""}>{renderView()}</main>
       </ErrorBoundary>
-      {currentView === "record" && <DailyRecs />}
+      {currentView === "record" && <DailyRecs showToast={showToast} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
       {showClearAllConfirm && (
         <ConfirmDialog

@@ -38,7 +38,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="record-button"]',
     title: "Voice Recording",
     description:
-      "Tap the mic to record your voice. Say things like \"I spent $12 on lunch\" or \"What can I cook tonight?\" and Voxy will handle the rest.",
+      "Tap the mic to record your voice. Say things like \"I spent $12 on lunch\" or \"What can I cook tonight?\" and Voxy will handle the rest. Pro tip: hold the spacebar to quick-record from anywhere!",
   },
   {
     id: "manual",

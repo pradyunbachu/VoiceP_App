@@ -7,10 +7,10 @@
  * on demand and cached in a ref to avoid redundant API calls).
  */
 import { useState, useEffect, useRef } from 'react';
-import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X, RefreshCw } from 'lucide-react';
-import { useDailyRecs, useRecipeDetail } from '../hooks';
+import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X, RefreshCw, Send } from 'lucide-react';
+import { useDailyRecs, useRecipeDetail, useCookMeal, useCookStats } from '../hooks';
 import RecipeDetailPanel from './RecipeDetailModal';
-import type { MealSuggestion, ExpiringItem, LowStockItem, RecipeDetail, DailyRecs as DailyRecsType } from '../types';
+import type { MealSuggestion, ExpiringItem, LowStockItem, RecipeDetail, ShowToast, CookMealResponse } from '../types';
 import './DailyRecs.css';
 
 interface RecipeDetailResponse extends RecipeDetail {
@@ -18,14 +18,22 @@ interface RecipeDetailResponse extends RecipeDetail {
   // and ingredients as (string | RecipeIngredient)[]
 }
 
-const DailyRecs: React.FC = () => {
+interface DailyRecsProps {
+  showToast: ShowToast;
+}
+
+const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
   const [cachedRecipe, setCachedRecipe] = useState<RecipeDetailResponse | null>(null);
+  const [preference, setPreference] = useState<string>('');
+  const [prefInput, setPrefInput] = useState<string>('');
   // In-memory recipe cache keyed by meal name to avoid re-fetching
   const recipeCacheRef = useRef<Record<string, RecipeDetailResponse>>({});
-  const { data, isLoading, isError, isFetching, refreshRecs } = useDailyRecs();
+  const { data, isLoading, isError, isFetching, refreshRecs } = useDailyRecs(preference);
   const recipeDetail = useRecipeDetail();
+  const cookMeal = useCookMeal();
+  const { data: cookStats } = useCookStats();
 
   const recipeOpen = !!selectedMeal;
 
@@ -86,10 +94,41 @@ const DailyRecs: React.FC = () => {
     refreshRecs();
   };
 
+  const handlePreferenceSubmit = () => {
+    const trimmed = prefInput.trim();
+    if (!trimmed || trimmed === preference) return;
+    recipeCacheRef.current = {};
+    setPreference(trimmed);
+  };
+
+  const handlePreferenceClear = () => {
+    recipeCacheRef.current = {};
+    setPreference('');
+    setPrefInput('');
+  };
+
   const closeRecipePanel = () => {
     setSelectedMeal(null);
     setCachedRecipe(null);
     recipeDetail.reset();
+  };
+
+  const handleCookMeal = (recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {
+    cookMeal.mutate(
+      { recipe_name: recipeName, ingredients },
+      {
+        onSuccess: (result: CookMealResponse) => {
+          const msg = result.expiring_items_saved > 0
+            ? `You used ${result.expiring_items_saved} expiring item${result.expiring_items_saved > 1 ? 's' : ''} — $${result.estimated_savings} saved from the trash!`
+            : `Recipe logged! ${result.deducted_count} pantry item${result.deducted_count !== 1 ? 's' : ''} updated.`;
+          showToast(msg, 'celebration', 5000);
+          setTimeout(closeRecipePanel, 300);
+        },
+        onError: () => {
+          showToast("Couldn't log your meal.", 'error');
+        },
+      }
+    );
   };
 
   // Render the main panel body based on loading/error/empty states
@@ -130,6 +169,22 @@ const DailyRecs: React.FC = () => {
     return (
       <>
         <p className="daily-recs-greeting">{greeting}</p>
+
+        {/* Weekly cooking stats */}
+        {cookStats && cookStats.week_meals_cooked > 0 && (
+          <div className="daily-recs-cook-stats">
+            <div className="cook-stat">
+              <span className="cook-stat-value">{cookStats.week_meals_cooked}</span>
+              <span className="cook-stat-label">meal{cookStats.week_meals_cooked !== 1 ? 's' : ''} this week</span>
+            </div>
+            {cookStats.week_estimated_savings > 0 && (
+              <div className="cook-stat highlight">
+                <span className="cook-stat-value">${cookStats.week_estimated_savings}</span>
+                <span className="cook-stat-label">saved from waste</span>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Meal suggestion cards */}
         {meals.length > 0 && (
@@ -249,6 +304,34 @@ const DailyRecs: React.FC = () => {
               </button>
             </div>
 
+            <div className="daily-recs-preference-input">
+              <input
+                type="text"
+                placeholder="e.g. Indian food, low carb, quick & easy..."
+                value={prefInput}
+                onChange={(e) => setPrefInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') handlePreferenceSubmit(); }}
+                disabled={isFetching}
+              />
+              <button
+                className="preference-submit"
+                onClick={handlePreferenceSubmit}
+                disabled={isFetching || !prefInput.trim() || prefInput.trim() === preference}
+                aria-label="Submit preference"
+              >
+                <Send size={14} />
+              </button>
+            </div>
+
+            {preference && (
+              <div className="preference-active-chip">
+                <span>{preference}</span>
+                <button onClick={handlePreferenceClear} aria-label="Clear preference" disabled={isFetching}>
+                  <X size={12} />
+                </button>
+              </div>
+            )}
+
             {renderPanelContent()}
           </div>
 
@@ -260,6 +343,8 @@ const DailyRecs: React.FC = () => {
                 isLoading={!cachedRecipe && recipeDetail.isPending}
                 error={!cachedRecipe && recipeDetail.isError}
                 onClose={closeRecipePanel}
+                onCookMeal={handleCookMeal}
+                isCooking={cookMeal.isPending}
               />
             )}
           </div>

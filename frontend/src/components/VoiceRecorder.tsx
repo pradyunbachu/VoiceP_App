@@ -6,8 +6,8 @@
  * hooks, and displays the transcript, extracted expense result, chat response,
  * and an optional "Add to Pantry" modal after successful input.
  */
-import React, { useState, useEffect, useRef } from "react";
-import { Mic, Square, Loader2, Type, Camera, HelpCircle } from "lucide-react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
+import { Mic, Square, Loader2, Type, Camera, HelpCircle, Zap, X, AlertTriangle } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ChatResponseDisplay from "./ChatResponseDisplay";
 import ReceiptScanner from "./ReceiptScanner";
@@ -16,8 +16,9 @@ import ManualInput from "./ManualInput";
 import RecordingIndicator from "./RecordingIndicator";
 import useAudioRecorder from "../hooks/useAudioRecorder";
 import useVoiceProcessor from "../hooks/useVoiceProcessor";
-import { useStreak } from "../hooks";
-import type { ShowToast, Expense } from "../types";
+import { useStreak, usePantryStats, usePantryItems } from "../hooks";
+import { isExpiringSoon } from "../lib/pantryUtils";
+import type { ShowToast, Expense, PantryItem } from "../types";
 import "./VoiceRecorder.css";
 
 interface Props {
@@ -41,10 +42,26 @@ const VoiceRecorder: React.FC<Props> = ({ showToast, onShowTutorial }) => {
   const [showReceiptScanner, setShowReceiptScanner] = useState<boolean>(false);
   const [showPantryModal, setShowPantryModal] = useState<boolean>(false);
 
+  const [showSpacebarTip, setShowSpacebarTip] = useState<boolean>(
+    () => !localStorage.getItem("voxal_spacebar_tip_dismissed")
+  );
+
   const { isRecording, recordingTime, startRecording, stopRecording, formatTime } = useAudioRecorder();
   const processor = useVoiceProcessor();
   const { data: streakData } = useStreak();
+  const { data: pantryStats } = usePantryStats();
+  const { data: pantryItems } = usePantryItems({ sort_by: 'expiration_date', sort_order: 'asc' });
+  const [showExpiring, setShowExpiring] = useState(false);
+
+  const expiringItems = (Array.isArray(pantryItems) ? pantryItems : []).filter(
+    (item: PantryItem) => isExpiringSoon(item.expiration_date)
+  );
   const prevExpenseCountRef = useRef(processor.expenseJustCreated);
+
+  const dismissSpacebarTip = useCallback(() => {
+    setShowSpacebarTip(false);
+    localStorage.setItem("voxal_spacebar_tip_dismissed", "1");
+  }, []);
 
   // Celebration toast when an expense is created
   useEffect(() => {
@@ -125,6 +142,62 @@ const VoiceRecorder: React.FC<Props> = ({ showToast, onShowTutorial }) => {
           <span>Scan Receipt</span>
         </button>
       </div>
+
+      {showSpacebarTip && (
+        <div className="spacebar-tip">
+          <Zap size={13} />
+          <span>Pro tip: hold <kbd>spacebar</kbd> to quick-record from anywhere</span>
+          <button className="spacebar-tip-dismiss" onClick={dismissSpacebarTip} aria-label="Dismiss tip">
+            <X size={12} />
+          </button>
+        </div>
+      )}
+
+      {(streakData || pantryStats?.expiring_soon) ? (
+        <div className="recorder-glance">
+          {streakData && (
+            <span className="glance-chip streak">
+              {streakData.current_streak > 0 ? `${streakData.current_streak}-day streak` : 'Start your streak!'}
+            </span>
+          )}
+          {pantryStats && pantryStats.expiring_soon > 0 && (
+            <div className="glance-expiring-wrapper">
+              <button className={`glance-chip expiring ${showExpiring ? 'active' : ''}`} onClick={() => setShowExpiring(!showExpiring)}>
+                <AlertTriangle size={12} />
+                {pantryStats.expiring_soon} expiring soon
+              </button>
+              {showExpiring && expiringItems.length > 0 && (
+                <>
+                  <div className="glance-expiring-backdrop" onClick={() => setShowExpiring(false)} />
+                  <div className="glance-expiring-list">
+                    <div className="glance-expiring-header">
+                      <span>Expiring Soon</span>
+                      <button className="glance-expiring-close" onClick={() => setShowExpiring(false)} aria-label="Close">
+                        <X size={14} />
+                      </button>
+                    </div>
+                    <div className="glance-expiring-items">
+                      {expiringItems.map((item) => {
+                        const daysLeft = Math.ceil(
+                          (new Date(item.expiration_date!).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)
+                        );
+                        return (
+                          <div key={item.id} className="glance-expiring-item">
+                            <span className="glance-expiring-name">{item.name}</span>
+                            <span className={`glance-expiring-days ${daysLeft <= 1 ? 'urgent' : ''}`}>
+                              {item.expiration_predicted ? '~' : ''}{daysLeft <= 0 ? 'today' : daysLeft === 1 ? 'tomorrow' : `${daysLeft}d left`}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {processor.error && <div className="error-message"><p>{processor.error}</p></div>}
 

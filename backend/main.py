@@ -19,7 +19,7 @@ from slowapi.errors import RateLimitExceeded
 from config import supabase
 from rate_limit import limiter
 from services.recurring import process_due_recurring_expenses
-from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs, streak
+from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs, streak, cook_meal
 from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
@@ -111,6 +111,7 @@ app.include_router(insights.router, prefix="/api", tags=["Insights"])
 app.include_router(receipt.router, prefix="/api", tags=["Receipt"])
 app.include_router(daily_recs.router, prefix="/api", tags=["Daily Recs"])
 app.include_router(streak.router, prefix="/api", tags=["Streak"])
+app.include_router(cook_meal.router, prefix="/api", tags=["Cook Meal"])
 
 # ============================================================================
 # ROOT ENDPOINT

@@ -11,6 +11,7 @@ export { useSpendingInsights } from './queries/useSpendingInsights';
 export { useSpendingComparison } from './queries/useSpendingComparison';
 export { useDailyRecs } from './queries/useDailyRecs';
 export { useStreak } from './queries/useStreak';
+export { useCookStats } from './queries/useCookStats';
 export { queryKeys } from './queries/queryKeys';
 
 // Expense mutations
@@ -49,6 +50,9 @@ export { useScanReceipt } from './mutations/useReceiptMutation';
 
 // Recipe mutations
 export { useRecipeDetail } from './mutations/useRecipeMutation';
+
+// Cook meal mutations
+export { useCookMeal } from './mutations/useCookMealMutation';
 
 // Shopping List mutations
 export {

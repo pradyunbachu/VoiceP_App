@@ -42,6 +42,10 @@ Analyze the user message and classify it into ONE of these intents:
 - meal_plan_week: User wants a full weekly meal plan (e.g., "Plan my meals for the week", "Make me a weekly meal plan", "What should I eat this week?")
 - budget_meal: User wants meal SUGGESTIONS under a price limit (e.g., "What can I make under $10?", "Cheap dinner ideas", "Meals under $15"). Must be a forward-looking request for ideas. "I got dinner under $10" (past tense, reporting what happened) is expense_input, NOT budget_meal.
 - mark_subscription: User wants to explicitly TAG or MARK a specific expense as recurring/subscription (e.g., "Log that as a subscription", "Mark that as recurring", "That's a monthly expense"). Must be an explicit tagging action. "My monthly expenses are too high" is NOT mark_subscription — that's expense_query or general.
+- expense_delete: User wants to DELETE or REMOVE an existing expense (e.g., "Delete my last expense", "Remove the $15 Walmart expense", "Undo that expense"). Must be about removing a previously logged expense. "I spent $20" is expense_input, NOT expense_delete.
+- budget_query: User wants to CHECK or VIEW their budget status (e.g., "What's my grocery budget?", "How much budget do I have left?", "Am I over budget?", "Show my budgets"). NOT for setting a budget — "Set a $200 budget" is budget_set.
+- shopping_list_remove: User wants to REMOVE specific items from their shopping list (e.g., "Remove milk from my shopping list", "Take eggs off my list", "Delete bread from my shopping list"). Must mention specific items AND shopping list.
+- shopping_clear: User wants to CLEAR or EMPTY their entire shopping list (e.g., "Clear my shopping list", "Empty my shopping list", "Delete everything from my shopping list"). No specific items needed — this removes ALL items.
 - general: General questions or greetings (e.g., "Hello", "What can you do?", "Help")
 
 Also determine the sub_intent where applicable:
@@ -65,7 +69,9 @@ Extract any relevant entities:
 - recipe_name: name of the recipe/dish being cooked (e.g., "chicken stir-fry" from "I'm cooking the chicken stir-fry")
 - share_target: name or email of person to share with (e.g., "Sarah" from "Share my list with Sarah")
 - price_limit: maximum price for budget meals (e.g., 10 from "What can I make under $10?")
-- shopping_items: list of items to add to shopping list (e.g., ["milk", "eggs"] from "Add milk and eggs to my list")
+- shopping_items: list of items to add to or remove from shopping list (e.g., ["milk", "eggs"] from "Add milk and eggs to my list")
+- delete_item_name: name/description of the expense to delete (e.g., "Walmart" from "delete the Walmart expense")
+- delete_amount: dollar amount of the expense to delete (e.g., 15 from "remove the $15 expense")
 
 DISAMBIGUATION RULES (apply these when intents overlap):
 1. Dollar amounts + items → expense_input (not shopping_complete, store_trip, or shopping_list_add)
@@ -74,16 +80,20 @@ DISAMBIGUATION RULES (apply these when intents overlap):
 4. Returning from a store WITHOUT prices → store_trip; WITH prices → expense_input
 5. "I have X" listing specific food items → pantry_add; "I have no idea / a question" → general
 6. "do I have X?" / "how many X?" → pantry_query (not pantry_add)
-7. "remove X from my pantry" → pantry_remove; "remove X from my shopping list" → general (not pantry_remove)
-8. "Set a $200 budget" → budget_set; "I spent from my budget" / "am I over budget?" → expense_query
+7. "remove X from my pantry" → pantry_remove; "remove X from my shopping list" → shopping_list_remove (not pantry_remove)
+8. "Set a $200 budget" → budget_set; "What's my budget?" / "How much budget left?" / "Am I over budget?" → budget_query; "I spent from my budget" → expense_query
 9. "I'm cooking/making [food]" → cooking_deduct; "I'm making a list/plans" → general (not cooking_deduct)
 10. "Mark that as recurring" / "that's a subscription" → mark_subscription; "my monthly expenses are high" → expense_query
 11. "What can I make under $10?" (forward-looking suggestion) → budget_meal; "I got dinner under $10" (past event) → expense_input
 12. "I need to buy eggs" (no price) → shopping_list_add; "I need to buy eggs for $3" (has price) → expense_input
 13. "What's in my pantry?" / "Show my pantry" → pantry_query (list_all); NOT general
 14. "What should I eat?" / "What should I have for dinner?" → meal_suggestion (not general)
-15. "Show my shopping list" / "Clear my shopping list" → general (not suggestion)
+15. "Show my shopping list" → general (not suggestion); "Clear my shopping list" → shopping_clear (not general)
 16. "I'm out of eggs" → pantry_query (out_of_stock); "I'm out of ideas/time/money" → general (not pantry_query)
+17. "Delete my last expense" / "Remove the $15 expense" → expense_delete (not expense_query or general)
+18. "What's my budget?" / "How much budget do I have left?" / "Am I over budget?" → budget_query (not budget_set or expense_query)
+19. "Remove milk from my shopping list" → shopping_list_remove (not pantry_remove or general)
+20. "Clear my shopping list" / "Empty my shopping list" → shopping_clear (not general)
 
 Respond ONLY with a JSON object in this format:
 {
@@ -102,7 +112,9 @@ Respond ONLY with a JSON object in this format:
     "recipe_name": "recipe name or null",
     "share_target": "person name or null",
     "price_limit": "number or null",
-    "shopping_items": ["list", "of", "items"] or null
+    "shopping_items": ["list", "of", "items"] or null,
+    "delete_item_name": "name of expense to delete or null",
+    "delete_amount": "number or null"
   }
 }"""
 
@@ -154,6 +166,63 @@ def detect_meal_type(message: str) -> Optional[str]:
 def simple_intent_detection(message: str) -> dict:
     """Simple keyword-based intent detection as fallback."""
     message_lower = message.lower()
+
+    # --- Shopping clear (check before shopping list add/remove) ---
+    shopping_clear_keywords = [
+        "clear my shopping list", "clear the shopping list", "empty my shopping list",
+        "empty the shopping list", "delete everything from my shopping list",
+        "remove everything from my shopping list", "clear my list",
+        "wipe my shopping list", "reset my shopping list"
+    ]
+    if any(kw in message_lower for kw in shopping_clear_keywords):
+        return {"intent": "shopping_clear", "sub_intent": None, "entities": {}}
+
+    # --- Shopping list remove (check before shopping list add) ---
+    shopping_list_remove_keywords = [
+        "remove from my shopping list", "remove from my list",
+        "remove from the shopping list", "remove from the list",
+        "delete from my shopping list", "delete from my list",
+        "take off my shopping list", "take off my list",
+        "take off the list", "take off the shopping list",
+        "from my shopping list", "from my list", "off my list",
+        "off my shopping list"
+    ]
+    # Must mention "remove/delete/take" AND "list" — avoid matching pantry_remove
+    shopping_list_remove_verbs = ["remove", "delete", "take off", "take out"]
+    shopping_list_context = ["shopping list", "my list", "the list", "grocery list"]
+    has_remove_verb = any(v in message_lower for v in shopping_list_remove_verbs)
+    has_list_context = any(c in message_lower for c in shopping_list_context)
+    if has_remove_verb and has_list_context:
+        return {"intent": "shopping_list_remove", "sub_intent": None, "entities": {}}
+
+    # --- Expense delete (check before expense keywords) ---
+    expense_delete_keywords = [
+        "delete my last expense", "delete the last expense", "remove my last expense",
+        "delete that expense", "remove that expense", "undo that expense",
+        "undo my last expense", "delete the expense", "remove the expense",
+        "cancel that expense", "delete expense"
+    ]
+    expense_delete_verbs = ["delete", "remove", "undo", "cancel"]
+    expense_delete_nouns = ["expense", "transaction", "purchase"]
+    has_delete_verb = any(v in message_lower for v in expense_delete_verbs)
+    has_expense_noun = any(n in message_lower for n in expense_delete_nouns)
+    if any(kw in message_lower for kw in expense_delete_keywords):
+        return {"intent": "expense_delete", "sub_intent": None, "entities": {}}
+    if has_delete_verb and has_expense_noun:
+        # Avoid matching "delete from my pantry" or "remove from my shopping list"
+        if "pantry" not in message_lower and "shopping list" not in message_lower and "list" not in message_lower:
+            return {"intent": "expense_delete", "sub_intent": None, "entities": {}}
+
+    # --- Budget query (check before budget set) ---
+    budget_query_keywords = [
+        "what's my budget", "whats my budget", "what is my budget",
+        "how much budget", "budget left", "budget remaining",
+        "am i over budget", "am i under budget", "show my budget",
+        "show my budgets", "check my budget", "budget status",
+        "how much do i have left in my budget", "how much is left in my budget"
+    ]
+    if any(kw in message_lower for kw in budget_query_keywords):
+        return {"intent": "budget_query", "sub_intent": None, "entities": {}}
 
     # --- Shopping list add (check before general shopping keywords) ---
     # If dollar amounts are present, it's an expense, not a shopping list add

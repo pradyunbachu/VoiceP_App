@@ -355,18 +355,76 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
                 parts.append(f"   Need: {', '.join(to_buy)}")
         return "\n".join(parts)
 
+    elif intent == "expense_delete":
+        message = data.get("message")
+        if message:
+            return message
+        deleted = data.get("deleted_expense", {})
+        store = deleted.get("store", "Unknown")
+        amount = deleted.get("amount")
+        items = deleted.get("items", "")
+        date = deleted.get("date", "")
+        amount_str = f"${amount:.2f}" if amount else ""
+        parts = [f"Deleted expense: {store} {amount_str}"]
+        if items:
+            parts.append(f"Items: {items}")
+        if date:
+            parts.append(f"Date: {date}")
+        return "\n".join(parts)
+
+    elif intent == "budget_query":
+        message = data.get("message")
+        if message:
+            return message
+        budgets = data.get("budgets", [])
+        if not budgets:
+            return "You don't have any budgets set for this month."
+        parts = [f"Budget status for this month ({len(budgets)} budget{'s' if len(budgets) != 1 else ''}):"]
+        for b in budgets:
+            cat = b.get("category", "General")
+            amount = b.get("amount", 0)
+            spent = b.get("actual_spending", 0)
+            remaining = b.get("remaining", 0)
+            pct = b.get("percentage_used", 0)
+            status = "Over budget!" if remaining < 0 else "On track"
+            parts.append(f"- {cat}: ${spent:.2f} / ${amount:.2f} ({pct:.0f}% used) — {status}")
+        return "\n".join(parts)
+
+    elif intent == "shopping_list_remove":
+        message = data.get("message")
+        if message:
+            return message
+        removed = data.get("removed_items", [])
+        count = data.get("removed_count", 0)
+        if count == 0:
+            return "I couldn't find those items in your shopping list."
+        return f"Removed {count} item(s) from your shopping list: {', '.join(removed)}"
+
+    elif intent == "shopping_clear":
+        message = data.get("message")
+        if message:
+            return message
+        count = data.get("cleared_count", 0)
+        if count == 0:
+            return "Your shopping list is already empty."
+        return f"Shopping list cleared! Removed {count} item(s)."
+
     elif intent == "general":
         return ("I can help you with:\n"
                 "- Log expenses: 'I spent $20 at Walmart'\n"
+                "- Delete expenses: 'Delete my last expense'\n"
                 "- Check pantry: 'How many eggs do I have?'\n"
                 "- Add to pantry: 'I have flour, oil, and salt'\n"
                 "- Remove from pantry: 'Remove chicken from my pantry'\n"
                 "- Track spending: 'How much did I spend this month?'\n"
                 "- Compare spending: 'How does this month compare?'\n"
+                "- Check budget: 'What's my grocery budget?'\n"
+                "- Set budget: 'Set a $200 budget for groceries'\n"
                 "- Get suggestions: 'What should I get from the store?'\n"
                 "- Meal ideas: 'What can I cook for breakfast?'\n"
                 "- Add to shopping list: 'Add milk to my shopping list'\n"
-                "- Set budget: 'Set a $200 budget for groceries'\n"
+                "- Remove from list: 'Remove milk from my shopping list'\n"
+                "- Clear list: 'Clear my shopping list'\n"
                 "- Store trip: 'I just got back from Costco'\n"
                 "- Cook & deduct: 'I'm cooking the chicken stir-fry'\n"
                 "- Check items: 'Remind me to use the avocados'\n"

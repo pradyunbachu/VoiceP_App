@@ -293,10 +293,23 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     }
   };
 
-  // Persist edits to an existing pantry item
+  // Persist edits to an existing pantry item.
+  // When the name changed but the user didn't manually pick a new category,
+  // auto-recategorize based on the updated name.
   const handleUpdate = async (id: number): Promise<void> => {
     try {
-      await updateMutation.mutateAsync({ id, data: editForm });
+      const original = items.find((item) => item.id === id);
+      let data = { ...editForm };
+      if (original && data.name && data.name !== original.name) {
+        // Name changed — recategorize if the category wasn't manually changed
+        if (data.category === original.category) {
+          const detected = detectCategory(data.name);
+          if (detected !== "Other" || original.category === "Other") {
+            data = { ...data, category: detected };
+          }
+        }
+      }
+      await updateMutation.mutateAsync({ id, data });
       setEditingId(null);
       setEditForm({} as EditFormData);
     } catch (error: unknown) {
@@ -413,11 +426,13 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
       }
     });
 
-    // --- Pass 2: Re-categorize "Other" items and merge if target shelf already has one ---
-    const otherItems = Object.values(canonical).filter((item) => item.category === "Other");
-    otherItems.forEach((item) => {
+    // --- Pass 2: Re-categorize any item whose detected category differs from its current one ---
+    const miscategorized = Object.values(canonical).filter((item) => {
+      const detected = detectCategory(item.name);
+      return detected !== "Other" && detected !== item.category;
+    });
+    miscategorized.forEach((item) => {
       const newCategory = detectCategory(item.name);
-      if (newCategory === "Other") return;
 
       const key = item.name.toLowerCase().trim();
       // Check if an item with the same name already lives in a non-Other shelf

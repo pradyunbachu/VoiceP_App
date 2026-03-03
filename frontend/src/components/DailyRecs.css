@@ -214,12 +214,151 @@
   to { transform: rotate(360deg); }
 }
 
+/* Preference Input Row */
+.daily-recs-preference-input {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-3);
+}
+
+.daily-recs-preference-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 10px;
+  background: rgba(200, 191, 178, 0.06);
+  border: 1px solid rgba(200, 191, 178, 0.12);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.daily-recs-preference-input input::placeholder {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+.daily-recs-preference-input input:focus {
+  border-color: var(--accent-primary-border);
+}
+
+.daily-recs-preference-input input:disabled {
+  opacity: 0.5;
+}
+
+.preference-submit {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: #fff;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease, opacity 0.15s ease;
+}
+
+.preference-submit:hover:not(:disabled) {
+  background: var(--accent-primary-hover, #B08D50);
+}
+
+.preference-submit:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Active Preference Chip */
+.preference-active-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  margin-bottom: var(--space-3);
+  background: var(--accent-primary-bg);
+  border: 1px solid var(--accent-primary-border);
+  border-radius: var(--radius-full);
+  color: var(--accent-primary-light);
+  font-size: 0.75rem;
+  font-weight: 500;
+  max-width: 100%;
+}
+
+.preference-active-chip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.preference-active-chip button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  background: rgba(200, 191, 178, 0.12);
+  border: none;
+  border-radius: 50%;
+  color: var(--accent-primary-light);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: background 0.15s ease;
+}
+
+.preference-active-chip button:hover:not(:disabled) {
+  background: rgba(200, 191, 178, 0.25);
+}
+
+.preference-active-chip button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Greeting */
 .daily-recs-greeting {
   color: var(--text-secondary);
   font-size: 0.85rem;
   line-height: 1.5;
   margin: 0 0 var(--space-4) 0;
+}
+
+/* Weekly Cook Stats Bar */
+.daily-recs-cook-stats {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  margin-bottom: var(--space-4);
+  background: rgba(200, 191, 178, 0.05);
+  border: 1px solid rgba(200, 191, 178, 0.08);
+  border-radius: var(--radius-md);
+}
+
+.cook-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.cook-stat-value {
+  font-weight: 700;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+}
+
+.cook-stat-label {
+  font-size: 0.7rem;
+}
+
+.cook-stat.highlight .cook-stat-value {
+  color: var(--accent-warning, #d4a017);
 }
 
 /* Meal Cards */

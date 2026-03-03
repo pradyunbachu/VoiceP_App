@@ -149,18 +149,40 @@ export interface Analytics {
 
 export type ChatIntent =
   | "shopping_complete"
+  | "shopping_list_add"
+  | "shopping_list_remove"
+  | "shopping_clear"
   | "pantry_add"
   | "pantry_query"
+  | "pantry_remove"
+  | "cooking_deduct"
   | "budget_set"
+  | "budget_query"
+  | "budget_meal"
   | "suggestion"
   | "expense_input"
   | "expense_query"
+  | "expense_delete"
   | "meal_suggestion"
+  | "meal_plan_week"
+  | "store_trip"
+  | "mark_subscription"
+  | "reminder_check"
+  | "share_list"
   | "general";
 
 export interface ChatResponseData {
   items?: Array<Record<string, unknown>>;
   added_items?: Array<{ id: number; name: string; category: string }>;
+  removed_items?: string[];
+  removed_count?: number;
+  deducted_items?: Array<{ name: string; old_quantity: number; new_quantity: number }>;
+  deleted_expense?: { store?: string; amount?: number; items?: string; date?: string; category?: string };
+  budgets?: Array<{ category: string; amount: number; actual_spending: number; remaining: number; percentage_used: number }>;
+  pantry_added?: string[];
+  skipped_items?: string[];
+  meal_plan?: Array<Record<string, unknown>>;
+  cleared_count?: number;
   total?: number;
   count?: number;
   time_period?: string;
@@ -170,6 +192,7 @@ export interface ChatResponseData {
   meal_type?: string;
   meals?: MealSuggestion[];
   expiring_items?: string[];
+  [key: string]: unknown;
 }
 
 export interface ChatResponse {
@@ -314,6 +337,7 @@ export interface DailyRecs {
   pantry_count: number;
   greeting: string;
   available_ingredients: string;
+  preference?: string;
 }
 
 // ── Recipe Detail ──────────────────────────────────────────────────────
@@ -344,6 +368,30 @@ export interface RecipeDetail {
   time_minutes?: number;
   difficulty?: string;
   nutrition?: NutritionInfo;
+}
+
+// ── Cook Meal ─────────────────────────────────────────────────────────
+
+export interface CookMealResponse {
+  success: boolean;
+  recipe_name: string;
+  deducted_items: Array<{
+    name: string;
+    old_quantity: number;
+    new_quantity: number;
+    new_status: string;
+    was_expiring: boolean;
+  }>;
+  deducted_count: number;
+  expiring_items_saved: number;
+  estimated_savings: number;
+}
+
+export interface CookStats {
+  week_meals_cooked: number;
+  week_expiring_saved: number;
+  week_estimated_savings: number;
+  recent_meals: Array<{ recipe_name: string; cooked_at: string }>;
 }
 
 // ── Receipt Scanning ───────────────────────────────────────────────────

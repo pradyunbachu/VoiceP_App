@@ -12,12 +12,12 @@ import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
 import type { DailyRecs } from '../../types';
 
-export const useDailyRecs = () => {
+export const useDailyRecs = (preference: string = '') => {
   const { getToken, session } = useAuth();
   const refreshRef = useRef(false);
 
   const query = useQuery<DailyRecs>({
-    queryKey: queryKeys.dailyRecs.all,
+    queryKey: queryKeys.dailyRecs.withPreference(preference),
     queryFn: async (): Promise<DailyRecs> => {
       const token = await getToken();
       if (!token) throw new Error('No authentication token');
@@ -28,6 +28,7 @@ export const useDailyRecs = () => {
 
       const params = new URLSearchParams({ tz });
       if (shouldRefresh) params.set('refresh', 'true');
+      if (preference) params.set('preference', preference);
 
       const response = await fetch(`${API_BASE_URL}/api/daily-recs?${params}`, {
         headers: { Authorization: `Bearer ${token}` },

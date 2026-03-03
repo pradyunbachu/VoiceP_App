@@ -5,6 +5,8 @@ These are invoked by the chat route when the intent is expense-related:
   handle_expense_query      — Queries expenses by time period, category, or
                               store. Also handles the spending_comparison
                               sub-intent (current vs. previous month).
+  handle_expense_delete     — Deletes the most recent expense matching the
+                              user's criteria (store, amount, item name).
   handle_store_trip         — When the user says "I just got back from Costco",
                               finds the most recent expense for that store and
                               auto-adds its line items to the pantry.
@@ -137,6 +139,83 @@ async def _handle_spending_comparison(user_id: str, entities: dict) -> dict:
         return {
             "message": "Failed to compare spending. Please try again.",
             "query_type": "spending_comparison"
+        }
+
+
+async def handle_expense_delete(user_id: str, entities: dict, original_message: str) -> dict:
+    """Delete the most recent expense matching the user's criteria."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    try:
+        # Build query to find the expense to delete
+        query = (
+            supabase.table("expenses")
+            .select("*")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+        )
+
+        # Apply filters from entities if provided
+        store = entities.get("store") or entities.get("delete_item_name")
+        amount = entities.get("delete_amount") or entities.get("amount")
+        item_name = entities.get("item_name") or entities.get("delete_item_name")
+
+        if store:
+            query = query.ilike("store", f"%{store}%")
+        if amount:
+            query = query.eq("amount", float(amount))
+
+        response = query.limit(5).execute()
+        expenses = response.data if response.data else []
+
+        if not expenses:
+            return {
+                "success": False,
+                "message": "I couldn't find a matching expense to delete.",
+                "query_type": "expense_delete"
+            }
+
+        # If item_name filter provided but wasn't a store match, try matching items/description
+        expense = expenses[0]
+        if item_name and not store:
+            for e in expenses:
+                items_str = (e.get("items") or e.get("description") or "").lower()
+                store_str = (e.get("store") or "").lower()
+                if item_name.lower() in items_str or item_name.lower() in store_str:
+                    expense = e
+                    break
+
+        expense_id = expense["id"]
+
+        # Delete linked pantry items that came from this expense
+        try:
+            supabase.table("pantry_items").delete().eq(
+                "source_expense_id", expense_id
+            ).execute()
+        except Exception:
+            pass  # Not all expenses have linked pantry items
+
+        # Delete the expense itself
+        supabase.table("expenses").delete().eq("id", expense_id).eq("user_id", user_id).execute()
+
+        return {
+            "success": True,
+            "deleted_expense": {
+                "store": expense.get("store"),
+                "amount": expense.get("amount"),
+                "items": expense.get("items"),
+                "date": expense.get("date"),
+                "category": expense.get("category"),
+            },
+            "query_type": "expense_delete"
+        }
+    except Exception as e:
+        print(f"Expense delete error: {e}")
+        return {
+            "success": False,
+            "message": "Failed to delete expense. Please try again.",
+            "query_type": "expense_delete"
         }
 
 

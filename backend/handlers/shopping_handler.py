@@ -225,3 +225,123 @@ async def handle_shopping_list_add(user_id: str, entities: dict, original_messag
         "added_count": len(added_items),
         "query_type": "shopping_list_add"
     }
+
+
+def parse_shopping_remove_items(message: str) -> list:
+    """Parse item names from a shopping list remove message."""
+    message_lower = message.lower()
+
+    remove_phrases = [
+        "remove from my shopping list", "remove from my list",
+        "remove from the shopping list", "remove from the list",
+        "delete from my shopping list", "delete from my list",
+        "take off my shopping list", "take off my list",
+        "take off the list", "take off the shopping list",
+        "from my shopping list", "from my list", "from the list",
+        "off my shopping list", "off my list", "off the list",
+        "remove", "delete", "take off", "take out",
+        "please", "can you", "could you"
+    ]
+
+    cleaned = message_lower
+    for phrase in remove_phrases:
+        cleaned = cleaned.replace(phrase, " ")
+
+    items = re.split(r'[,;]|\band\b', cleaned)
+
+    parsed_items = []
+    for item in items:
+        item = item.strip().strip('.')
+        if item and len(item) > 1 and item not in ["the", "a", "an", "some", "to", "my", "me"]:
+            parsed_items.append(item.strip())
+
+    return parsed_items
+
+
+async def handle_shopping_list_remove(user_id: str, entities: dict, original_message: str) -> dict:
+    """Handle removing specific items from the shopping list."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    shopping_items = entities.get("shopping_items", [])
+    if not shopping_items:
+        shopping_items = parse_shopping_remove_items(original_message)
+
+    if not shopping_items:
+        return {
+            "removed_items": [],
+            "removed_count": 0,
+            "message": "I couldn't identify which items to remove. Try 'Remove milk from my shopping list'.",
+            "query_type": "shopping_list_remove"
+        }
+
+    # Get current shopping list
+    shopping_response = supabase.table("shopping_list").select("*").eq("user_id", user_id).execute()
+    current_items = shopping_response.data if shopping_response.data else []
+
+    removed_items = []
+    removed_ids = []
+
+    for target in shopping_items:
+        target_lower = target.lower().strip()
+        for item in current_items:
+            item_name = item.get("name", "").lower()
+            if target_lower in item_name or item_name in target_lower:
+                if item["id"] not in removed_ids:
+                    removed_ids.append(item["id"])
+                    removed_items.append(item.get("name"))
+
+    deleted_count = 0
+    for item_id in removed_ids:
+        try:
+            response = supabase.table("shopping_list").delete().eq("id", item_id).eq("user_id", user_id).execute()
+            if response.data:
+                deleted_count += 1
+        except Exception as e:
+            print(f"Error removing shopping list item: {e}")
+
+    if deleted_count == 0 and shopping_items:
+        return {
+            "removed_items": [],
+            "removed_count": 0,
+            "message": f"I couldn't find '{', '.join(shopping_items)}' in your shopping list.",
+            "query_type": "shopping_list_remove"
+        }
+
+    return {
+        "removed_items": removed_items,
+        "removed_count": deleted_count,
+        "query_type": "shopping_list_remove"
+    }
+
+
+async def handle_shopping_clear(user_id: str) -> dict:
+    """Clear the entire shopping list."""
+    if supabase is None:
+        return {"message": "Database not configured"}
+
+    try:
+        # Count items before clearing
+        count_response = supabase.table("shopping_list").select("id").eq("user_id", user_id).execute()
+        item_count = len(count_response.data) if count_response.data else 0
+
+        if item_count == 0:
+            return {
+                "cleared_count": 0,
+                "message": "Your shopping list is already empty.",
+                "query_type": "shopping_clear"
+            }
+
+        # Delete all items
+        supabase.table("shopping_list").delete().eq("user_id", user_id).execute()
+
+        return {
+            "cleared_count": item_count,
+            "query_type": "shopping_clear"
+        }
+    except Exception as e:
+        print(f"Shopping clear error: {e}")
+        return {
+            "message": "Failed to clear shopping list. Please try again.",
+            "query_type": "shopping_clear"
+        }

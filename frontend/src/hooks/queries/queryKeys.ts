@@ -104,11 +104,17 @@ export const queryKeys = {
   // Daily Recs
   dailyRecs: {
     all: ['dailyRecs'] as const,
+    withPreference: (preference: string) => [...queryKeys.dailyRecs.all, preference] as const,
   },
 
   // Streak
   streak: {
     all: ['streak'] as const,
+  },
+
+  // Cook Stats
+  cookStats: {
+    all: ['cookStats'] as const,
   },
 
 } as const;
