@@ -8,7 +8,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
-import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
@@ -43,7 +43,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
   }, []);
 
   const isFinanceView = ["dashboard", "expenses", "budgets", "insights", "comparisons"].includes(currentView);
-  const isKitchenView = ["pantry", "shopping-list"].includes(currentView);
+  const isKitchenView = ["pantry", "shopping-list", "chef"].includes(currentView);
 
   const handleFinanceItemClick = (view: AppView): void => {
     onViewChange(view);
@@ -165,6 +165,13 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
               >
                 <ShoppingCart size={16} />
                 <span>Shopping List</span>
+              </button>
+              <button
+                className={`nav-dropdown-item ${currentView === "chef" ? "active" : ""}`}
+                onClick={() => handleKitchenItemClick("chef")}
+              >
+                <ChefHat size={16} />
+                <span>Chef</span>
               </button>
             </div>
           )}

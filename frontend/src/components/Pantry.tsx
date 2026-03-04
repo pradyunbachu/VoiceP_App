@@ -41,11 +41,11 @@ import {
   useUpdatePantryStatus,
   useDeletePantryItem,
   useBulkDeletePantryItems,
-  useBackfillDates,
+  useResyncPantry,
   useUndoDelete,
 } from "../hooks";
 import { exportPantryCsv } from "../lib/csvExport";
-import { detectCategory, isPantryItem } from "../lib/categoryDetection";
+import { detectCategory } from "../lib/categoryDetection";
 import { isExpired } from "../lib/pantryUtils";
 import LoadingSkeleton from "./LoadingSkeleton";
 import PantryFilters from "./PantryFilters";
@@ -164,7 +164,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
   const statusMutation = useUpdatePantryStatus();
   const deleteMutation = useDeletePantryItem();
   const bulkDeleteMutation = useBulkDeletePantryItems();
-  const backfillDatesMutation = useBackfillDates();
+  const resyncMutation = useResyncPantry();
   const { scheduleDelete } = useUndoDelete(showToast);
 
   // Server-side filtering has already been applied via query params,
@@ -361,6 +361,14 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     statusMutation.mutate({ id, status: newStatus });
   };
 
+  const handleQuantityChange = (id: number, delta: number): void => {
+    const item = items.find((i) => i.id === id);
+    if (!item) return;
+    const newQty = Math.max(0, (item.quantity || 1) + delta);
+    const newStatus: StockStatus = newQty === 0 ? "out_of_stock" : newQty === 1 ? "low" : item.stock_status === "out_of_stock" ? "full" : item.stock_status;
+    updateMutation.mutate({ id, data: { quantity: newQty, stock_status: newStatus } });
+  };
+
   // Delete all currently selected items at once via undo-able bulk delete
   const handleBulkDelete = (): void => {
     if (selectedItems.size === 0) {
@@ -390,119 +398,31 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     });
   };
 
-  // Recategorize performs a two-pass cleanup of the pantry:
-  //   Pass 1 - Deduplicates items with the same name (merges quantities).
-  //   Pass 2 - Moves "Other" items to their detected category, merging
-  //            with any existing item on the target shelf.
-  // Afterwards, backfills missing purchase/expiration dates on the server.
-  const handleRecategorize = (): void => {
-    let mergedCount = 0;
-    let movedCount = 0;
-
-    // --- Pass 1: Deduplicate within every shelf (e.g. two "Bananas" both in Produce) ---
-    // canonical keeps the first item per lowercase name; duplicates get merged into it
-    const canonical: Record<string, PantryItem> = {};
-    (shelfItems as PantryItem[]).forEach((item: PantryItem) => {
-      const key = item.name.toLowerCase().trim();
-      if (!canonical[key]) {
-        canonical[key] = { ...item };
-      } else {
-        // Duplicate — merge quantity into canonical and delete this one
-        mergedCount++;
-        canonical[key].quantity = (canonical[key].quantity || 1) + (item.quantity || 1);
-        updateMutation.mutate(
-          { id: canonical[key].id, data: { ...canonical[key] } },
-          {
-            onError: () => {
-              if (showToast) showToast(`Error merging ${item.name}`, "error");
-            },
-          }
-        );
-        deleteMutation.mutate(item.id, {
-          onError: () => {
-            if (showToast) showToast(`Error removing duplicate ${item.name}`, "error");
-          },
-        });
-      }
-    });
-
-    // --- Pass 2: Re-categorize any item whose detected category differs from its current one ---
-    const miscategorized = Object.values(canonical).filter((item) => {
-      const detected = detectCategory(item.name);
-      return detected !== "Other" && detected !== item.category;
-    });
-    miscategorized.forEach((item) => {
-      const newCategory = detectCategory(item.name);
-
-      const key = item.name.toLowerCase().trim();
-      // Check if an item with the same name already lives in a non-Other shelf
-      const existing = Object.values(canonical).find(
-        (c) => c.id !== item.id && c.name.toLowerCase().trim() === key && c.category !== "Other"
-      );
-
-      if (existing) {
-        // Merge into the existing non-Other item
-        mergedCount++;
-        existing.quantity = (existing.quantity || 1) + (item.quantity || 1);
-        updateMutation.mutate(
-          { id: existing.id, data: { ...existing } },
-          {
-            onError: () => {
-              if (showToast) showToast(`Error merging ${item.name}`, "error");
-            },
-          }
-        );
-        deleteMutation.mutate(item.id, {
-          onError: () => {
-            if (showToast) showToast(`Error removing duplicate ${item.name}`, "error");
-          },
-        });
-        delete canonical[key];
-      } else {
-        // Just move the category
-        movedCount++;
-        item.category = newCategory;
-        updateMutation.mutate(
-          { id: item.id, data: { ...item, category: newCategory } },
-          {
-            onError: () => {
-              if (showToast) showToast(`Error re-categorizing ${item.name}`, "error");
-            },
-          }
-        );
-      }
-    });
-
-    const total = movedCount + mergedCount;
-    if (total > 0) {
-      const parts: string[] = [];
-      if (movedCount > 0) parts.push(`${movedCount} re-categorized`);
-      if (mergedCount > 0) parts.push(`${mergedCount} merged`);
-      if (showToast) showToast(`${total} item(s) updated: ${parts.join(", ")}`, "success");
-    }
-
-    // Backfill missing dates and clear bogus expirations on non-food items
-    backfillDatesMutation.mutate(undefined, {
+  // Resync performs a full server-side refresh of the pantry:
+  //   - Deduplicates items with the same name (merges quantities)
+  //   - Re-categorizes items using current detection logic
+  //   - Refreshes all predicted expiration dates (picks up shelf life data updates)
+  //   - Backfills missing purchase/expiration dates
+  const handleResync = (): void => {
+    resyncMutation.mutate(undefined, {
       onSuccess: (result: any) => {
-        const filled = (result.purchase_filled || 0) + (result.expiration_filled || 0) + (result.expiration_cleared || 0);
-        if (filled > 0) {
-          const dateParts: string[] = [];
-          if (result.purchase_filled && result.purchase_filled > 0) dateParts.push(`${result.purchase_filled} purchase date(s) added`);
-          if (result.expiration_filled && result.expiration_filled > 0) dateParts.push(`${result.expiration_filled} expiration(s) updated`);
-          if (result.expiration_cleared && result.expiration_cleared > 0) dateParts.push(`${result.expiration_cleared} non-food expiration(s) cleared`);
-          if (showToast) showToast(dateParts.join(", "), "success");
-        } else if (total === 0) {
+        const parts: string[] = [];
+        if (result.recategorized > 0) parts.push(`${result.recategorized} re-categorized`);
+        if (result.merged > 0) parts.push(`${result.merged} merged`);
+        if (result.purchase_filled > 0) parts.push(`${result.purchase_filled} purchase date(s) added`);
+        if (result.expiration_filled > 0) parts.push(`${result.expiration_filled} expiration(s) updated`);
+        if (result.expiration_cleared > 0) parts.push(`${result.expiration_cleared} non-food expiration(s) cleared`);
+        if (parts.length > 0) {
+          if (showToast) showToast(parts.join(", "), "success");
+        } else {
           if (showToast) showToast("All items are up to date", "success");
         }
       },
       onError: () => {
-        if (showToast) showToast("Error backfilling dates", "error");
+        if (showToast) showToast("Error syncing pantry", "error");
       },
     });
   };
-
-  // Recategorize is always available — it deduplicates, re-categorizes,
-  // and resyncs all expiration dates so predicted shelf lives stay accurate.
 
   // Populate the edit form with the selected item's current values
   const startEdit = (item: PantryItem): void => {
@@ -575,11 +495,12 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
           </button>
           <button
             className="recategorize-button"
-            onClick={handleRecategorize}
-            title="Re-categorize, deduplicate, and resync expiration dates"
+            onClick={handleResync}
+            disabled={resyncMutation.isPending}
+            title="Resync categories, expiration dates, and deduplicate items"
           >
-            <RefreshCw size={18} />
-            <span>Re-categorize</span>
+            <RefreshCw size={18} className={resyncMutation.isPending ? "spin" : ""} />
+            <span>{resyncMutation.isPending ? "Syncing..." : "Resync"}</span>
           </button>
           <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
             <Plus size={18} />
@@ -790,6 +711,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
           onEdit={startEdit}
           onRemove={handleRemoveFromPantry}
           onStatusChange={handleStatusChange}
+          onQuantityChange={handleQuantityChange}
         />
       ) : (
         <PantryListView
@@ -807,6 +729,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
           onCancelEdit={() => setEditingId(null)}
           onDelete={handleDelete}
           onStatusChange={handleStatusChange}
+          onQuantityChange={handleQuantityChange}
           onToggleSelect={toggleItemSelection}
           updatePending={updateMutation.isPending}
           deletePending={deleteMutation.isPending}

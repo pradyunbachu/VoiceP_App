@@ -26,7 +26,10 @@
       "Bash(git checkout:*)",
       "Bash(pip3 install:*)",
       "Bash(python -m pytest tests/ -v --tb=short)",
-      "Bash(head:*)"
+      "Bash(head:*)",
+      "WebFetch(domain:www.fsis.usda.gov)",
+      "WebFetch(domain:catalog.data.gov)",
+      "WebFetch(domain:github.com)"
     ]
   }
 }

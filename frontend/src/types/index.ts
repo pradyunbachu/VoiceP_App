@@ -447,7 +447,8 @@ export type AppView =
   | "insights"
   | "comparisons"
   | "pantry"
-  | "shopping-list";
+  | "shopping-list"
+  | "chef";
 
 // ── Auth ───────────────────────────────────────────────────────────────
 

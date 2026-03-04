@@ -12,8 +12,8 @@
   DELETE /pantry/bulk           — Bulk-delete pantry items by ID list.
   GET    /pantry/stats          — Summary stats: counts by status, expiring
          within 7 days, and breakdown by category.
-  POST   /pantry/backfill-dates — One-shot migration: fills missing
-         purchase/expiration dates and clears bogus dates on non-food items.
+  POST   /pantry/resync         — Full resync: re-categorizes, deduplicates,
+         and refreshes all predicted expiration dates.
 """
 
 # ============================================================================
@@ -452,34 +452,70 @@ async def get_pantry_stats(
     }
 
 
-@router.post("/pantry/backfill-dates")
+@router.post("/pantry/resync")
 @limiter.limit("10/minute")
-async def backfill_pantry_dates(
+async def resync_pantry(
     request: Request,
     current_user: dict = Depends(get_current_user_dependency)
 ):
-    """Backfill missing purchase_date and expiration_date on existing pantry items.
-    Also clears bogus expiration dates on non-food items."""
+    """Full pantry resync: re-categorize, deduplicate, and refresh dates.
+
+    1. Re-categorize — update each item's category from current detection logic.
+    2. Deduplicate — merge items with the same (lowercased) name, summing quantities.
+    3. Refresh dates — backfill missing purchase/expiration dates and recalculate
+       all predicted expirations (shelf life data may have been updated).
+    """
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
     from shelf_life import _is_non_pantry
+    from handlers.pantry_handler import categorize_pantry_item
 
     response = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"]).execute()
     items = response.data if response.data else []
 
+    recategorized = 0
+    merged = 0
     purchase_filled = 0
     expiration_filled = 0
     expiration_cleared = 0
     now_iso = datetime.now().isoformat()
 
+    # --- Pass 1: Deduplicate (group by lowercase name, merge quantities) ---
+    canonical: dict[str, dict] = {}
+    delete_ids: list[str] = []
     for item in items:
+        key = item["name"].lower().strip()
+        if key not in canonical:
+            canonical[key] = item
+        else:
+            # Merge quantity into canonical, mark duplicate for deletion
+            merged += 1
+            canonical[key]["quantity"] = (canonical[key].get("quantity") or 1) + (item.get("quantity") or 1)
+            delete_ids.append(item["id"])
+
+    # Delete duplicates
+    for did in delete_ids:
+        supabase.table("pantry_items").delete().eq("id", did).execute()
+
+    # --- Pass 2: Re-categorize + refresh dates on canonical items ---
+    for item in canonical.values():
         update_data = {}
         is_non_food = _is_non_pantry(item["name"])
-
-        # Backfill purchase_date from created_at or today
-        # Skip items explicitly added as pre-existing (unknown purchase date)
         is_preexisting = "pre-existing" in (item.get("notes") or "")
+
+        # Re-categorize
+        detected = categorize_pantry_item(item["name"])
+        if detected != "Other" and detected != item.get("category"):
+            update_data["category"] = detected
+            recategorized += 1
+
+        # Persist merged quantity if this item absorbed duplicates
+        orig = next((i for i in items if i["id"] == item["id"]), None)
+        if orig and item.get("quantity") != orig.get("quantity"):
+            update_data["quantity"] = item["quantity"]
+
+        # Backfill purchase_date
         if not item.get("purchase_date") and not is_preexisting:
             created = item.get("created_at")
             if created:
@@ -491,22 +527,22 @@ async def backfill_pantry_dates(
                 update_data["purchase_date"] = datetime.now().strftime("%Y-%m-%d")
             purchase_filled += 1
 
-        # Clear expiration dates on non-food items (they don't expire)
+        # Refresh expiration dates
         if is_non_food and item.get("expiration_date"):
             update_data["expiration_date"] = None
             update_data["expiration_predicted"] = False
             expiration_cleared += 1
-        # Recalculate predicted expiration dates (shelf life data may have improved)
         elif not is_non_food and item.get("expiration_predicted"):
             purchase = update_data.get("purchase_date") or item.get("purchase_date") or datetime.now().strftime("%Y-%m-%d")
-            predicted = predict_expiration(item["name"], item.get("category"), purchase)
+            category = update_data.get("category") or item.get("category")
+            predicted = predict_expiration(item["name"], category, purchase)
             if predicted and predicted != item.get("expiration_date"):
                 update_data["expiration_date"] = predicted
                 expiration_filled += 1
-        # Backfill expiration_date for food items with a known purchase date
         elif not is_non_food and not item.get("expiration_date") and not is_preexisting:
             purchase = update_data.get("purchase_date") or item.get("purchase_date") or datetime.now().strftime("%Y-%m-%d")
-            predicted = predict_expiration(item["name"], item.get("category"), purchase)
+            category = update_data.get("category") or item.get("category")
+            predicted = predict_expiration(item["name"], category, purchase)
             if predicted:
                 update_data["expiration_date"] = predicted
                 update_data["expiration_predicted"] = True
@@ -517,7 +553,9 @@ async def backfill_pantry_dates(
             supabase.table("pantry_items").update(update_data).eq("id", item["id"]).execute()
 
     return {
-        "message": f"Backfilled dates for {purchase_filled + expiration_filled} item(s)",
+        "message": "Pantry resync complete",
+        "recategorized": recategorized,
+        "merged": merged,
         "purchase_filled": purchase_filled,
         "expiration_filled": expiration_filled,
         "expiration_cleared": expiration_cleared

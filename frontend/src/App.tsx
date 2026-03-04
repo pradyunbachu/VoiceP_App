@@ -9,6 +9,7 @@ import ExpenseList from "./components/ExpenseList";
 import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
 import ShoppingList from "./components/ShoppingList";
+import Chef from "./components/Chef";
 import SpendingInsights from "./components/SpendingInsights";
 import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
@@ -226,6 +227,12 @@ function AppContent() {
             <ShoppingList
               showToast={showToast}
             />
+          </div>
+        );
+      case "chef":
+        return (
+          <div className="view-container" key="chef">
+            <Chef showToast={showToast} />
           </div>
         );
       default:

@@ -9,7 +9,7 @@
 import type { ReactElement } from "react";
 import type { PantryItem, StockStatus } from "../types/index";
 import { useDraggable } from "@dnd-kit/core";
-import { CheckCircle, AlertTriangle, Circle, X } from "lucide-react";
+import { CheckCircle, AlertTriangle, Circle, X, Plus, Minus } from "lucide-react";
 import { isExpiringSoon, isExpired } from "../lib/pantryUtils";
 import "./Pantry.css";
 
@@ -18,6 +18,7 @@ interface Props {
   onEdit: (item: PantryItem) => void;
   onRemove: (id: number) => void;
   onStatusChange: (id: number, status: StockStatus) => void;
+  onQuantityChange: (id: number, delta: number) => void;
 }
 
 interface StatusOption {
@@ -26,7 +27,7 @@ interface StatusOption {
   icon: ReactElement;
 }
 
-const DraggableShelfItem: React.FC<Props> = ({ item, onEdit, onRemove, onStatusChange }) => {
+const DraggableShelfItem: React.FC<Props> = ({ item, onEdit, onRemove, onStatusChange, onQuantityChange }) => {
   const {
     attributes,
     listeners,
@@ -77,9 +78,34 @@ const DraggableShelfItem: React.FC<Props> = ({ item, onEdit, onRemove, onStatusC
         onEdit(item);
       }}>
         <div className="shelf-item-name">{item.name}</div>
-        {item.quantity && (
-          <div className="shelf-item-qty">{item.quantity}{item.unit ? ` ${item.unit}` : ''}</div>
-        )}
+        <div
+          className="shelf-item-qty-row"
+          onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}
+          onPointerDown={(e: React.PointerEvent<HTMLDivElement>) => e.stopPropagation()}
+        >
+          <button
+            className="qty-btn"
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation();
+              onQuantityChange(item.id, -1);
+            }}
+            disabled={item.quantity <= 0}
+            title="Decrease quantity"
+          >
+            <Minus size={10} />
+          </button>
+          <span className="shelf-item-qty">{item.quantity ?? 1}{item.unit ? ` ${item.unit}` : ''}</span>
+          <button
+            className="qty-btn"
+            onClick={(e: React.MouseEvent<HTMLButtonElement>) => {
+              e.stopPropagation();
+              onQuantityChange(item.id, 1);
+            }}
+            title="Increase quantity"
+          >
+            <Plus size={10} />
+          </button>
+        </div>
         {item.purchase_date && (
           <div className="shelf-item-purchase">Purch: {new Date(item.purchase_date + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</div>
         )}

@@ -18,6 +18,8 @@ import {
   Square,
   ShoppingCart,
   Loader,
+  Plus,
+  Minus,
 } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
 import { getStatusIcon, getStatusLabel, isExpiringSoon, isExpired } from "../lib/pantryUtils";
@@ -50,6 +52,7 @@ interface Props {
   onCancelEdit: () => void;
   onDelete: (id: number) => void;
   onStatusChange: (id: number, status: StockStatus) => void;
+  onQuantityChange: (id: number, delta: number) => void;
   onToggleSelect: (id: number) => void;
   updatePending: boolean;
   deletePending: boolean;
@@ -70,6 +73,7 @@ const PantryListView: React.FC<Props> = ({
   onCancelEdit,
   onDelete,
   onStatusChange,
+  onQuantityChange,
   onToggleSelect,
   updatePending,
   deletePending,
@@ -200,11 +204,26 @@ const PantryListView: React.FC<Props> = ({
                         <div className="pantry-card-header">
                           <div className="item-name">
                             <span className="name">{item.name}</span>
-                            {item.quantity && (
+                            <div className="item-quantity-row">
+                              <button
+                                className="qty-btn"
+                                onClick={(e) => { e.stopPropagation(); onQuantityChange(item.id, -1); }}
+                                disabled={item.quantity <= 0}
+                                title="Decrease quantity"
+                              >
+                                <Minus size={10} />
+                              </button>
                               <span className="item-quantity">
-                                {item.quantity}{item.unit ? ` ${item.unit}` : ""}
+                                {item.quantity ?? 1}{item.unit ? ` ${item.unit}` : ""}
                               </span>
-                            )}
+                              <button
+                                className="qty-btn"
+                                onClick={(e) => { e.stopPropagation(); onQuantityChange(item.id, 1); }}
+                                title="Increase quantity"
+                              >
+                                <Plus size={10} />
+                              </button>
+                            </div>
                           </div>
                           {!isSelectMode && (
                             <div className="item-actions">

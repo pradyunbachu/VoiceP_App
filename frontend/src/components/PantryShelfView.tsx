@@ -19,9 +19,10 @@ interface Props {
   onEdit: (item: PantryItem) => void;
   onRemove: (id: number) => void;
   onStatusChange: (id: number, status: StockStatus) => void;
+  onQuantityChange: (id: number, delta: number) => void;
 }
 
-const PantryShelfView: React.FC<Props> = ({ itemsByCategory, sensors, onDragEnd, onEdit, onRemove, onStatusChange }) => {
+const PantryShelfView: React.FC<Props> = ({ itemsByCategory, sensors, onDragEnd, onEdit, onRemove, onStatusChange, onQuantityChange }) => {
   return (
     <DndContext
       sensors={sensors}
@@ -43,6 +44,7 @@ const PantryShelfView: React.FC<Props> = ({ itemsByCategory, sensors, onDragEnd,
                 onEdit={onEdit}
                 onRemove={onRemove}
                 onStatusChange={onStatusChange}
+                onQuantityChange={onQuantityChange}
               />
             ))}
           </DroppableShelf>

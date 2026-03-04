@@ -247,28 +247,38 @@ async def handle_share_list(user_id: str, entities: dict, original_message: str)
     if not share_target:
         return {
             "success": False,
-            "message": "I couldn't determine who to share with. Try 'Share my shopping list with Sarah'.",
+            "message": "I couldn't determine who to share with. Try 'Share my shopping list with sarah@example.com'.",
+            "query_type": "share_list"
+        }
+
+    # Sanitize input: strip PostgREST filter characters to prevent injection
+    sanitized = re.sub(r'[,\(\):]', '', share_target).strip()
+    if not sanitized:
+        return {
+            "success": False,
+            "message": "Invalid share target. Please provide a valid email address.",
             "query_type": "share_list"
         }
 
     try:
+        # Use exact email match to prevent user enumeration via wildcard probing
         target_query = (
             supabase.table("profiles")
-            .select("id, display_name, email")
-            .or_(f"display_name.ilike.%{share_target}%,email.ilike.%{share_target}%")
+            .select("id, display_name")
+            .eq("email", sanitized)
             .execute()
         )
 
         if not target_query.data:
             return {
                 "success": False,
-                "message": f"I couldn't find a user named '{share_target}'. Make sure they have an account.",
+                "message": "I couldn't find a user with that email. Make sure they have an account.",
                 "query_type": "share_list"
             }
 
         target_user = target_query.data[0]
         target_id = target_user["id"]
-        target_name = target_user.get("display_name") or target_user.get("email", share_target)
+        target_name = target_user.get("display_name") or "that user"
 
         groups_response = (
             supabase.table("group_members")

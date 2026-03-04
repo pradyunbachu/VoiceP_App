@@ -2,7 +2,7 @@
  * usePantryMutations.ts
  * React Query mutations for pantry CRUD and utility operations.
  * Exports useCreatePantryItem, useUpdatePantryItem, useUpdatePantryStatus,
- * useDeletePantryItem, useBulkDeletePantryItems, useBackfillDates, and useAddFromExpense.
+ * useDeletePantryItem, useBulkDeletePantryItems, useResyncPantry, and useAddFromExpense.
  * useUpdatePantryItem and useUpdatePantryStatus use optimistic updates with
  * rollback on error across both flat-array and infinite-query cache shapes.
  */
@@ -257,21 +257,21 @@ export const useBulkDeletePantryItems = () => {
   });
 };
 
-export const useBackfillDates = () => {
+export const useResyncPantry = () => {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
 
-  return useMutation<{ message: string }, Error, void>({
-    mutationFn: async (): Promise<{ message: string }> => {
+  return useMutation<{ message: string; recategorized: number; merged: number; purchase_filled: number; expiration_filled: number; expiration_cleared: number }, Error, void>({
+    mutationFn: async () => {
       const token = await getToken();
-      const response = await fetch(`${API_BASE_URL}/api/pantry/backfill-dates`, {
+      const response = await fetch(`${API_BASE_URL}/api/pantry/resync`, {
         method: 'POST',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
         credentials: 'include',
       });
 
       if (!response.ok) {
-        throw new Error('Failed to backfill dates');
+        throw new Error('Failed to resync pantry');
       }
 
       return response.json();

@@ -37,8 +37,7 @@
       "cabbage", "green beans", "asparagus",
       "cilantro", "parsley", "basil", "mint", "green onions",
       "brussel sprouts", "brussels sprouts", "sprouts",
-      "peas", "snow peas", "sugar snap peas",
-      "zuchinni", "zuchini"
+      "peas", "snow peas", "sugar snap peas"
     ],
     "Meat & Seafood": [
       "chicken", "chicken breast", "chicken thighs", "whole chicken",
@@ -81,7 +80,7 @@
     "Snacks": [
       "chip", "chips", "tortilla chips", "pretzel", "pretzels",
       "popcorn", "cracker", "crackers", "granola bars", "trail mix",
-      "candy", "chocolate", "cookies",
+      "candy", "chocolate",
       "nut", "nuts", "almond", "almonds", "cashew", "peanut", "peanuts", "walnut"
     ],
     "Canned Goods": [

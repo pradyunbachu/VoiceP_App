@@ -38,7 +38,7 @@ export {
   useUpdatePantryStatus,
   useDeletePantryItem,
   useBulkDeletePantryItems,
-  useBackfillDates,
+  useResyncPantry,
   useAddFromExpense,
 } from './mutations/usePantryMutations';
 
@@ -53,6 +53,9 @@ export { useRecipeDetail } from './mutations/useRecipeMutation';
 
 // Cook meal mutations
 export { useCookMeal } from './mutations/useCookMealMutation';
+
+// Chef mutations
+export { useChefSuggestions } from './mutations/useChefSuggestions';
 
 // Shopping List mutations
 export {
