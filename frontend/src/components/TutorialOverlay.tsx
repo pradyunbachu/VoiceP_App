@@ -31,56 +31,63 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: null,
     title: "Welcome to Voxal!",
     description:
-      "Your voice-powered finance and kitchen assistant. Let's take a quick tour of the key features.",
+      "Your voice-powered finance and kitchen assistant. This is your Home dashboard — let's take a quick tour.",
   },
   {
-    id: "record",
-    target: '[data-tutorial="record-button"]',
-    title: "Voice Recording",
+    id: "quick-actions",
+    target: '[data-tutorial="quick-actions"]',
+    title: "Quick Actions",
     description:
-      "Tap the mic to record your voice. Say things like \"I spent $12 on lunch\" or \"What can I cook tonight?\" and Voxy will handle the rest. Pro tip: hold the spacebar to quick-record from anywhere!",
+      "Log an expense by voice, scan a receipt, add to your shopping list, or find a recipe — all in one tap. Pro tip: hold the spacebar to quick-record from anywhere!",
   },
   {
-    id: "manual",
-    target: '[data-tutorial="manual-button"]',
-    title: "Manual Entry",
+    id: "expenses-card",
+    target: '[data-tutorial="expenses-card"]',
+    title: "Weekly Spending",
     description:
-      "Prefer typing? Use the manual entry button to type your expenses or questions instead of speaking.",
+      "See your spending at a glance with a daily breakdown. Tap the card to dive into the full Expenses view where you can browse, edit, and filter every transaction.",
   },
   {
-    id: "receipt",
-    target: '[data-tutorial="receipt-button"]',
-    title: "Receipt Scanner",
+    id: "pantry-card",
+    target: '[data-tutorial="pantry-card"]',
+    title: "Pantry Alerts",
     description:
-      "Snap a photo of your receipt and Voxal will automatically extract the expense details for you.",
+      "Stay on top of low stock and expiring items. Voxal tracks quantities and expiration dates automatically when you log grocery purchases or scan receipts.",
   },
   {
-    id: "daily-recs",
-    target: '[data-tutorial="daily-recs-toggle"]',
-    title: "Recommendations",
+    id: "budget-card",
+    target: '[data-tutorial="budget-card"]',
+    title: "Budget Tracker",
     description:
-      "Open this panel to see personalized meal ideas based on what's in your pantry, plus alerts for expiring items.",
+      "Set monthly spending limits by category and track your progress. The bar fills up as you spend — red means you're over budget.",
+  },
+  {
+    id: "shopping-card",
+    target: '[data-tutorial="shopping-card"]',
+    title: "Shopping List",
+    description:
+      "Your shopping list auto-removes items when you log a grocery purchase, so it always stays up to date. Ask Voxy to add items by voice!",
   },
   {
     id: "finance",
     target: '[data-tutorial="finance-tab"]',
     title: "Finance Hub",
     description:
-      "Your complete money management center. View spending charts on the Dashboard, browse and edit individual transactions in Expenses, set monthly category limits in Budgets, and get AI-powered Spending Insights that spot trends and saving opportunities.",
+      "Your complete money management center. View spending charts, browse transactions, set budget limits, and get AI-powered insights that spot trends and saving opportunities.",
   },
   {
     id: "kitchen",
     target: '[data-tutorial="kitchen-tab"]',
     title: "Kitchen Hub",
     description:
-      "Everything you need to manage your food. The Pantry tracks what you have at home with quantities and expiration dates. The Shopping List auto-removes items when you log a grocery purchase, so it always stays up to date.",
+      "Manage your food here. The Pantry tracks what you have with expiration dates, the Shopping List keeps your next trip organized, and the Chef suggests recipes from what's in your pantry.",
   },
   {
     id: "nav",
     target: '[data-tutorial="nav-tabs"]',
     title: "Navigation",
     description:
-      "These tabs are your home base. Tap Voxy to come back here anytime, or explore the Finance and Kitchen sections. You're all set!",
+      "Use these tabs to move between sections. Tap Home to come back to this dashboard anytime. You're all set!",
   },
 ];
 

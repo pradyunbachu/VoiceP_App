@@ -246,3 +246,144 @@ CREATE POLICY "Group members can delete group items"
         OR group_id IN (SELECT group_id FROM shopping_list_members WHERE user_id = auth.uid())
     );
 
+-- ============================================================================
+-- Shared Pantry Groups (for Supabase Auth)
+-- ============================================================================
+
+-- Pantry groups for shared pantries
+CREATE TABLE IF NOT EXISTS pantry_groups (
+    id BIGSERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    owner_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    invite_code TEXT UNIQUE NOT NULL DEFAULT encode(gen_random_bytes(6), 'hex'),
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pantry_groups_owner ON pantry_groups(owner_id);
+CREATE INDEX IF NOT EXISTS idx_pantry_groups_invite ON pantry_groups(invite_code);
+
+-- Pantry group members
+CREATE TABLE IF NOT EXISTS pantry_group_members (
+    id BIGSERIAL PRIMARY KEY,
+    group_id BIGINT NOT NULL REFERENCES pantry_groups(id) ON DELETE CASCADE,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    role TEXT NOT NULL DEFAULT 'editor' CHECK (role IN ('owner', 'editor')),
+    joined_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(group_id, user_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pantry_group_members_group ON pantry_group_members(group_id);
+CREATE INDEX IF NOT EXISTS idx_pantry_group_members_user ON pantry_group_members(user_id);
+
+-- Add group_id to pantry_items (nullable for backward compat)
+ALTER TABLE pantry_items ADD COLUMN IF NOT EXISTS group_id BIGINT REFERENCES pantry_groups(id) ON DELETE CASCADE;
+CREATE INDEX IF NOT EXISTS idx_pantry_items_group ON pantry_items(group_id);
+
+-- Enable RLS for new tables
+ALTER TABLE pantry_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pantry_group_members ENABLE ROW LEVEL SECURITY;
+
+-- Policies for pantry_groups
+CREATE POLICY "Pantry group members can view their groups"
+    ON pantry_groups FOR SELECT
+    USING (
+        owner_id = auth.uid()
+        OR id IN (SELECT group_id FROM pantry_group_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Users can create pantry groups"
+    ON pantry_groups FOR INSERT
+    WITH CHECK (owner_id = auth.uid());
+
+CREATE POLICY "Owners can update their pantry groups"
+    ON pantry_groups FOR UPDATE
+    USING (owner_id = auth.uid());
+
+CREATE POLICY "Owners can delete their pantry groups"
+    ON pantry_groups FOR DELETE
+    USING (owner_id = auth.uid());
+
+-- Policies for pantry_group_members
+CREATE POLICY "Pantry group members can view members"
+    ON pantry_group_members FOR SELECT
+    USING (
+        group_id IN (SELECT id FROM pantry_groups WHERE owner_id = auth.uid())
+        OR group_id IN (SELECT group_id FROM pantry_group_members AS m WHERE m.user_id = auth.uid())
+    );
+
+CREATE POLICY "Pantry group owners can manage members"
+    ON pantry_group_members FOR INSERT
+    WITH CHECK (
+        group_id IN (SELECT id FROM pantry_groups WHERE owner_id = auth.uid())
+        OR user_id = auth.uid()
+    );
+
+CREATE POLICY "Pantry owners can remove members or members can leave"
+    ON pantry_group_members FOR DELETE
+    USING (
+        group_id IN (SELECT id FROM pantry_groups WHERE owner_id = auth.uid())
+        OR user_id = auth.uid()
+    );
+
+-- Update pantry_items policies to allow group member access
+CREATE POLICY "Group members can view group pantry items"
+    ON pantry_items FOR SELECT
+    USING (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM pantry_group_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Group members can add items to group pantries"
+    ON pantry_items FOR INSERT
+    WITH CHECK (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM pantry_group_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Group members can update group pantry items"
+    ON pantry_items FOR UPDATE
+    USING (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM pantry_group_members WHERE user_id = auth.uid())
+    );
+
+CREATE POLICY "Group members can delete group pantry items"
+    ON pantry_items FOR DELETE
+    USING (
+        user_id = auth.uid()
+        OR group_id IN (SELECT group_id FROM pantry_group_members WHERE user_id = auth.uid())
+    );
+
+-- ============================================================================
+-- Cooked Meals Table (for Cook Stats & Meals This Week)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS cooked_meals (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    recipe_name TEXT NOT NULL,
+    ingredients_deducted JSONB DEFAULT '[]',
+    expiring_items_saved INTEGER DEFAULT 0,
+    estimated_savings REAL DEFAULT 0,
+    cooked_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_cooked_meals_user_id ON cooked_meals(user_id);
+CREATE INDEX IF NOT EXISTS idx_cooked_meals_cooked_at ON cooked_meals(cooked_at);
+
+-- Enable RLS
+ALTER TABLE cooked_meals ENABLE ROW LEVEL SECURITY;
+
+-- Policies
+CREATE POLICY "Users can view their own cooked meals"
+    ON cooked_meals FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own cooked meals"
+    ON cooked_meals FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own cooked meals"
+    ON cooked_meals FOR DELETE
+    USING (auth.uid() = user_id);
+

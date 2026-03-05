@@ -4,7 +4,7 @@
  * Toggles between a "Select Items" button and an action bar showing the
  * selected count with Delete and Cancel buttons.
  */
-import { AlertTriangle, CheckSquare, Trash2, X } from "lucide-react";
+import { AlertTriangle, CheckSquare, Trash2, X, PackageMinus } from "lucide-react";
 import "./Pantry.css";
 
 interface Props {
@@ -14,6 +14,9 @@ interface Props {
   onCancelSelect: () => void;
   onBulkDelete: () => void;
   onSelectAllExpired: () => void;
+  onDiscardOutOfStock: () => void;
+  outOfStockCount: number;
+  isDiscarding: boolean;
   isDeleting: boolean;
 }
 
@@ -24,15 +27,30 @@ const PantryBulkActions: React.FC<Props> = ({
   onCancelSelect,
   onBulkDelete,
   onSelectAllExpired,
+  onDiscardOutOfStock,
+  outOfStockCount,
+  isDiscarding,
   isDeleting,
 }) => {
   return (
     <div className="bulk-controls">
       {!isSelectMode ? (
-        <button className="select-mode-button" onClick={onEnterSelect}>
-          <CheckSquare size={18} />
-          <span>Select Items</span>
-        </button>
+        <div className="bulk-controls-row">
+          <button className="select-mode-button" onClick={onEnterSelect}>
+            <CheckSquare size={18} />
+            <span>Select Items</span>
+          </button>
+          {outOfStockCount > 0 && (
+            <button
+              className="discard-oos-button"
+              onClick={onDiscardOutOfStock}
+              disabled={isDiscarding}
+            >
+              <PackageMinus size={16} />
+              <span>{isDiscarding ? "Discarding..." : `Discard Out of Stock (${outOfStockCount})`}</span>
+            </button>
+          )}
+        </div>
       ) : (
         <div className="bulk-actions">
           <button

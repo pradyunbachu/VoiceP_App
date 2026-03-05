@@ -122,17 +122,18 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 /* Step dots */
 .tutorial-dots {
   display: flex;
-  gap: 6px;
+  gap: 5px;
 }
 
 .tutorial-dot {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
   border-radius: var(--radius-full);
   background: var(--border-primary);
   border: none;
@@ -143,13 +144,14 @@
 
 .tutorial-dot.active {
   background: var(--accent-primary);
-  width: 20px;
+  width: 16px;
 }
 
 /* Nav buttons */
 .tutorial-nav-buttons {
   display: flex;
   gap: var(--space-2);
+  flex-shrink: 0;
 }
 
 .tutorial-btn {

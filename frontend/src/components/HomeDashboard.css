@@ -1,0 +1,510 @@
+.home-dashboard {
+  width: 100%;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+/* ── Greeting + Streak ──────────────────────────────────────── */
+.home-greeting {
+  margin-bottom: var(--space-6);
+}
+
+.home-greeting-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-4);
+}
+
+.home-greeting h1 {
+  color: var(--text-primary);
+  font-size: 1.75rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin-bottom: var(--space-1);
+}
+
+.home-greeting p {
+  color: var(--text-tertiary);
+  font-size: 0.95rem;
+}
+
+/* Streak badge */
+.home-streak {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent-warning-bg);
+  border: 1px solid rgba(212, 160, 53, 0.25);
+  border-radius: var(--radius-full);
+  color: var(--accent-warning);
+  flex-shrink: 0;
+}
+
+.home-streak-count {
+  font-size: 0.95rem;
+  font-weight: 700;
+}
+
+.home-greeting-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-shrink: 0;
+  margin-top: var(--space-2);
+}
+
+.home-tutorial-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  color: var(--text-tertiary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-tutorial-btn:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+/* ── Quick Actions ──────────────────────────────────────────── */
+.home-quick-actions {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.home-quick-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-4) var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.home-quick-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-primary);
+  color: var(--text-primary);
+}
+
+/* ── Recipe Nudge ───────────────────────────────────────────── */
+.home-nudge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  margin-bottom: var(--space-4);
+  background: var(--accent-warning-bg);
+  border: 1px solid rgba(212, 160, 53, 0.2);
+  border-radius: var(--radius-lg);
+  color: var(--accent-warning);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+}
+
+.home-nudge span {
+  flex: 1;
+}
+
+.home-nudge:hover {
+  background: rgba(212, 160, 53, 0.12);
+  border-color: rgba(212, 160, 53, 0.3);
+}
+
+/* ── Grid layout: 2 columns ────────────────────────────────── */
+.home-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+  margin-bottom: var(--space-4);
+}
+
+/* ── Card base ──────────────────────────────────────────────── */
+.home-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  text-align: left;
+  width: 100%;
+  font-family: inherit;
+  font-size: inherit;
+  color: inherit;
+}
+
+.home-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-primary);
+}
+
+/* Card header */
+.home-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.home-card-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.home-card-icon--expenses { background: var(--stat-blue); }
+.home-card-icon--pantry   { background: var(--stat-amber); }
+.home-card-icon--shopping { background: var(--stat-green); }
+.home-card-icon--meals    { background: var(--stat-purple); }
+.home-card-icon--budget   { background: var(--stat-orange); }
+
+.home-card-title {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.home-card-title h3 {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 0;
+}
+
+.home-card-count {
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.home-card-arrow {
+  color: var(--text-muted);
+  flex-shrink: 0;
+}
+
+/* Card body */
+.home-card-body {
+  min-height: 60px;
+}
+
+/* Skeleton */
+.home-card-skeleton {
+  height: 60px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-sm);
+  animation: home-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes home-pulse {
+  0%, 100% { opacity: 0.4; }
+  50% { opacity: 0.7; }
+}
+
+/* ── Expense stat row ───────────────────────────────────────── */
+.home-stat-row {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.home-stat-value {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.home-stat-label {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
+
+/* ── Sparkline chart ────────────────────────────────────────── */
+.home-sparkline {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--space-2);
+  height: 56px;
+  padding-top: var(--space-2);
+}
+
+.home-sparkline-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.home-sparkline-bar {
+  width: 100%;
+  max-width: 28px;
+  min-height: 2px;
+  background: var(--accent-primary-bg);
+  border-radius: 3px 3px 0 0;
+  transition: height 0.3s ease;
+}
+
+.home-sparkline-bar.today {
+  background: var(--accent-primary);
+}
+
+.home-sparkline-bar.empty {
+  background: var(--border-secondary);
+}
+
+.home-sparkline-label {
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  line-height: 1;
+}
+
+.home-sparkline-label.today {
+  color: var(--accent-primary);
+  font-weight: 600;
+}
+
+/* ── Pantry alert sections ──────────────────────────────────── */
+.home-alert-section {
+  margin-bottom: var(--space-3);
+}
+
+.home-alert-section:last-child {
+  margin-bottom: 0;
+}
+
+.home-alert-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-bottom: var(--space-2);
+}
+
+.home-alert-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.home-alert-list li {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  padding-left: var(--space-4);
+  position: relative;
+}
+
+.home-alert-list li::before {
+  content: "\2022";
+  position: absolute;
+  left: var(--space-1);
+  color: var(--text-muted);
+}
+
+.home-expiry-days {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* ── Empty hint ─────────────────────────────────────────────── */
+.home-empty-hint {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-style: italic;
+}
+
+/* ── Budget progress bars ───────────────────────────────────── */
+.home-budget-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.home-budget-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+}
+
+.home-budget-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.home-budget-cat {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.home-budget-nums {
+  color: var(--text-muted);
+  font-size: 0.7rem;
+  flex-shrink: 0;
+  margin-left: var(--space-2);
+}
+
+.home-budget-track {
+  height: 6px;
+  background: var(--bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+}
+
+.home-budget-fill {
+  height: 100%;
+  background: var(--accent-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.4s ease;
+}
+
+.home-budget-fill.warn {
+  background: var(--accent-warning);
+}
+
+.home-budget-fill.over {
+  background: var(--accent-danger);
+}
+
+/* ── Shopping list chips ────────────────────────────────────── */
+.home-shopping-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-2);
+}
+
+.home-shopping-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: var(--space-1) var(--space-3);
+  background: var(--accent-primary-bg);
+  border: 1px solid var(--accent-primary-border);
+  border-radius: var(--radius-full);
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.home-shopping-chip--more {
+  background: var(--bg-tertiary);
+  border-color: var(--border-primary);
+  color: var(--text-muted);
+}
+
+/* ── Meals card ─────────────────────────────────────────────── */
+.home-card--meals {
+  width: 100%;
+  cursor: default;
+}
+
+.home-meals-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.home-meal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.home-meal-item:last-child {
+  border-bottom: none;
+}
+
+.home-meal-name {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.home-meal-day {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  flex-shrink: 0;
+  margin-left: var(--space-3);
+}
+
+.home-meals-savings {
+  margin-top: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--accent-primary-bg);
+  border-radius: var(--radius-sm);
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* ── Responsive ─────────────────────────────────────────────── */
+@media (max-width: 640px) {
+  .home-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .home-quick-actions {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-2);
+  }
+
+  .home-quick-btn {
+    padding: var(--space-3) var(--space-1);
+    font-size: 0.7rem;
+  }
+
+  .home-greeting h1 {
+    font-size: 1.4rem;
+  }
+
+  .home-stat-value {
+    font-size: 1.25rem;
+  }
+}

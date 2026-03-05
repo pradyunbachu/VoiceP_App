@@ -10,6 +10,8 @@ import BudgetManagement from "./components/BudgetManagement";
 import Pantry from "./components/Pantry";
 import ShoppingList from "./components/ShoppingList";
 import Chef from "./components/Chef";
+import HomeDashboard from "./components/HomeDashboard";
+import Settings from "./components/Settings";
 import SpendingInsights from "./components/SpendingInsights";
 import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
@@ -62,7 +64,7 @@ function AppContent() {
         });
         setIsAuthenticated(true);
         if (currentView === "landing" || currentView === "login") {
-          setCurrentView("record");
+          setCurrentView("home");
         }
       } else if (!authLoading && !session) {
         setToken(null);
@@ -104,7 +106,7 @@ function AppContent() {
     setToken(newToken);
     setUser(userData);
     setIsAuthenticated(true);
-    setCurrentView("record");
+    setCurrentView("home");
     showToast(`Welcome, ${userData.username}!`, "success");
   };
 
@@ -148,15 +150,21 @@ function AppContent() {
         return (
           <div className="view-container" key="landing">
             <LandingPage
-              onGetStarted={() => setCurrentView("record")}
+              onGetStarted={() => setCurrentView("home")}
               isAuthenticated={true}
             />
+          </div>
+        );
+      case "home":
+        return (
+          <div className="view-container" key="home">
+            <HomeDashboard showToast={showToast} onNavigate={setCurrentView} onShowTutorial={() => setShowTutorial(true)} />
           </div>
         );
       case "record":
         return (
           <div className="view-container" key="record">
-            <VoiceRecorder showToast={showToast} onShowTutorial={() => setShowTutorial(true)} />
+            <VoiceRecorder showToast={showToast} />
           </div>
         );
       case "dashboard":
@@ -235,10 +243,16 @@ function AppContent() {
             <Chef showToast={showToast} />
           </div>
         );
+      case "settings":
+        return (
+          <div className="view-container" key="settings">
+            <Settings showToast={showToast} />
+          </div>
+        );
       default:
         return (
           <div className="view-container" key="default">
-            <VoiceRecorder showToast={showToast} onShowTutorial={() => setShowTutorial(true)} />
+            <VoiceRecorder showToast={showToast} />
           </div>
         );
     }

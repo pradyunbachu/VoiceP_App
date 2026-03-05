@@ -8,7 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { getCsrfHeaders } from '../../lib/csrf';
 import { queryKeys } from '../queries/queryKeys';
-import type { CookMealResponse } from '../../types';
+import type { CookMealResponse, CookStats } from '../../types';
 
 interface CookMealVariables {
   recipe_name: string;
@@ -39,7 +39,31 @@ export const useCookMeal = () => {
 
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
+      // Optimistically update cook stats cache so the meal appears
+      // immediately on the Home dashboard without waiting for a refetch
+      queryClient.setQueryData<CookStats>(queryKeys.cookStats.all, (old) => {
+        const newMeal = {
+          recipe_name: result.recipe_name,
+          cooked_at: new Date().toISOString(),
+        };
+        if (!old) {
+          return {
+            week_meals_cooked: 1,
+            week_expiring_saved: result.expiring_items_saved,
+            week_estimated_savings: result.estimated_savings,
+            recent_meals: [newMeal],
+          };
+        }
+        return {
+          ...old,
+          week_meals_cooked: old.week_meals_cooked + 1,
+          week_expiring_saved: old.week_expiring_saved + result.expiring_items_saved,
+          week_estimated_savings: old.week_estimated_savings + result.estimated_savings,
+          recent_meals: [newMeal, ...old.recent_meals].slice(0, 5),
+        };
+      });
+
       queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.cookStats.all });
       queryClient.invalidateQueries({ queryKey: queryKeys.dailyRecs.all });

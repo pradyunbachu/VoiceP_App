@@ -154,6 +154,19 @@ class ShoppingListJoinByCode(BaseModel):
     invite_code: str = Field(max_length=100)
 
 # ============================================================================
+# PANTRY SHARING MODELS
+# ============================================================================
+
+class PantryGroupCreate(BaseModel):
+    name: str = Field(max_length=100)
+
+class PantryGroupInvite(BaseModel):
+    email: str = Field(max_length=254)
+
+class PantryGroupJoinByCode(BaseModel):
+    invite_code: str = Field(max_length=100)
+
+# ============================================================================
 # CHAT MODELS
 # ============================================================================
 

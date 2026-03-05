@@ -7,6 +7,7 @@ export { usePantryItems, usePantryStats } from './queries/usePantry';
 export { useInfinitePantryItems } from './queries/useInfinitePantryItems';
 export { useShoppingList, useShoppingPantryMatches } from './queries/useShoppingList';
 export { useShoppingListGroups } from './queries/useShoppingListGroups';
+export { usePantryGroups } from './queries/usePantryGroups';
 export { useSpendingInsights } from './queries/useSpendingInsights';
 export { useSpendingComparison } from './queries/useSpendingComparison';
 export { useDailyRecs } from './queries/useDailyRecs';
@@ -75,6 +76,15 @@ export {
   useRemoveGroupMember,
   useDeleteShoppingListGroup,
 } from './mutations/useShoppingListGroupMutations';
+
+// Pantry Group mutations
+export {
+  useCreatePantryGroup,
+  useJoinPantryGroup,
+  useInviteToPantryGroup,
+  useRemovePantryGroupMember,
+  useDeletePantryGroup,
+} from './mutations/usePantryGroupMutations';
 
 // Audio recording
 export { default as useAudioRecorder } from './useAudioRecorder';

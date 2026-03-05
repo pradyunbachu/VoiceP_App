@@ -50,6 +50,7 @@ import { isExpired } from "../lib/pantryUtils";
 import LoadingSkeleton from "./LoadingSkeleton";
 import PantryFilters from "./PantryFilters";
 import PantryBulkActions from "./PantryBulkActions";
+import PantryGroupSelector from "./PantryGroupSelector";
 import PantryShelfView from "./PantryShelfView";
 import PantryListView from "./PantryListView";
 import "./Pantry.css";
@@ -84,6 +85,9 @@ interface EditFormData {
 }
 
 const Pantry: React.FC<Props> = ({ showToast }) => {
+  // Group selection state
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
 
@@ -130,6 +134,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     search: debouncedSearch || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
+    group_id: selectedGroupId ?? undefined,
   });
 
   // List view uses cursor-based infinite scrolling for better performance
@@ -146,6 +151,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     search: debouncedSearch || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
+    group_id: selectedGroupId ?? undefined,
   });
 
   // Flatten all loaded infinite-scroll pages into a single array
@@ -157,6 +163,10 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
   const loading: boolean = viewMode === 'shelf' ? shelfLoading : listLoading;
 
   const { data: stats } = usePantryStats();
+
+  // Fetch all out-of-stock items (used for "Discard Out of Stock" button)
+  const { data: oosItems } = usePantryItems({ stock_status: 'out_of_stock', group_id: selectedGroupId ?? undefined });
+  const outOfStockItems: PantryItem[] = Array.isArray(oosItems) ? oosItems : [];
 
   // Mutations
   const createMutation = useCreatePantryItem();
@@ -398,6 +408,34 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     });
   };
 
+  // Discard all out-of-stock items at once via undo-able bulk delete
+  const handleDiscardOutOfStock = (): void => {
+    if (outOfStockItems.length === 0) {
+      if (showToast) showToast("No out of stock items to discard", "info");
+      return;
+    }
+
+    const idsToDelete = outOfStockItems.map((item) => item.id);
+    const idSet = new Set(idsToDelete);
+    const count = idsToDelete.length;
+
+    scheduleDelete({
+      id: `discard-oos-${Date.now()}`,
+      queryKeyPrefix: ["pantry"],
+      filterFn: (item: PantryItem) => !idSet.has(item.id),
+      dataKey: null,
+      onDelete: async () => {
+        try {
+          await bulkDeleteMutation.mutateAsync(idsToDelete);
+        } catch (error: unknown) {
+          console.error("Error discarding out of stock items:", error);
+          if (showToast) showToast("Error discarding items", "error");
+        }
+      },
+      message: `${count} out of stock item(s) discarded`,
+    });
+  };
+
   // Resync performs a full server-side refresh of the pantry:
   //   - Deduplicates items with the same name (merges quantities)
   //   - Re-categorizes items using current detection logic
@@ -407,6 +445,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     resyncMutation.mutate(undefined, {
       onSuccess: (result: any) => {
         const parts: string[] = [];
+        if (result.name_corrected > 0) parts.push(`${result.name_corrected} name(s) corrected`);
         if (result.recategorized > 0) parts.push(`${result.recategorized} re-categorized`);
         if (result.merged > 0) parts.push(`${result.merged} merged`);
         if (result.purchase_filled > 0) parts.push(`${result.purchase_filled} purchase date(s) added`);
@@ -562,6 +601,13 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
         </div>
       )}
 
+      {/* Group Selector */}
+      <PantryGroupSelector
+        selectedGroupId={selectedGroupId}
+        onSelectGroup={setSelectedGroupId}
+        showToast={showToast}
+      />
+
       {/* Add Item Form */}
       {showAddForm && (
         <form className="pantry-form" onSubmit={handleCreate}>
@@ -683,6 +729,9 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
         onCancelSelect={() => { setIsSelectMode(false); setSelectedItems(new Set()); }}
         onBulkDelete={handleBulkDelete}
         onSelectAllExpired={handleSelectAllExpired}
+        onDiscardOutOfStock={handleDiscardOutOfStock}
+        outOfStockCount={outOfStockItems.length}
+        isDiscarding={bulkDeleteMutation.isPending}
         isDeleting={bulkDeleteMutation.isPending}
       />
 

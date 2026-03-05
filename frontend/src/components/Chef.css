@@ -105,6 +105,11 @@
   border-style: dashed;
 }
 
+.chef-pantry-item.empty {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
 .chef-pantry-item.dragging {
   opacity: 0.5;
 }

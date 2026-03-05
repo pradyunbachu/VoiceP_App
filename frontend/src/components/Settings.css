@@ -1,0 +1,299 @@
+.settings-page {
+  width: 100%;
+  max-width: 560px;
+  margin: 0 auto;
+  padding: var(--space-6) var(--space-4);
+}
+
+.settings-header {
+  margin-bottom: var(--space-6);
+}
+
+.settings-header h2 {
+  color: var(--text-primary);
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  margin: 0;
+}
+
+/* Section */
+.settings-section {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-6);
+  margin-bottom: var(--space-4);
+}
+
+.settings-section-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin-bottom: var(--space-5);
+  color: var(--text-primary);
+}
+
+.settings-section-header h3 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+/* Fields */
+.settings-field {
+  margin-bottom: var(--space-4);
+}
+
+.settings-field:last-child {
+  margin-bottom: 0;
+}
+
+.settings-field label {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-bottom: var(--space-2);
+}
+
+.settings-field-hint {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  margin-top: var(--space-1);
+}
+
+.settings-input {
+  width: 100%;
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-family: inherit;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.settings-input:focus {
+  outline: none;
+  background: var(--bg-input-focus);
+  border-color: var(--accent-primary);
+}
+
+.settings-input--disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.settings-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B6358' stroke-width='2'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  padding-right: var(--space-10);
+  cursor: pointer;
+}
+
+.settings-select option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Row for first/last name side by side */
+.settings-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-4);
+}
+
+/* Number input with suffix */
+.settings-number-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.settings-input--number {
+  width: 80px;
+  text-align: center;
+}
+
+.settings-number-suffix {
+  color: var(--text-tertiary);
+  font-size: 0.8rem;
+}
+
+/* Save button */
+.settings-save {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-5);
+  background: var(--accent-primary);
+  border: none;
+  border-radius: var(--radius-md);
+  color: white;
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: background 0.15s ease;
+  margin-top: var(--space-2);
+}
+
+.settings-save:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.settings-save:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Toggle rows */
+.settings-toggle-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  padding: var(--space-3) 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.settings-toggle-row:last-child {
+  border-bottom: none;
+}
+
+.settings-toggle-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-1);
+  min-width: 0;
+}
+
+.settings-toggle-label {
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.settings-toggle-desc {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* Toggle switch */
+.settings-toggle {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+}
+
+.settings-toggle-track {
+  display: block;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  position: relative;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-toggle.on .settings-toggle-track {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.settings-toggle-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: var(--radius-full);
+  transition: transform 0.2s ease;
+}
+
+.settings-toggle.on .settings-toggle-thumb {
+  transform: translateX(20px);
+}
+
+/* Theme toggle button */
+.settings-theme-btn {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+}
+
+.settings-theme-track {
+  display: block;
+  width: 44px;
+  height: 24px;
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-full);
+  position: relative;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.settings-theme-btn.dark .settings-theme-track {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+}
+
+.settings-theme-thumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 18px;
+  height: 18px;
+  background: white;
+  border-radius: var(--radius-full);
+  transition: transform 0.2s ease;
+}
+
+.settings-theme-btn.dark .settings-theme-thumb {
+  transform: translateX(20px);
+}
+
+/* Action button (e.g. Reset) */
+.settings-action-btn {
+  padding: var(--space-2) var(--space-4);
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  font-family: inherit;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.settings-action-btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+@media (max-width: 480px) {
+  .settings-row {
+    grid-template-columns: 1fr;
+  }
+}

@@ -33,17 +33,19 @@ interface DraggablePantryItemProps {
 }
 
 function DraggablePantryItem({ item, inBowl, onAdd }: DraggablePantryItemProps) {
+  const isEmpty = (item.quantity ?? 0) <= 0 || item.stock_status === 'out_of_stock';
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
     id: `pantry-${item.id}`,
     data: { item },
+    disabled: isEmpty,
   });
 
   return (
     <div
       ref={setNodeRef}
-      className={`chef-pantry-item${inBowl ? ' in-bowl' : ''}${isDragging ? ' dragging' : ''}`}
-      onClick={() => !inBowl && onAdd(item)}
-      {...listeners}
+      className={`chef-pantry-item${inBowl ? ' in-bowl' : ''}${isDragging ? ' dragging' : ''}${isEmpty ? ' empty' : ''}`}
+      onClick={() => !inBowl && !isEmpty && onAdd(item)}
+      {...(isEmpty ? {} : listeners)}
       {...attributes}
     >
       <span className="chef-item-name">{item.name}</span>
@@ -128,6 +130,7 @@ const Chef: React.FC<ChefProps> = ({ showToast }) => {
   // ── Handlers ──
 
   const addToBowl = useCallback((item: PantryItem) => {
+    if ((item.quantity ?? 0) <= 0 || item.stock_status === 'out_of_stock') return;
     setBowlItems((prev) => {
       if (prev.some((i) => i.id === item.id)) return prev;
       return [...prev, item];

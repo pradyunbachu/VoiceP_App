@@ -20,6 +20,7 @@ interface PantryItemFilters {
   page?: number;
   page_size?: number;
   paginate?: boolean;
+  group_id?: number;
 }
 
 export const usePantryItems = (filters: PantryItemFilters = {}) => {
@@ -36,6 +37,7 @@ export const usePantryItems = (filters: PantryItemFilters = {}) => {
       if (category) params.append('category', category);
       if (stock_status) params.append('stock_status', stock_status);
       if (search) params.append('search', search);
+      if (filters.group_id != null) params.append('group_id', String(filters.group_id));
       if (paginate) params.append('paginate', 'true');
       if (page) params.append('page', String(page));
       if (page_size) params.append('page_size', String(page_size));

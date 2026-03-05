@@ -25,6 +25,7 @@ interface InfinitePantryFilters {
   sort_by?: string;
   sort_order?: string;
   page_size?: number;
+  group_id?: number;
 }
 
 interface PantryItemFilters {
@@ -36,6 +37,7 @@ interface PantryItemFilters {
   page?: number;
   page_size?: number;
   paginate?: boolean;
+  group_id?: number;
 }
 
 interface ShoppingListFilters {
@@ -77,6 +79,8 @@ export const queryKeys = {
     items: (filters: PantryItemFilters) => [...queryKeys.pantry.all, 'items', filters] as const,
     infinite: (filters: InfinitePantryFilters = {}) => [...queryKeys.pantry.all, 'infinite', filters] as const,
     stats: () => [...queryKeys.pantry.all, 'stats'] as const,
+    groups: () => [...queryKeys.pantry.all, 'groups'] as const,
+    groupDetail: (id: number | string) => [...queryKeys.pantry.all, 'group', id] as const,
   },
 
   // Shopping List

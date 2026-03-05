@@ -57,6 +57,7 @@ export interface PantryItem {
   stock_status: StockStatus;
   notes: string | null;
   source_expense_id?: number | null;
+  group_id?: number | null;
 }
 
 export interface PantryStats {
@@ -109,6 +110,14 @@ export interface GroupMember {
   email: string;
   username?: string;
   role?: string;
+}
+
+export interface PantryGroup {
+  id: number;
+  name: string;
+  invite_code?: string;
+  owner_id?: string;
+  members?: GroupMember[];
 }
 
 export interface PantryMatch {
@@ -440,6 +449,7 @@ export type ShowToast = (
 export type AppView =
   | "landing"
   | "login"
+  | "home"
   | "record"
   | "dashboard"
   | "expenses"
@@ -448,7 +458,8 @@ export type AppView =
   | "comparisons"
   | "pantry"
   | "shopping-list"
-  | "chef";
+  | "chef"
+  | "settings";
 
 // ── Auth ───────────────────────────────────────────────────────────────
 
@@ -474,6 +485,10 @@ export interface AuthContextValue {
   signOut: () => Promise<{ error: unknown }>;
   signInWithGoogle: () => Promise<{ data: unknown; error: unknown }>;
   getToken: () => Promise<string | null>;
+  updateUserProfile: (data: {
+    first_name?: string;
+    last_name?: string;
+  }) => Promise<{ error: unknown }>;
 }
 
 // ── Theme ──────────────────────────────────────────────────────────────

@@ -26,8 +26,12 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
   const [cachedRecipe, setCachedRecipe] = useState<RecipeDetailResponse | null>(null);
-  const [preference, setPreference] = useState<string>('');
-  const [prefInput, setPrefInput] = useState<string>('');
+  const [preference, setPreference] = useState<string>(() =>
+    localStorage.getItem("voxal_dietary_preference") || ""
+  );
+  const [prefInput, setPrefInput] = useState<string>(() =>
+    localStorage.getItem("voxal_dietary_preference") || ""
+  );
   // In-memory recipe cache keyed by meal name to avoid re-fetching
   const recipeCacheRef = useRef<Record<string, RecipeDetailResponse>>({});
   const { data, isLoading, isError, isFetching, refreshRecs } = useDailyRecs(preference);

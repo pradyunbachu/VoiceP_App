@@ -35,8 +35,26 @@ from schemas import (
     AutoPopulatePantryRequest
 )
 from shelf_life import predict_expiration
+from spell_check import correct_item_name
+from routes.pantry_sharing import verify_pantry_group_membership
 
 router = APIRouter()
+
+
+def _can_access_item(current_user_id: str, item_owner_id: str) -> bool:
+    """Check if current user can access an item: either they own it,
+    or they are a member of a pantry group owned by the item's owner."""
+    if current_user_id == item_owner_id:
+        return True
+    # Check if the item owner has a pantry group that current_user is a member of
+    owner_groups = supabase.table("pantry_groups").select("id").eq("owner_id", item_owner_id).execute()
+    if not owner_groups.data:
+        return False
+    group_ids = [g["id"] for g in owner_groups.data]
+    for gid in group_ids:
+        if verify_pantry_group_membership(current_user_id, gid):
+            return True
+    return False
 
 
 def _find_existing_pantry_item(user_id: str, item_name: str):
@@ -82,16 +100,29 @@ async def get_pantry_items(
     sort_order: Optional[str] = "asc",
     page: int = 1,
     page_size: int = 20,
-    paginate: bool = False
+    paginate: bool = False,
+    group_id: Optional[int] = None
 ):
     """Get pantry items for the current user with filtering, sorting, and optional pagination"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
+    # When group_id is provided, verify membership and show the group owner's items
+    target_user_id = current_user["id"]
+    if group_id is not None:
+        if not verify_pantry_group_membership(current_user["id"], group_id):
+            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+        # Fetch the group owner's user_id — members see the owner's pantry
+        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
+        if group_resp.data:
+            target_user_id = group_resp.data[0]["owner_id"]
+
     if paginate:
-        query = supabase.table("pantry_items").select("*", count="exact").eq("user_id", current_user["id"])
+        query = supabase.table("pantry_items").select("*", count="exact")
     else:
-        query = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"])
+        query = supabase.table("pantry_items").select("*")
+
+    query = query.eq("user_id", target_user_id)
 
     if category:
         query = query.eq("category", category)
@@ -240,12 +271,19 @@ async def auto_populate_pantry_from_expense(
     created_items = []
 
     merged_count = 0
+    corrected_count = 0
     for item_data in populate_request.items:
         item_name = item_data.get("name", "Unknown Item")
         item_category = item_data.get("category", "Other")
         item_expiration = item_data.get("expiration_date")
         item_purchase = expense.get("date")
         item_qty = item_data.get("quantity", 1)
+
+        # Spell-correct item name before lookup (fixes OCR typos)
+        correction = correct_item_name(item_name)
+        if correction["corrected"]:
+            item_name = correction["name"]
+            corrected_count += 1
 
         # Check for existing item — merge instead of duplicating
         existing = _find_existing_pantry_item(current_user["id"], item_name)
@@ -303,10 +341,12 @@ async def update_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    # Verify item belongs to user
-    check_response = supabase.table("pantry_items").select("id").eq("id", item_id).eq("user_id", current_user["id"]).execute()
+    # Verify the user owns the item or is a group member of the owner's pantry
+    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
+    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = {}
     if item_update.name is not None:
@@ -336,7 +376,7 @@ async def update_pantry_item(
 
     update_data["updated_at"] = datetime.now().isoformat()
 
-    supabase.table("pantry_items").update(update_data).eq("id", item_id).eq("user_id", current_user["id"]).execute()
+    supabase.table("pantry_items").update(update_data).eq("id", item_id).execute()
 
     return {"message": "Pantry item updated successfully"}
 
@@ -355,14 +395,16 @@ async def update_pantry_item_status(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    check_response = supabase.table("pantry_items").select("id").eq("id", item_id).eq("user_id", current_user["id"]).execute()
+    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
+    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
 
     supabase.table("pantry_items").update({
         "stock_status": stock_status,
         "updated_at": datetime.now().isoformat()
-    }).eq("id", item_id).eq("user_id", current_user["id"]).execute()
+    }).eq("id", item_id).execute()
 
     return {"message": f"Status updated to {stock_status}"}
 
@@ -398,8 +440,13 @@ async def delete_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    response = supabase.table("pantry_items").delete().eq("id", item_id).eq("user_id", current_user["id"]).execute()
+    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    if not check_response.data:
+        raise HTTPException(status_code=404, detail="Pantry item not found")
+    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+        raise HTTPException(status_code=403, detail="Access denied")
 
+    response = supabase.table("pantry_items").delete().eq("id", item_id).execute()
     if not response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
 
@@ -479,7 +526,19 @@ async def resync_pantry(
     purchase_filled = 0
     expiration_filled = 0
     expiration_cleared = 0
+    name_corrected = 0
     now_iso = datetime.now().isoformat()
+
+    # --- Pass 0: Spell-correct item names ---
+    for item in items:
+        correction = correct_item_name(item["name"])
+        if correction["corrected"]:
+            supabase.table("pantry_items").update({
+                "name": correction["name"],
+                "updated_at": now_iso,
+            }).eq("id", item["id"]).execute()
+            item["name"] = correction["name"]
+            name_corrected += 1
 
     # --- Pass 1: Deduplicate (group by lowercase name, merge quantities) ---
     canonical: dict[str, dict] = {}
@@ -554,6 +613,7 @@ async def resync_pantry(
 
     return {
         "message": "Pantry resync complete",
+        "name_corrected": name_corrected,
         "recategorized": recategorized,
         "merged": merged,
         "purchase_filled": purchase_filled,

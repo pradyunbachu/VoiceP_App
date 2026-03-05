@@ -17,6 +17,7 @@ interface InfinitePantryFilters {
   sort_by?: string;
   sort_order?: string;
   page_size?: number;
+  group_id?: number;
 }
 
 interface InfinitePantryPage extends PaginatedPantryItems {
@@ -46,6 +47,7 @@ export const useInfinitePantryItems = (filters: InfinitePantryFilters = {}) => {
       params.append('paginate', 'true');
       params.append('page', String(pageParam));
       params.append('page_size', String(page_size));
+      if (filters.group_id != null) params.append('group_id', String(filters.group_id));
       if (category) params.append('category', category);
       if (stock_status) params.append('stock_status', stock_status);
       if (search) params.append('search', search);

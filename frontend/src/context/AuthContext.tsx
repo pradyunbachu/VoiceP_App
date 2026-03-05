@@ -76,6 +76,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return currentSession.access_token;
   }, []);
 
+  const updateUserProfile = async (profileData: { first_name?: string; last_name?: string }) => {
+    const { data, error } = await supabase.auth.updateUser({
+      data: profileData,
+    });
+    if (!error && data.user) {
+      setUser(data.user);
+    }
+    return { error };
+  };
+
   const value: AuthContextValue = {
     user,
     session,
@@ -85,6 +95,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signOut,
     signInWithGoogle,
     getToken,
+    updateUserProfile,
   };
 
   return (

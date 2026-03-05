@@ -8,7 +8,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
-import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
 import { useTheme } from "../context/ThemeContext";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
@@ -58,7 +58,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
   return (
     <nav className="navigation">
       <div className="nav-left">
-        <div className="nav-logo" onClick={() => onViewChange("record")}>
+        <div className="nav-logo" onClick={() => onViewChange("home")}>
           <Mic size={20} />
           <span>voxal</span>
         </div>
@@ -71,6 +71,15 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
         </button>
       </div>
       <div className="nav-tabs" data-tutorial="nav-tabs">
+        {/* Home Tab */}
+        <button
+          className={`nav-tab ${currentView === "home" ? "active" : ""}`}
+          onClick={() => onViewChange("home")}
+        >
+          <Home size={18} />
+          <span className="nav-label-full">Home</span>
+        </button>
+
         {/* VoxAssistant Tab */}
         <button
           className={`nav-tab ${currentView === "record" ? "active" : ""}`}
@@ -78,7 +87,6 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
         >
           <Mic size={18} />
           <span className="nav-label-full">Voxy</span>
-          <span className="nav-label-short">Assist</span>
         </button>
 
         {/* VoxFinance Dropdown */}
@@ -180,6 +188,13 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
       </div>
       <div className="nav-user">
         {user && <span className="nav-username">{user.username}</span>}
+        <button
+          className={`nav-settings ${currentView === "settings" ? "active" : ""}`}
+          onClick={() => onViewChange("settings")}
+          title="Settings"
+        >
+          <Settings size={18} />
+        </button>
         <button className="nav-logout" onClick={onLogout} title="Logout">
           <LogOut size={18} />
         </button>

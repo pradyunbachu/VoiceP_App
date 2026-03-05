@@ -28,7 +28,8 @@ export const useCookStats = () => {
       return response.json();
     },
     enabled: !!session,
-    staleTime: 5 * 60 * 1000,
-    refetchOnWindowFocus: false,
+    staleTime: 0,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
   });
 };

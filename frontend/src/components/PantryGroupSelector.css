@@ -1,0 +1,382 @@
+.pantry-group-selector {
+  position: relative;
+  margin-bottom: 1rem;
+}
+
+.pantry-group-selector .group-selector-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.pantry-group-selector .group-selector-toggle:hover {
+  border-color: var(--accent-primary);
+}
+
+.pantry-group-selector .group-selector-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pantry-group-selector .group-selector-label svg {
+  color: var(--accent-primary);
+}
+
+.pantry-group-selector .group-member-count {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.pantry-group-selector .chevron {
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+}
+
+.pantry-group-selector .chevron.open {
+  transform: rotate(180deg);
+}
+
+.pantry-group-selector .group-dropdown {
+  margin-top: 4px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+}
+
+.pantry-group-selector .group-option {
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-primary);
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.9rem;
+  color: var(--text-primary);
+  text-align: left;
+  transition: background 0.15s;
+}
+
+.pantry-group-selector .group-option:hover {
+  background: var(--bg-secondary);
+}
+
+.pantry-group-selector .group-option.active {
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-primary);
+  font-weight: 500;
+}
+
+.pantry-group-selector .group-option-wrapper {
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.pantry-group-selector .group-option-row {
+  display: flex;
+  align-items: center;
+}
+
+.pantry-group-selector .group-option-row .group-option {
+  flex: 1;
+  border-bottom: none;
+}
+
+.pantry-group-selector .group-edit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  margin-right: 0.5rem;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 8px;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.pantry-group-selector .group-edit-btn:hover {
+  background: var(--bg-secondary);
+  color: var(--accent-primary);
+}
+
+.pantry-group-selector .share-toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.pantry-group-selector .toggle-label {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.pantry-group-selector .toggle-switch {
+  position: relative;
+  width: 40px;
+  height: 22px;
+  border-radius: 11px;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.2s;
+  flex-shrink: 0;
+}
+
+.pantry-group-selector .toggle-switch.off {
+  background: var(--border-primary);
+}
+
+.pantry-group-selector .toggle-switch.on {
+  background: var(--accent-primary);
+  cursor: pointer;
+}
+
+.pantry-group-selector .toggle-switch:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pantry-group-selector .toggle-knob {
+  position: absolute;
+  top: 2px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: white;
+  transition: left 0.2s;
+}
+
+.pantry-group-selector .toggle-switch.off .toggle-knob {
+  left: 2px;
+}
+
+.pantry-group-selector .toggle-switch.on .toggle-knob {
+  left: 20px;
+}
+
+.pantry-group-selector .share-hint {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.pantry-group-selector .group-option-wrapper .group-option {
+  border-bottom: none;
+}
+
+.pantry-group-selector .group-option-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.pantry-group-selector .group-meta {
+  font-size: 0.75rem;
+  color: var(--text-tertiary);
+  font-weight: 400;
+}
+
+.pantry-group-selector .group-actions {
+  padding: 0.5rem 1rem 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: var(--bg-secondary);
+}
+
+.pantry-group-selector .invite-code-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.pantry-group-selector .code-label {
+  color: var(--text-tertiary);
+}
+
+.pantry-group-selector .invite-code-display code {
+  padding: 0.2rem 0.5rem;
+  background: var(--bg-input);
+  border-radius: 4px;
+  font-size: 0.8rem;
+  color: var(--text-primary);
+  letter-spacing: 0.5px;
+}
+
+.pantry-group-selector .copy-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+
+.pantry-group-selector .copy-btn:hover {
+  background: var(--bg-input);
+  color: var(--accent-primary);
+}
+
+.pantry-group-selector .group-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.7rem;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  width: fit-content;
+}
+
+.pantry-group-selector .group-action-btn:hover:not(:disabled) {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.pantry-group-selector .group-action-btn.delete-btn:hover:not(:disabled) {
+  border-color: var(--accent-danger);
+  color: var(--accent-danger);
+}
+
+.pantry-group-selector .group-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pantry-group-selector .group-footer-actions {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  flex-wrap: wrap;
+}
+
+.pantry-group-selector .group-footer-btn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.85rem;
+  background: transparent;
+  border: 1px dashed var(--border-primary);
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-tertiary);
+  transition: all 0.2s;
+}
+
+.pantry-group-selector .group-footer-btn:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+  border-style: solid;
+}
+
+.pantry-group-selector .inline-input {
+  display: flex;
+  gap: 0.5rem;
+  width: 100%;
+}
+
+.pantry-group-selector .inline-input input {
+  flex: 1;
+  padding: 0.45rem 0.75rem;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: 6px;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.85rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.pantry-group-selector .inline-input input:focus {
+  border-color: var(--accent-primary);
+}
+
+.pantry-group-selector .inline-input button {
+  padding: 0.45rem 0.75rem;
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  transition: opacity 0.15s;
+}
+
+.pantry-group-selector .inline-input button:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.pantry-group-selector .inline-input button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pantry-group-selector .inline-input .cancel-btn {
+  background: transparent;
+  color: var(--text-tertiary);
+  border: 1px solid var(--border-primary);
+}
+
+.pantry-group-selector .inline-input .cancel-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--text-tertiary);
+}
+
+@media (max-width: 640px) {
+  .pantry-group-selector .group-footer-actions {
+    flex-direction: column;
+  }
+
+  .pantry-group-selector .group-footer-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .pantry-group-selector .inline-input {
+    flex-wrap: wrap;
+  }
+
+  .pantry-group-selector .inline-input input {
+    width: 100%;
+  }
+}
