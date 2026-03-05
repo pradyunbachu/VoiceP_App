@@ -20,6 +20,7 @@ import {
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
 import { Search, X, Loader, UtensilsCrossed, Clock, Sparkles, Trash2 } from 'lucide-react';
 import { usePantryItems, useChefSuggestions, useRecipeDetail, useCookMeal } from '../hooks';
+import { DEMO_PANTRY_ITEMS } from '../constants/demoPantry';
 import RecipeDetailPanel from './RecipeDetailModal';
 import type { PantryItem, MealSuggestion, RecipeDetail, ShowToast, CookMealResponse } from '../types';
 import './Chef.css';
@@ -70,11 +71,12 @@ function DroppableBowl({ children, isOver }: { children: React.ReactNode; isOver
 
 interface ChefProps {
   showToast: ShowToast;
+  selectedGroupId?: number | null | "demo";
 }
 
 interface RecipeDetailResponse extends RecipeDetail {}
 
-const Chef: React.FC<ChefProps> = ({ showToast }) => {
+const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId }) => {
   // State
   const [bowlItems, setBowlItems] = useState<PantryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -84,11 +86,19 @@ const Chef: React.FC<ChefProps> = ({ showToast }) => {
   const [isOverBowl, setIsOverBowl] = useState(false);
   const recipeCacheRef = useRef<Record<string, RecipeDetailResponse>>({});
 
+  const isDemoMode = selectedGroupId === "demo";
+  const apiGroupId = isDemoMode ? undefined : (selectedGroupId ?? undefined);
+
   // Hooks
-  const { data: pantryData, isLoading: pantryLoading } = usePantryItems({ sort_by: 'category' });
+  const { data: pantryData, isLoading: pantryLoadingRaw } = usePantryItems({
+    sort_by: 'category',
+    group_id: apiGroupId as number | undefined,
+  });
   const chefSuggestions = useChefSuggestions();
   const recipeDetail = useRecipeDetail();
   const cookMeal = useCookMeal();
+
+  const pantryLoading = isDemoMode ? false : pantryLoadingRaw;
 
   // Sensors for dnd-kit
   const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
@@ -97,9 +107,10 @@ const Chef: React.FC<ChefProps> = ({ showToast }) => {
 
   // Pantry items (non-paginated array)
   const pantryItems = useMemo(() => {
+    if (isDemoMode) return DEMO_PANTRY_ITEMS;
     if (!pantryData || !Array.isArray(pantryData)) return [];
     return pantryData as PantryItem[];
-  }, [pantryData]);
+  }, [pantryData, isDemoMode]);
 
   // Filtered pantry list
   const filteredItems = useMemo(() => {

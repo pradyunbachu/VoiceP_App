@@ -421,7 +421,7 @@
 }
 
 /* Mobile responsive */
-@media (max-width: 480px) {
+@media (max-width: 768px) {
   .quick-record-popup {
     min-width: calc(100vw - 2rem);
     margin: 1rem;
@@ -440,7 +440,7 @@
   }
 
   .quick-record-dropdown {
-    top: 118px;
-    left: 16px;
+    top: 102px;
+    left: 12px;
   }
 }

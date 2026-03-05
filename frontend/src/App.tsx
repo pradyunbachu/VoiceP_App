@@ -39,6 +39,7 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>("landing");
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
+  const [selectedPantryGroup, setSelectedPantryGroup] = useState<number | null | "demo">(null);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
 
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
@@ -243,6 +244,8 @@ function AppContent() {
           <div className="view-container" key="pantry">
             <Pantry
               showToast={showToast}
+              selectedGroupId={selectedPantryGroup}
+              onSelectGroup={setSelectedPantryGroup}
             />
           </div>
         );
@@ -257,7 +260,7 @@ function AppContent() {
       case "chef":
         return (
           <div className="view-container" key="chef">
-            <Chef showToast={showToast} />
+            <Chef showToast={showToast} selectedGroupId={selectedPantryGroup} />
           </div>
         );
       case "settings":
