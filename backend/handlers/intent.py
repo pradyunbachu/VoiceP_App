@@ -76,7 +76,7 @@ Extract any relevant entities:
 DISAMBIGUATION RULES (apply these when intents overlap):
 1. Dollar amounts + items → expense_input (not shopping_complete, store_trip, or shopping_list_add)
 2. Question about past spending ("how much did I spend?") → expense_query (not expense_input)
-3. "I bought X" WITHOUT prices → shopping_complete; WITH prices → expense_input
+3. "I bought X" WITHOUT prices AND without a store → shopping_complete; WITH prices → expense_input; "I bought X from/at [store]" even WITHOUT prices → expense_input (mentioning where they bought it implies a financial transaction)
 4. Returning from a store WITHOUT prices → store_trip; WITH prices → expense_input
 5. "I have X" listing specific food items → pantry_add; "I have no idea / a question" → general
 6. "do I have X?" / "how many X?" → pantry_query (not pantry_add)
@@ -442,8 +442,12 @@ def simple_intent_detection(message: str) -> dict:
         return {"intent": "suggestion", "sub_intent": "shopping_list", "entities": {}}
 
     # --- Shopping complete (only if no dollar amounts — otherwise expense_input already caught it above) ---
+    # If "bought" is paired with a store/location, treat as expense_input, not shopping_complete
     shopping_complete_keywords = ["i bought", "just bought", "picked up", "finished shopping"]
+    store_prepositions = ["from the ", "from a ", "at the ", "at a ", "from my ", "at my "]
     if any(kw in message_lower for kw in shopping_complete_keywords):
+        if any(sp in message_lower for sp in store_prepositions) or any(s in message_lower for s in _store_names):
+            return {"intent": "expense_input", "sub_intent": None, "entities": {}}
         return {"intent": "shopping_complete", "sub_intent": "items_purchased", "entities": {}}
 
     return {"intent": "general", "sub_intent": None, "entities": {}}

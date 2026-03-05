@@ -353,7 +353,10 @@ const Chef: React.FC<ChefProps> = ({ showToast }) => {
               <div className="chef-loading">
                 <div className="chef-loading-bowl">
                   <div className="chef-loading-spoon" />
-                  <div className="chef-loading-bowl-body" />
+                  <div className="chef-loading-bowl-rim" />
+                  <div className="chef-loading-bowl-body">
+                    <div className="chef-loading-bowl-liquid" />
+                  </div>
                 </div>
                 <span className="chef-loading-text">Cooking up recipe ideas...</span>
               </div>
@@ -419,21 +422,20 @@ const Chef: React.FC<ChefProps> = ({ showToast }) => {
         </DragOverlay>
       </DndContext>
 
-      {/* Recipe detail modal overlay */}
-      {selectedMeal && (
-        <div className="chef-recipe-overlay" onClick={closeRecipePanel}>
-          <div className="chef-recipe-modal" onClick={(e) => e.stopPropagation()}>
-            <RecipeDetailPanel
-              recipe={cachedRecipe || (recipeDetail.data as RecipeDetailResponse | undefined)}
-              isLoading={!cachedRecipe && recipeDetail.isPending}
-              error={!cachedRecipe && recipeDetail.isError}
-              onClose={closeRecipePanel}
-              onCookMeal={handleCookMeal}
-              isCooking={cookMeal.isPending}
-            />
-          </div>
-        </div>
-      )}
+      {/* Recipe detail side panel (left) */}
+      <div className={`chef-recipe-panel ${selectedMeal ? 'open' : ''}`}>
+        {selectedMeal && (
+          <RecipeDetailPanel
+            recipe={cachedRecipe || (recipeDetail.data as RecipeDetailResponse | undefined)}
+            isLoading={!cachedRecipe && recipeDetail.isPending}
+            error={!cachedRecipe && recipeDetail.isError}
+            onClose={closeRecipePanel}
+            onCookMeal={handleCookMeal}
+            isCooking={cookMeal.isPending}
+          />
+        )}
+      </div>
+      {selectedMeal && <div className="chef-recipe-backdrop" onClick={closeRecipePanel} />}
     </div>
   );
 };

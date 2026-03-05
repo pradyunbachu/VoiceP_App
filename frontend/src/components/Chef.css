@@ -151,19 +151,25 @@
   gap: var(--space-4);
 }
 
-/* Bowl */
+/* Bowl — circle */
 .chef-bowl {
-  background: rgba(200, 191, 178, 0.04);
-  border: 2px dashed rgba(200, 191, 178, 0.15);
-  border-radius: var(--radius-lg, 12px);
-  padding: var(--space-4);
-  min-height: 100px;
+  width: 520px;
+  height: 520px;
+  margin: 0 auto;
+  border-radius: 50%;
+  border: 2px dashed rgba(200, 191, 178, 0.2);
+  background: rgba(200, 191, 178, 0.03);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-6);
   transition: border-color 0.2s ease, background 0.2s ease;
 }
 
 .chef-bowl.drag-over {
   border-color: var(--accent-primary);
-  background: var(--accent-primary-bg);
+  background: rgba(200, 170, 110, 0.06);
 }
 
 .chef-bowl-header {
@@ -419,60 +425,81 @@
 
 .chef-loading-bowl {
   position: relative;
-  width: 80px;
-  height: 52px;
+  width: 100px;
+  height: 70px;
 }
 
-/* Bowl shape — a rounded-bottom container */
+/* Bowl body — wide rim tapering to a narrow base with elliptical curve */
 .chef-loading-bowl-body {
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 72px;
-  height: 40px;
+  width: 90px;
+  height: 44px;
+  background: rgba(200, 170, 110, 0.1);
   border: 3px solid var(--accent-primary);
   border-top: none;
-  border-radius: 0 0 36px 36px;
-  animation: bowlRock 2s ease-in-out infinite;
-  transform-origin: top center;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  overflow: hidden;
 }
 
-/* Bowl rim */
-.chef-loading-bowl-body::before {
+/* Rim — wide ellipse sitting on top of the bowl body */
+.chef-loading-bowl-rim {
+  position: absolute;
+  bottom: 42px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 96px;
+  height: 16px;
+  border: 3px solid var(--accent-primary);
+  border-radius: 50%;
+  background: var(--bg-primary, #161210);
+}
+
+/* Liquid fill inside the bowl */
+.chef-loading-bowl-liquid {
+  position: absolute;
+  bottom: 3px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 72px;
+  height: 26px;
+  background: rgba(200, 170, 110, 0.15);
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  overflow: hidden;
+}
+
+/* Liquid surface shimmer */
+.chef-loading-bowl-liquid::after {
   content: '';
   position: absolute;
-  top: -1px;
-  left: -8px;
-  right: -8px;
-  height: 3px;
-  background: var(--accent-primary);
-  border-radius: 2px;
+  top: 0;
+  left: -10%;
+  width: 120%;
+  height: 6px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 170, 110, 0.3) 30%,
+    rgba(200, 170, 110, 0.5) 50%,
+    rgba(200, 170, 110, 0.3) 70%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  animation: liquidShimmer 2s ease-in-out infinite;
 }
 
-/* Liquid surface inside bowl */
-.chef-loading-bowl-body::after {
-  content: '';
-  position: absolute;
-  top: 8px;
-  left: 4px;
-  right: 4px;
-  height: 3px;
-  background: var(--accent-primary);
-  opacity: 0.3;
-  border-radius: 2px;
-  animation: liquidWobble 1.5s ease-in-out infinite;
-}
-
-/* Spoon — handle + head, rotating around the bowl center */
+/* Spoon — anchored at center of bowl, handle sticks up, head dips into liquid */
 .chef-loading-spoon {
   position: absolute;
-  top: -6px;
+  bottom: 20px;
   left: 50%;
-  width: 3px;
-  height: 36px;
+  width: 4px;
+  height: 48px;
   transform-origin: bottom center;
-  animation: spoonStir 1.5s ease-in-out infinite;
+  animation: spoonStir 1.8s ease-in-out infinite;
+  z-index: 1;
 }
 
 /* Spoon handle */
@@ -482,40 +509,35 @@
   top: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 3px;
-  height: 22px;
+  width: 4px;
+  height: 32px;
   background: var(--accent-primary-light, #d4b87a);
-  border-radius: 2px;
+  border-radius: 2px 2px 1px 1px;
 }
 
-/* Spoon head */
+/* Spoon head — oval dipping into the bowl */
 .chef-loading-spoon::after {
   content: '';
   position: absolute;
   bottom: 0;
   left: 50%;
   transform: translateX(-50%);
-  width: 10px;
-  height: 14px;
+  width: 12px;
+  height: 16px;
   background: var(--accent-primary-light, #d4b87a);
-  border-radius: 50%;
+  border-radius: 50% 50% 45% 45%;
 }
 
 @keyframes spoonStir {
-  0%   { transform: rotate(-30deg); }
-  50%  { transform: rotate(30deg); }
-  100% { transform: rotate(-30deg); }
+  0%   { transform: rotate(-25deg); }
+  50%  { transform: rotate(25deg); }
+  100% { transform: rotate(-25deg); }
 }
 
-@keyframes bowlRock {
-  0%, 100% { transform: translateX(-50%) rotate(0deg); }
-  25%      { transform: translateX(-50%) rotate(-2deg); }
-  75%      { transform: translateX(-50%) rotate(2deg); }
-}
-
-@keyframes liquidWobble {
-  0%, 100% { transform: scaleX(1); }
-  50%      { transform: scaleX(0.85); }
+@keyframes liquidShimmer {
+  0%   { transform: translateX(-30%); }
+  50%  { transform: translateX(30%); }
+  100% { transform: translateX(-30%); }
 }
 
 .chef-loading-text {
@@ -553,44 +575,38 @@
   min-width: 200px;
 }
 
-/* Recipe modal overlay */
-.chef-recipe-overlay {
+/* Recipe side panel — slides in from the left */
+.chef-recipe-panel {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  width: 380px;
+  height: calc(100% - 56px);
+  z-index: 900;
+  background: var(--bg-primary, #161210);
+  border-left: 1px solid var(--accent-primary-border);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+  overflow-y: auto;
+  padding: var(--space-5);
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+}
+
+.chef-recipe-panel.open {
+  transform: translateX(0);
+}
+
+.chef-recipe-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 1000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(0, 0, 0, 0.5);
-  animation: backdropFadeIn 0.2s ease-out;
+  z-index: 899;
+  background: rgba(0, 0, 0, 0.35);
+  animation: chefBackdropIn 0.2s ease-out;
 }
 
-@keyframes backdropFadeIn {
+@keyframes chefBackdropIn {
   from { opacity: 0; }
   to { opacity: 1; }
-}
-
-.chef-recipe-modal {
-  width: 90%;
-  max-width: 560px;
-  max-height: 85vh;
-  overflow-y: auto;
-  background: var(--bg-primary, #161210);
-  border: 1px solid rgba(200, 191, 178, 0.12);
-  border-radius: var(--radius-lg, 12px);
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
-  animation: modalSlideIn 0.25s ease-out;
-}
-
-@keyframes modalSlideIn {
-  from {
-    opacity: 0;
-    transform: translateY(16px) scale(0.97);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 /* ── Responsive ── */
@@ -602,6 +618,15 @@
 
   .chef-pantry-panel {
     max-height: 300px;
+  }
+
+  .chef-bowl {
+    width: 260px;
+    height: 260px;
+  }
+
+  .chef-recipe-panel {
+    width: 100%;
   }
 
   .chef-bowl-actions {
