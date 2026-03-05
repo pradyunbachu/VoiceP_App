@@ -43,6 +43,38 @@ def _normalize(name: str) -> str:
     return name
 
 
+# Items that come in bulk containers and only a small portion is used per recipe.
+# Deduct a fraction instead of a full unit so they last across many meals.
+_BULK_STAPLE_RE = re.compile(
+    r"\b("
+    r"oil|olive oil|vegetable oil|canola oil|coconut oil|sesame oil|avocado oil"
+    r"|salt|pepper|black pepper|seasoning|spice"
+    r"|butter|margarine"
+    r"|flour|sugar|brown sugar|powdered sugar|baking soda|baking powder|cornstarch|yeast"
+    r"|milk|cream|heavy cream|half and half|sour cream"
+    r"|soy sauce|fish sauce|hot sauce|sriracha|ketchup|mustard|mayo|mayonnaise"
+    r"|vinegar|balsamic|rice vinegar|apple cider vinegar|white vinegar"
+    r"|honey|maple syrup|molasses|agave"
+    r"|vanilla|vanilla extract|extract"
+    r"|garlic powder|onion powder|cumin|paprika|chili powder|oregano|basil|thyme"
+    r"|cinnamon|nutmeg|turmeric|cayenne|ginger powder|italian seasoning"
+    r"|worcestershire|teriyaki|barbecue sauce|bbq sauce|ranch"
+    r"|peanut butter|jam|jelly"
+    r"|cocoa powder|chocolate chips"
+    r")\b",
+    re.IGNORECASE,
+)
+
+# How much to deduct per recipe use
+_BULK_DEDUCTION = 0.1   # ~10 uses per container
+_NORMAL_DEDUCTION = 1
+
+
+def _get_deduction(item_name: str) -> float:
+    """Return how much quantity to deduct for one recipe use."""
+    return _BULK_DEDUCTION if _BULK_STAPLE_RE.search(item_name) else _NORMAL_DEDUCTION
+
+
 def _match_ingredient_to_pantry(ingredient_name: str, pantry_items: list, matched_ids: set) -> dict | None:
     """Find the best pantry match for an ingredient name.
 
@@ -136,8 +168,13 @@ async def cook_meal(
             continue
 
         current_qty = match.get("quantity", 1)
-        new_qty = max(0, current_qty - 1)
-        new_status = "out_of_stock" if new_qty == 0 else ("low" if new_qty <= 1 else "full")
+        deduction = _get_deduction(match.get("name", ""))
+        new_qty = round(max(0, current_qty - deduction), 2)
+        new_status = (
+            "out_of_stock" if new_qty == 0
+            else "low" if new_qty <= (0.2 if deduction < 1 else 1)
+            else "full"
+        )
 
         supabase.table("pantry_items").update({
             "quantity": new_qty,
