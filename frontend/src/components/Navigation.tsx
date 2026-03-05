@@ -8,8 +8,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
-import { Mic, BarChart3, List, LogOut, Wallet, Sun, Moon, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
-import { useTheme } from "../context/ThemeContext";
+import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
 
@@ -21,7 +20,6 @@ interface Props {
 }
 
 const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) => {
-  const { theme, toggleTheme } = useTheme();
   const [financeOpen, setFinanceOpen] = useState<boolean>(false);
   const [kitchenOpen, setKitchenOpen] = useState<boolean>(false);
   const financeRef = useRef<HTMLDivElement>(null);
@@ -62,13 +60,6 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
           <Mic size={20} />
           <span>voxal</span>
         </div>
-        <button
-          className="nav-theme-toggle"
-          onClick={toggleTheme}
-          title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
-        >
-          {theme === "dark" ? <Sun size={18} /> : <Moon size={18} />}
-        </button>
       </div>
       <div className="nav-tabs" data-tutorial="nav-tabs">
         {/* Home Tab */}
@@ -78,15 +69,6 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
         >
           <Home size={18} />
           <span className="nav-label-full">Home</span>
-        </button>
-
-        {/* VoxAssistant Tab */}
-        <button
-          className={`nav-tab ${currentView === "record" ? "active" : ""}`}
-          onClick={() => onViewChange("record")}
-        >
-          <Mic size={18} />
-          <span className="nav-label-full">Voxy</span>
         </button>
 
         {/* VoxFinance Dropdown */}

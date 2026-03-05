@@ -450,7 +450,6 @@ export type AppView =
   | "landing"
   | "login"
   | "home"
-  | "record"
   | "dashboard"
   | "expenses"
   | "budgets"

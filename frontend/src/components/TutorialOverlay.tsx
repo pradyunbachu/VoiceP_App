@@ -31,14 +31,21 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: null,
     title: "Welcome to Voxal!",
     description:
-      "Your voice-powered finance and kitchen assistant. This is your Home dashboard — let's take a quick tour.",
+      "Your voice-powered finance and kitchen assistant. We've stocked your pantry with sample items so you can explore right away — let's take a quick tour.",
+  },
+  {
+    id: "voxy-fab",
+    target: '[data-tutorial="voxy-fab"]',
+    title: "Meet Voxy",
+    description:
+      "Tap the mic button to record your voice, type a message, or scan a receipt. This is available on every page. Pro tip: hold spacebar to quick-record!",
   },
   {
     id: "quick-actions",
     target: '[data-tutorial="quick-actions"]',
     title: "Quick Actions",
     description:
-      "Log an expense by voice, scan a receipt, add to your shopping list, or find a recipe — all in one tap. Pro tip: hold the spacebar to quick-record from anywhere!",
+      "Log an expense, scan a receipt, add to your shopping list, or find a recipe — all in one tap.",
   },
   {
     id: "expenses-card",
@@ -52,7 +59,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="pantry-card"]',
     title: "Pantry Alerts",
     description:
-      "Stay on top of low stock and expiring items. Voxal tracks quantities and expiration dates automatically when you log grocery purchases or scan receipts.",
+      "Stay on top of low stock and expiring items. We've added some sample items that are expiring soon so you can see this in action — tap the card to manage your pantry!",
   },
   {
     id: "budget-card",
@@ -80,7 +87,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="kitchen-tab"]',
     title: "Kitchen Hub",
     description:
-      "Manage your food here. The Pantry tracks what you have with expiration dates, the Shopping List keeps your next trip organized, and the Chef suggests recipes from what's in your pantry.",
+      "Manage your food here. Your pantry is pre-stocked with sample items — try the Chef to generate recipes from what's already there!",
   },
   {
     id: "nav",

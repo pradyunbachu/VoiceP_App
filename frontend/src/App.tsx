@@ -1,9 +1,8 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Navigation from "./components/Navigation";
 import LandingPage from "./components/LandingPage";
 import Login from "./components/Login";
-import VoiceRecorder from "./components/VoiceRecorder";
 import AnalyticsDashboard from "./components/AnalyticsDashboard";
 import ExpenseList from "./components/ExpenseList";
 import BudgetManagement from "./components/BudgetManagement";
@@ -17,10 +16,13 @@ import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
 import LoadingSkeleton from "./components/LoadingSkeleton";
 import QuickRecordPopup from "./components/QuickRecordPopup";
+import type { QuickRecordPopupHandle } from "./components/QuickRecordPopup";
+import VoxyFAB from "./components/VoxyFAB";
 import DailyRecs from "./components/DailyRecs";
 import TutorialOverlay from "./components/TutorialOverlay";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { useAnalytics, useClearAllExpenses } from "./hooks";
@@ -37,6 +39,7 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>("landing");
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
+  const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
 
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const clearAllMutation = useClearAllExpenses();
@@ -81,6 +84,21 @@ function AppContent() {
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated]);
+
+  // Seed demo pantry for first-time users (fire-and-forget)
+  useEffect(() => {
+    if (isAuthenticated && !localStorage.getItem("voxal_demo_seeded")) {
+      getToken().then((t) => {
+        if (!t) return;
+        fetch(`${API_BASE_URL}/api/pantry/seed-demo`, {
+          method: "POST",
+          headers: { Authorization: `Bearer ${t}` },
+        }).then(() => {
+          localStorage.setItem("voxal_demo_seeded", "true");
+        }).catch(() => {});
+      });
+    }
+  }, [isAuthenticated, getToken]);
 
   const handleTutorialClose = useCallback(() => {
     setShowTutorial(false);
@@ -158,13 +176,12 @@ function AppContent() {
       case "home":
         return (
           <div className="view-container" key="home">
-            <HomeDashboard showToast={showToast} onNavigate={setCurrentView} onShowTutorial={() => setShowTutorial(true)} />
-          </div>
-        );
-      case "record":
-        return (
-          <div className="view-container" key="record">
-            <VoiceRecorder showToast={showToast} />
+            <HomeDashboard
+              showToast={showToast}
+              onNavigate={setCurrentView}
+              onShowTutorial={() => setShowTutorial(true)}
+              onOpenVoxy={() => quickRecordRef.current?.triggerOpen()}
+            />
           </div>
         );
       case "dashboard":
@@ -252,7 +269,12 @@ function AppContent() {
       default:
         return (
           <div className="view-container" key="default">
-            <VoiceRecorder showToast={showToast} />
+            <HomeDashboard
+              showToast={showToast}
+              onNavigate={setCurrentView}
+              onShowTutorial={() => setShowTutorial(true)}
+              onOpenVoxy={() => quickRecordRef.current?.triggerOpen()}
+            />
           </div>
         );
     }
@@ -269,13 +291,14 @@ function AppContent() {
             onLogout={handleLogout}
             user={user}
           />
-          <QuickRecordPopup showToast={showToast} />
+          <QuickRecordPopup ref={quickRecordRef} showToast={showToast} />
+          <VoxyFAB popupRef={quickRecordRef} />
         </ErrorBoundary>
       )}
       <ErrorBoundary name="view" key={currentView}>
         <main className={isAuthenticated ? "app-main" : ""}>{renderView()}</main>
       </ErrorBoundary>
-      {currentView === "record" && <DailyRecs showToast={showToast} />}
+      {isAuthenticated && <DailyRecs showToast={showToast} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
       {showClearAllConfirm && (
         <ConfirmDialog

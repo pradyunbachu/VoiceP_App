@@ -84,9 +84,40 @@ interface EditFormData {
   expiration_predicted?: boolean;
 }
 
+// Helper to get a date string offset from today
+const daysFromNow = (days: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + days);
+  return d.toISOString().split("T")[0];
+};
+
+const today = (): string => new Date().toISOString().split("T")[0];
+
+const DEMO_PANTRY_ITEMS: PantryItem[] = [
+  { id: -1, name: "Bananas", quantity: 2, unit: "", category: "Produce", expiration_date: daysFromNow(1), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -2, name: "Spinach", quantity: 1, unit: "bag", category: "Produce", expiration_date: daysFromNow(2), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -3, name: "Carrots", quantity: 6, unit: "", category: "Produce", expiration_date: daysFromNow(14), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -4, name: "Bell Peppers", quantity: 3, unit: "", category: "Produce", expiration_date: daysFromNow(7), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -5, name: "Onions", quantity: 4, unit: "", category: "Produce", expiration_date: daysFromNow(30), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -6, name: "Tomatoes", quantity: 3, unit: "", category: "Produce", expiration_date: daysFromNow(3), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -7, name: "Milk", quantity: 1, unit: "gal", category: "Dairy", expiration_date: daysFromNow(7), purchase_date: today(), stock_status: "low", notes: "Demo item" },
+  { id: -8, name: "Eggs", quantity: 12, unit: "", category: "Dairy", expiration_date: daysFromNow(21), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -9, name: "Greek Yogurt", quantity: 2, unit: "", category: "Dairy", expiration_date: daysFromNow(10), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -10, name: "Cheddar Cheese", quantity: 1, unit: "block", category: "Dairy", expiration_date: daysFromNow(30), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -11, name: "Chicken Breast", quantity: 2, unit: "lbs", category: "Meat & Seafood", expiration_date: daysFromNow(2), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -12, name: "Ground Beef", quantity: 1, unit: "lb", category: "Meat & Seafood", expiration_date: daysFromNow(2), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -13, name: "Rice", quantity: 2, unit: "lbs", category: "Grains & Pasta", expiration_date: null, purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -14, name: "Pasta", quantity: 1, unit: "box", category: "Grains & Pasta", expiration_date: null, purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -15, name: "Bread", quantity: 1, unit: "loaf", category: "Grains & Pasta", expiration_date: daysFromNow(3), purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -16, name: "Olive Oil", quantity: 1, unit: "bottle", category: "Condiments", expiration_date: null, purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -17, name: "Soy Sauce", quantity: 1, unit: "bottle", category: "Condiments", expiration_date: null, purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -18, name: "Frozen Broccoli", quantity: 1, unit: "bag", category: "Frozen", expiration_date: null, purchase_date: today(), stock_status: "full", notes: "Demo item" },
+  { id: -19, name: "Granola Bars", quantity: 6, unit: "", category: "Snacks", expiration_date: null, purchase_date: today(), stock_status: "full", notes: "Demo item" },
+];
+
 const Pantry: React.FC<Props> = ({ showToast }) => {
   // Group selection state
-  const [selectedGroupId, setSelectedGroupId] = useState<number | null>(null);
+  const [selectedGroupId, setSelectedGroupId] = useState<number | null | "demo">(null);
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
@@ -126,6 +157,9 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  const isDemoMode = selectedGroupId === "demo";
+  const apiGroupId = isDemoMode ? undefined : (selectedGroupId ?? undefined);
+
   // Shelf view fetches all items at once (no pagination) because
   // dnd-kit requires all draggable items to be in the DOM simultaneously.
   const { data: shelfItems = [] as PantryItem[], isLoading: shelfLoading } = usePantryItems({
@@ -134,7 +168,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     search: debouncedSearch || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
-    group_id: selectedGroupId ?? undefined,
+    group_id: apiGroupId,
   });
 
   // List view uses cursor-based infinite scrolling for better performance
@@ -151,21 +185,36 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
     search: debouncedSearch || undefined,
     sort_by: sortBy,
     sort_order: sortOrder,
-    group_id: selectedGroupId ?? undefined,
+    group_id: apiGroupId,
   });
 
   // Flatten all loaded infinite-scroll pages into a single array
   const listItems: PantryItem[] = listInfiniteData?.pages?.flatMap((p: { items: PantryItem[] }) => p.items) ?? [];
 
+  // In demo mode, use hardcoded items with optional client-side filtering
+  const demoFiltered = useMemo<PantryItem[]>(() => {
+    if (!isDemoMode) return [];
+    let result = DEMO_PANTRY_ITEMS;
+    if (categoryFilter) result = result.filter((i) => i.category === categoryFilter);
+    if (statusFilter) result = result.filter((i) => i.stock_status === statusFilter);
+    if (debouncedSearch) {
+      const q = debouncedSearch.toLowerCase();
+      result = result.filter((i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
+    }
+    return result;
+  }, [isDemoMode, categoryFilter, statusFilter, debouncedSearch]);
+
   // Unify data/loading behind the active view mode so the rest of the
   // component can reference `items` and `loading` without branching.
-  const items: PantryItem[] = viewMode === 'shelf' ? (shelfItems as PantryItem[]) : listItems;
-  const loading: boolean = viewMode === 'shelf' ? shelfLoading : listLoading;
+  const items: PantryItem[] = isDemoMode
+    ? demoFiltered
+    : (viewMode === 'shelf' ? (shelfItems as PantryItem[]) : listItems);
+  const loading: boolean = isDemoMode ? false : (viewMode === 'shelf' ? shelfLoading : listLoading);
 
   const { data: stats } = usePantryStats();
 
   // Fetch all out-of-stock items (used for "Discard Out of Stock" button)
-  const { data: oosItems } = usePantryItems({ stock_status: 'out_of_stock', group_id: selectedGroupId ?? undefined });
+  const { data: oosItems } = usePantryItems({ stock_status: 'out_of_stock', group_id: apiGroupId });
   const outOfStockItems: PantryItem[] = Array.isArray(oosItems) ? oosItems : [];
 
   // Mutations
@@ -503,8 +552,10 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
       {/* Header */}
       <div className="pantry-header">
         <div>
-          <h2><Package size={28} /> My Pantry</h2>
-          <p className="pantry-subtitle">Track your groceries and household items</p>
+          <h2><Package size={28} /> {isDemoMode ? "Demo Pantry" : "My Pantry"}</h2>
+          <p className="pantry-subtitle">
+            {isDemoMode ? "Sample items to explore features — switch to My Pantry to manage your own" : "Track your groceries and household items"}
+          </p>
         </div>
         <div className="header-actions">
           <div className="view-toggle">
@@ -523,33 +574,37 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
               <List size={18} />
             </button>
           </div>
-          <button
-            className="export-pantry-button"
-            onClick={() => exportPantryCsv(shelfItems as PantryItem[])}
-            disabled={(shelfItems as PantryItem[]).length === 0}
-            title="Export pantry items to CSV"
-          >
-            <Download size={18} />
-            <span>Export CSV</span>
-          </button>
-          <button
-            className="recategorize-button"
-            onClick={handleResync}
-            disabled={resyncMutation.isPending}
-            title="Resync categories, expiration dates, and deduplicate items"
-          >
-            <RefreshCw size={18} className={resyncMutation.isPending ? "spin" : ""} />
-            <span>{resyncMutation.isPending ? "Syncing..." : "Resync"}</span>
-          </button>
-          <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
-            <Plus size={18} />
-            <span>Add Item</span>
-          </button>
+          {!isDemoMode && (
+            <>
+              <button
+                className="export-pantry-button"
+                onClick={() => exportPantryCsv(shelfItems as PantryItem[])}
+                disabled={(shelfItems as PantryItem[]).length === 0}
+                title="Export pantry items to CSV"
+              >
+                <Download size={18} />
+                <span>Export CSV</span>
+              </button>
+              <button
+                className="recategorize-button"
+                onClick={handleResync}
+                disabled={resyncMutation.isPending}
+                title="Resync categories, expiration dates, and deduplicate items"
+              >
+                <RefreshCw size={18} className={resyncMutation.isPending ? "spin" : ""} />
+                <span>{resyncMutation.isPending ? "Syncing..." : "Resync"}</span>
+              </button>
+              <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
+                <Plus size={18} />
+                <span>Add Item</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
 
       {/* Stats Cards */}
-      {stats && (
+      {stats && !isDemoMode && (
         <div className="pantry-stats">
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'var(--stat-blue)' }}>
@@ -609,7 +664,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
       />
 
       {/* Add Item Form */}
-      {showAddForm && (
+      {showAddForm && !isDemoMode && (
         <form className="pantry-form" onSubmit={handleCreate}>
           <h3>Add New Item</h3>
           <div className="form-row">
@@ -722,7 +777,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
       />
 
       {/* Bulk controls */}
-      <PantryBulkActions
+      {!isDemoMode && <PantryBulkActions
         isSelectMode={isSelectMode}
         selectedCount={selectedItems.size}
         onEnterSelect={() => setIsSelectMode(true)}
@@ -733,7 +788,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
         outOfStockCount={outOfStockItems.length}
         isDiscarding={bulkDeleteMutation.isPending}
         isDeleting={bulkDeleteMutation.isPending}
-      />
+      />}
 
       {/* Items Display */}
       {loading ? (
@@ -786,7 +841,7 @@ const Pantry: React.FC<Props> = ({ showToast }) => {
       )}
 
       {/* Edit Modal for Shelf View */}
-      {viewMode === 'shelf' && editingId && (
+      {viewMode === 'shelf' && editingId && !isDemoMode && (
         <div className="shelf-edit-modal" onClick={() => setEditingId(null)}>
           <div className="shelf-edit-content" onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
             <h3>Edit Item</h3>

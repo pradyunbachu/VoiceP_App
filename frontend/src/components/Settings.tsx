@@ -122,6 +122,7 @@ const Settings: FC<Props> = ({ showToast }) => {
   const handleResetTutorial = () => {
     localStorage.removeItem("voxal_tutorial_seen");
     localStorage.removeItem("voxal_spacebar_tip_dismissed");
+    localStorage.removeItem("voxal_demo_seeded");
     showToast("Tutorial will show on next page load", "info");
   };
 

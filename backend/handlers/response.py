@@ -190,8 +190,10 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
 
         skipped_items = data.get("skipped_items", [])
         skipped_count = data.get("skipped_count", 0)
+        unrecognized_items = data.get("unrecognized_items", [])
+        unrecognized_count = data.get("unrecognized_count", 0)
 
-        if added_count == 0 and skipped_count == 0:
+        if added_count == 0 and skipped_count == 0 and unrecognized_count == 0:
             return "I couldn't identify any items to add to your pantry."
 
         parts = []
@@ -200,6 +202,9 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
             parts.append(f"Added {added_count} item(s) to your pantry: {', '.join(item_names)}")
         if skipped_count > 0:
             parts.append(f"Skipped {skipped_count} non-pantry item(s): {', '.join(skipped_items)}")
+        if unrecognized_count > 0:
+            items_str = ", ".join(unrecognized_items)
+            parts.append(f"I didn't recognize: {items_str}. Could you clarify what you meant?")
         return "\n".join(parts)
 
     elif intent == "meal_suggestion":

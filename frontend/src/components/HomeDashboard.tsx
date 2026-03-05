@@ -33,6 +33,7 @@ interface Props {
   showToast: ShowToast;
   onNavigate: (view: AppView) => void;
   onShowTutorial?: () => void;
+  onOpenVoxy?: () => void;
 }
 
 const getGreeting = (): string => {
@@ -44,7 +45,7 @@ const getGreeting = (): string => {
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial }) => {
+const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy }) => {
   const { user } = useAuth();
   const firstName =
     user?.user_metadata?.first_name ||
@@ -193,11 +194,11 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial }) => {
 
       {/* ── Quick Actions ──────────────────────────────────── */}
       <div className="home-quick-actions" data-tutorial="quick-actions">
-        <button className="home-quick-btn" onClick={() => onNavigate("record")}>
+        <button className="home-quick-btn" onClick={() => onOpenVoxy?.()}>
           <Mic size={18} />
           <span>Log expense</span>
         </button>
-        <button className="home-quick-btn" onClick={() => onNavigate("record")}>
+        <button className="home-quick-btn" onClick={() => onOpenVoxy?.()}>
           <Camera size={18} />
           <span>Scan receipt</span>
         </button>

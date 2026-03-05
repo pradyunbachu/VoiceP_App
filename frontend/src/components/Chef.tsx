@@ -127,15 +127,25 @@ const Chef: React.FC<ChefProps> = ({ showToast }) => {
     [bowlItems]
   );
 
+  // ── Non-cookable item detection ──
+
+  const NON_COOKABLE = /\b(toilet paper|paper towel|napkin|tissue|trash bag|garbage bag|plastic wrap|aluminum foil|tin foil|sponge|dish soap|laundry detergent|fabric softener|bleach|cleaning|cleaner|disinfectant|wipe|hand soap|body wash|shampoo|conditioner|toothpaste|toothbrush|floss|mouthwash|deodorant|lotion|sunscreen|razor|bandaid|band-aid|medicine|vitamin|supplement|pet food|dog food|cat food|cat litter|light bulb|battery|candle|air freshener|detergent|dryer sheet|ziplock|ziploc|parchment|cling wrap|soap)\b/i;
+
+  const isNonCookable = useCallback((name: string) => NON_COOKABLE.test(name), []);
+
   // ── Handlers ──
 
   const addToBowl = useCallback((item: PantryItem) => {
     if ((item.quantity ?? 0) <= 0 || item.stock_status === 'out_of_stock') return;
+    if (isNonCookable(item.name)) {
+      showToast(`"${item.name}" can't be used to make a meal`, 'warning');
+      return;
+    }
     setBowlItems((prev) => {
       if (prev.some((i) => i.id === item.id)) return prev;
       return [...prev, item];
     });
-  }, []);
+  }, [isNonCookable, showToast]);
 
   const removeFromBowl = useCallback((itemId: number) => {
     setBowlItems((prev) => prev.filter((i) => i.id !== itemId));

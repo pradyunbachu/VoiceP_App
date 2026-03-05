@@ -36,8 +36,8 @@ interface GroupWithMeta extends PantryGroup {
 }
 
 interface Props {
-  selectedGroupId: number | null;
-  onSelectGroup: (groupId: number | null) => void;
+  selectedGroupId: number | null | "demo";
+  onSelectGroup: (groupId: number | null | "demo") => void;
   showToast: ShowToast;
 }
 
@@ -155,7 +155,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
       <div className="group-selector-toggle" onClick={() => setIsOpen(!isOpen)}>
         <div className="group-selector-label">
           <Users size={16} />
-          <span>{selectedGroup ? selectedGroup.name : "My Pantry"}</span>
+          <span>{selectedGroupId === "demo" ? "Demo Pantry" : selectedGroup ? selectedGroup.name : "My Pantry"}</span>
           {selectedGroup && (
             <span className="group-member-count">
               {selectedGroup.member_count || 0} members
@@ -229,6 +229,25 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
                 )}
               </div>
             )}
+          </div>
+
+          {/* Demo pantry — always visible */}
+          <div className="group-option-wrapper">
+            <div className="group-option-row">
+              <button
+                className={`group-option ${selectedGroupId === "demo" ? "active" : ""}`}
+                onClick={() => {
+                  onSelectGroup("demo");
+                  setIsOpen(false);
+                  setExpandedGroupId(null);
+                }}
+              >
+                <div className="group-option-info">
+                  <span>Demo Pantry</span>
+                  <span className="group-meta">Sample items to explore</span>
+                </div>
+              </button>
+            </div>
           </div>
 
           {/* Shared groups */}

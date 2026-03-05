@@ -37,6 +37,13 @@ with open(_data_path, "r") as f:
 _CATEGORY_ITEMS = _grocery_data["items"]
 _NON_PANTRY_KEYWORDS = _grocery_data.get("non_pantry", [])
 
+# Build a flat set of all known grocery words for recognition checks
+_KNOWN_FOOD_WORDS: set[str] = set()
+for _items_list in _CATEGORY_ITEMS.values():
+    for _item in _items_list:
+        for _word in _item.lower().split():
+            _KNOWN_FOOD_WORDS.add(_word)
+
 
 def is_pantry_item(name: str) -> bool:
     """Return False if the item matches a non-pantry keyword (household, toiletry, pet, etc.)."""
@@ -62,6 +69,16 @@ def categorize_pantry_item(name: str) -> str:
             return category
 
     return "Other"
+
+
+    """Check if the item name contains at least one known grocery word.
+
+    Items that categorize as 'Other' and fail this check are likely
+    misheard words from voice input (e.g. 'Locales') and should trigger
+    a clarification prompt instead of being silently added.
+    """
+    words = name.lower().strip().split()
+    return any(w in _KNOWN_FOOD_WORDS for w in words)
 
 
 def parse_pantry_items_from_message(message: str) -> list:
@@ -166,12 +183,20 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
     now = datetime.now().isoformat()
     added_items = []
     skipped_items = []
+    unrecognized_items = []
 
     for item_name in pantry_items:
         if not is_pantry_item(item_name):
             skipped_items.append(item_name.title())
             continue
         category = categorize_pantry_item(item_name)
+
+        # If the item falls into "Other" and doesn't match any known grocery
+        # word, it's likely a misheard voice input — ask the user to clarify.
+        if category == "Other" and not is_recognized_food(item_name):
+            unrecognized_items.append(item_name.title())
+            continue
+
         try:
             response = supabase.table("pantry_items").insert({
                 "user_id": user_id,
@@ -201,6 +226,8 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
         "added_count": len(added_items),
         "skipped_items": skipped_items,
         "skipped_count": len(skipped_items),
+        "unrecognized_items": unrecognized_items,
+        "unrecognized_count": len(unrecognized_items),
         "query_type": "pantry_add"
     }
 

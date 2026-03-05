@@ -1,19 +1,21 @@
 /**
- * QuickRecordPopup.jsx - Global voice recording overlay for Voxal.
+ * QuickRecordPopup.tsx - Global voice recording overlay for Voxal.
  *
- * Activated by holding the spacebar (push-to-talk). Records audio via the
- * MediaRecorder API, sends it to the backend for transcription, then routes
- * the transcript through the chat/intent endpoint. Expense inputs are parsed
- * and displayed; grocery expenses prompt the user to add items to the pantry.
- * Non-expense intents (queries, suggestions) render inline chat responses.
+ * Activated by holding the spacebar (push-to-talk) or via the VoxyFAB button.
+ * When opened via FAB, shows an idle state with three options: voice, type, scan.
+ * Records audio via the MediaRecorder API, sends it to the backend for
+ * transcription, then routes the transcript through the chat/intent endpoint.
+ * Expense inputs are parsed and displayed; grocery expenses prompt the user
+ * to add items to the pantry. Non-expense intents render inline chat responses.
  */
-import React, { useState, useRef, useEffect, useCallback } from "react";
-import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle } from "lucide-react";
+import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
+import ReceiptScanner from "./ReceiptScanner";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat } from "../hooks";
 import { API_BASE_URL } from "../config/api";
-import type { ShowToast, Expense, ChatResponse } from "../types";
+import type { ShowToast, Expense, ChatResponse, ReceiptScanResult } from "../types";
 import "./QuickRecordPopup.css";
 
 interface ExtractedExpenseData {
@@ -22,11 +24,15 @@ interface ExtractedExpenseData {
   message?: string;
 }
 
+export interface QuickRecordPopupHandle {
+  triggerOpen: () => void;
+}
+
 interface Props {
   showToast: ShowToast;
 }
 
-const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
+const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast }, ref) => {
   const { getToken } = useAuth();
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -38,20 +44,40 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
   const [showPantryModal, setShowPantryModal] = useState<boolean>(false);
   const [pendingPantryExpense, setPendingPantryExpense] = useState<Expense | null>(null);
 
+  // New states for idle mode
+  const [showManualInput, setShowManualInput] = useState<boolean>(false);
+  const [showReceiptScanner, setShowReceiptScanner] = useState<boolean>(false);
+  const [manualInput, setManualInput] = useState<string>("");
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  // Tracks whether the spacebar is currently held to prevent repeat triggers
   const isSpaceHeldRef = useRef<boolean>(false);
+  const cancelledRef = useRef<boolean>(false);
+  const startedViaButtonRef = useRef<boolean>(false);
+  const manualInputRef = useRef<HTMLTextAreaElement | null>(null);
 
   // React Query mutations
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
   const chatMutation = useChat();
 
-  // Unified processing flag across all async stages
   const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
+
+  // Expose triggerOpen to parent via ref
+  useImperativeHandle(ref, () => ({
+    triggerOpen() {
+      setIsVisible(true);
+      setError("");
+      setExtractedExpense(null);
+      setChatResponse(null);
+      setPendingPantryExpense(null);
+      setShowManualInput(false);
+      setShowReceiptScanner(false);
+      setManualInput("");
+    },
+  }));
 
   // Increment a visible recording timer every second while recording
   useEffect(() => {
@@ -71,14 +97,19 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
     };
   }, [isRecording]);
 
+  // Auto-focus textarea when manual input opens
+  useEffect(() => {
+    if (showManualInput && manualInputRef.current) {
+      manualInputRef.current.focus();
+    }
+  }, [showManualInput]);
+
   const formatTime = (seconds: number): string => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
-  // After an expense is created, check if it's a grocery category
-  // and offer to add items to the pantry.
   const checkForPantryItems = (expenseData: ExtractedExpenseData | Expense): void => {
     let expenses: Expense[] = [];
     if ((expenseData as ExtractedExpenseData).expenses) {
@@ -97,7 +128,6 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
     }
   };
 
-  // Request microphone access and start recording audio chunks
   const startRecording = useCallback(async (): Promise<void> => {
     if (isRecording || isProcessing) return;
 
@@ -109,7 +139,6 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
 
-      // Pick the best supported audio MIME type for this browser
       let mimeType = "audio/webm";
       if (MediaRecorder.isTypeSupported("audio/webm;codecs=opus")) {
         mimeType = "audio/webm;codecs=opus";
@@ -127,21 +156,27 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
         }
       };
 
-      // When recording stops, assemble the audio blob and process it
       mediaRecorder.onstop = async () => {
-        const blobType = mediaRecorder.mimeType || "audio/webm";
-        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
-        await processAudio(audioBlob, blobType);
-        // Release the microphone
         if (streamRef.current) {
           streamRef.current.getTracks().forEach((track) => track.stop());
           streamRef.current = null;
         }
+        // If dismissed/cancelled, skip processing entirely
+        if (cancelledRef.current) {
+          cancelledRef.current = false;
+          return;
+        }
+        const blobType = mediaRecorder.mimeType || "audio/webm";
+        const audioBlob = new Blob(audioChunksRef.current, { type: blobType });
+        await processAudio(audioBlob, blobType);
       };
 
+      cancelledRef.current = false;
       mediaRecorder.start();
       setIsRecording(true);
       setIsVisible(true);
+      setShowManualInput(false);
+      setShowReceiptScanner(false);
       setError("");
       setExtractedExpense(null);
       setPendingPantryExpense(null);
@@ -159,11 +194,6 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
     }
   }, [isRecording]);
 
-  // Three-step audio processing pipeline:
-  //   1. Transcribe the audio blob via the /api/transcribe endpoint
-  //   2. Send the transcript to the chat endpoint for intent detection
-  //   3. Route based on intent -- expense inputs go to expense creation,
-  //      everything else renders as a chat response
   const processAudio = async (audioBlob: Blob, mimeType: string = "audio/webm"): Promise<void> => {
     setIsTranscribing(true);
     setChatResponse(null);
@@ -171,7 +201,6 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
     try {
       const token = await getToken();
 
-      // Step 1: Transcribe
       const formData = new FormData();
       let extension = "webm";
       if (mimeType.includes("mp4")) extension = "mp4";
@@ -201,34 +230,59 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
       const transcriptData = await transcriptResponse.json();
       setIsTranscribing(false);
 
-      // Step 2: Send to chat endpoint for intent detection
-      const chatResult = await chatMutation.mutateAsync(transcriptData.transcript);
-
-      // Step 3: Route based on intent
-      if (chatResult.intent === "expense_input" && (chatResult.data as Record<string, unknown>)?.route_to_expense) {
-        // Process as expense input -- try structured extraction first,
-        // fall back to simple extraction on failure
-        try {
-          const expenseData = await createExpenseMutation.mutateAsync(transcriptData.transcript);
-          handleExpenseData(expenseData as unknown as ExtractedExpenseData);
-        } catch (extractError) {
-          const expenseData = await createExpenseSimpleMutation.mutateAsync(transcriptData.transcript);
-          handleExpenseData(expenseData as unknown as ExtractedExpenseData);
-        }
-      } else {
-        // Display chat response for queries/suggestions
-        setChatResponse(chatResult);
-      }
+      await processText(transcriptData.transcript);
     } catch (error) {
       const err = error as Error;
       console.error("Error processing audio:", err);
-      setError(err.message || "Failed to process recording");
+      setError(friendlyError(err.message));
     } finally {
       setIsTranscribing(false);
     }
   };
 
-  // Normalize expense response into a consistent shape and check for pantry items
+  // Turn raw/JSON error messages into something readable
+  const friendlyError = (msg: string): string => {
+    if (!msg) return "Something went wrong. Please try again.";
+    const lower = msg.toLowerCase();
+    if (lower.includes("empty message") || lower.includes("empty")) {
+      return "I didn't catch anything. Try speaking a bit longer or type your message instead.";
+    }
+    if (lower.includes("transcription failed")) {
+      return "Couldn't understand the audio. Try again in a quieter spot or type your message.";
+    }
+    if (lower.includes("microphone")) {
+      return "Microphone access denied. Check your browser permissions and try again.";
+    }
+    // Strip JSON-looking strings
+    if (msg.startsWith("{") || msg.startsWith("[")) {
+      return "Something went wrong. Please try again.";
+    }
+    return msg;
+  };
+
+  // Shared text processing — used by both voice transcripts and manual input
+  const processText = async (text: string): Promise<void> => {
+    try {
+      const chatResult = await chatMutation.mutateAsync(text);
+
+      if (chatResult.intent === "expense_input" && (chatResult.data as Record<string, unknown>)?.route_to_expense) {
+        try {
+          const expenseData = await createExpenseMutation.mutateAsync(text);
+          handleExpenseData(expenseData as unknown as ExtractedExpenseData);
+        } catch {
+          const expenseData = await createExpenseSimpleMutation.mutateAsync(text);
+          handleExpenseData(expenseData as unknown as ExtractedExpenseData);
+        }
+      } else {
+        setChatResponse(chatResult);
+      }
+    } catch (error) {
+      const err = error as Error;
+      console.error("Error processing text:", err);
+      setError(friendlyError(err.message));
+    }
+  };
+
   const handleExpenseData = (expenseData: ExtractedExpenseData): void => {
     let expenses: Expense[];
     if (expenseData.expenses) {
@@ -244,26 +298,67 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
     }
     checkForPantryItems(expenseData);
 
-    // Celebration toast
     const totalAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
     const amountStr = totalAmount ? `$${totalAmount.toFixed(2)} logged` : "Expense logged";
     showToast(amountStr, "celebration", 4000);
   };
 
   const handleDismiss = (): void => {
+    // Stop any active recording and skip processing
+    cancelledRef.current = true;
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current = null;
+    }
+    setIsRecording(false);
+    // Force-release the microphone
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
     setIsVisible(false);
     setExtractedExpense(null);
     setChatResponse(null);
     setError("");
     setPendingPantryExpense(null);
+    setShowManualInput(false);
+    setShowReceiptScanner(false);
+    setManualInput("");
   };
 
   const handleConfirm = (): void => {
     handleDismiss();
   };
 
-  // Global spacebar push-to-talk: keydown starts recording, keyup stops it.
-  // Skips activation when the user is focused on a text input or textarea.
+  // Manual input submission
+  const handleManualSubmit = async (): Promise<void> => {
+    const text = manualInput.trim();
+    if (!text || isProcessing) return;
+    setShowManualInput(false);
+    setManualInput("");
+    setIsTranscribing(true);
+    setChatResponse(null);
+    try {
+      await processText(text);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Receipt scanner success handler
+  const handleReceiptSuccess = async (result: ReceiptScanResult): Promise<void> => {
+    setShowReceiptScanner(false);
+    const text = `I spent $${result.amount} at ${result.store} on ${result.items}${result.date ? ` on ${result.date}` : ""}`;
+    setIsTranscribing(true);
+    setChatResponse(null);
+    try {
+      await processText(text);
+    } finally {
+      setIsTranscribing(false);
+    }
+  };
+
+  // Global spacebar push-to-talk
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent): void => {
       if (
@@ -277,6 +372,7 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
       if (e.code === "Space" && !isSpaceHeldRef.current && !isProcessing && !extractedExpense && !chatResponse) {
         e.preventDefault();
         isSpaceHeldRef.current = true;
+        startedViaButtonRef.current = false;
         startRecording();
       }
     };
@@ -300,23 +396,105 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
     };
   }, [startRecording, stopRecording, isRecording, isProcessing, extractedExpense, chatResponse]);
 
+  // Determine whether to show the idle state (popup visible, nothing else active)
+  const isIdle = isVisible && !isRecording && !isProcessing && !error && !extractedExpense && !chatResponse && !showManualInput && !showReceiptScanner;
+
   if (!isVisible) return null;
+
+  // Receipt scanner has its own modal — render only that, no overlay
+  if (showReceiptScanner && !isRecording && !isProcessing && !extractedExpense && !chatResponse) {
+    return (
+      <ReceiptScanner
+        onClose={() => { setShowReceiptScanner(false); handleDismiss(); }}
+        onSuccess={handleReceiptSuccess}
+      />
+    );
+  }
+
+  // Idle state renders as a small dropdown below the FAB — no overlay
+  if (isIdle) {
+    return (
+      <>
+        <div className="idle-backdrop" onClick={handleDismiss} />
+        <div className="quick-record-dropdown" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+          <button className="idle-dropdown-btn" onClick={() => { startedViaButtonRef.current = true; startRecording(); }}>
+            <div className="idle-dropdown-icon idle-dropdown-icon--mic">
+              <Mic size={18} />
+            </div>
+            <span>Voice</span>
+          </button>
+          <button className="idle-dropdown-btn" onClick={() => setShowManualInput(true)}>
+            <div className="idle-dropdown-icon idle-dropdown-icon--type">
+              <Keyboard size={18} />
+            </div>
+            <span>Type</span>
+          </button>
+          <button className="idle-dropdown-btn" onClick={() => setShowReceiptScanner(true)}>
+            <div className="idle-dropdown-icon idle-dropdown-icon--scan">
+              <Camera size={18} />
+            </div>
+            <span>Scan</span>
+          </button>
+        </div>
+      </>
+    );
+  }
 
   return (
     <>
+      {!showPantryModal && (
       <div className="quick-record-overlay" onClick={handleDismiss}>
         <div
           className="quick-record-popup"
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
         >
+          {/* Manual Input State */}
+          {showManualInput && !isProcessing && !extractedExpense && !chatResponse && (
+            <div className="quick-record-manual">
+              <h3>Type your message</h3>
+              <textarea
+                ref={manualInputRef}
+                className="quick-record-textarea"
+                value={manualInput}
+                onChange={(e) => setManualInput(e.target.value)}
+                placeholder="e.g. 'I spent $20 at Walmart', 'How many eggs do I have?', 'What can I cook?'"
+                rows={3}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && !e.shiftKey) {
+                    e.preventDefault();
+                    handleManualSubmit();
+                  }
+                }}
+              />
+              <div className="quick-record-actions">
+                <button
+                  className="confirm-btn"
+                  onClick={handleManualSubmit}
+                  disabled={!manualInput.trim()}
+                >
+                  <Send size={18} />
+                  <span>Send</span>
+                </button>
+                <button className="dismiss-btn" onClick={() => setShowManualInput(false)}>
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Recording State */}
           {isRecording && (
             <div className="quick-record-recording">
-              <div className="recording-pulse">
+              <div
+                className={`recording-pulse${startedViaButtonRef.current ? " clickable" : ""}`}
+                onClick={startedViaButtonRef.current ? stopRecording : undefined}
+              >
                 <Mic size={32} />
               </div>
               <div className="recording-time">{formatTime(recordingTime)}</div>
-              <p className="recording-hint">Release spacebar to stop</p>
+              <p className="recording-hint">
+                {startedViaButtonRef.current ? "Tap the mic to stop" : "Release spacebar to stop"}
+              </p>
             </div>
           )}
 
@@ -373,7 +551,6 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
                   <Check size={18} />
                   <span>Done</span>
                 </button>
-                {/* Show "Add to Pantry" only for grocery expenses */}
                 {pendingPantryExpense && (
                   <button
                     className="pantry-btn"
@@ -390,7 +567,7 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
             </div>
           )}
 
-          {/* Chat Response State -- non-expense intents (queries, suggestions) */}
+          {/* Chat Response State */}
           {chatResponse && !isProcessing && !extractedExpense && (
             <div className="quick-record-result quick-record-chat">
               <h3>
@@ -417,8 +594,9 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
           )}
         </div>
       </div>
+      )}
 
-      {/* Pantry Modal -- shown after a grocery expense to add items to pantry */}
+      {/* Pantry Modal */}
       {showPantryModal && pendingPantryExpense && (
         <AddToPantryModal
           expense={pendingPantryExpense}
@@ -435,6 +613,8 @@ const QuickRecordPopup: React.FC<Props> = ({ showToast }) => {
       )}
     </>
   );
-};
+});
+
+QuickRecordPopup.displayName = "QuickRecordPopup";
 
 export default QuickRecordPopup;

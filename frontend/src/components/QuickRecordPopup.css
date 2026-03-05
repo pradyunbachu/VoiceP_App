@@ -63,6 +63,14 @@
   margin-bottom: 1rem;
 }
 
+.recording-pulse.clickable {
+  cursor: pointer;
+}
+
+.recording-pulse.clickable:hover {
+  transform: scale(1.08);
+}
+
 @keyframes pulse {
   0%, 100% {
     transform: scale(1);
@@ -285,6 +293,128 @@
   margin-bottom: 0;
 }
 
+/* Idle dropdown — anchored below the FAB */
+.idle-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+}
+
+.quick-record-dropdown {
+  position: fixed;
+  top: 130px;
+  left: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 12px;
+  padding: 6px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+  animation: dropdownSlide 0.15s ease-out;
+}
+
+@keyframes dropdownSlide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.idle-dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 14px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+  transition: background 0.12s, color 0.12s;
+}
+
+.idle-dropdown-btn:hover {
+  background: var(--bg-input);
+  color: var(--text-primary);
+}
+
+.idle-dropdown-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.idle-dropdown-icon--mic {
+  background: linear-gradient(135deg, var(--accent-danger) 0%, var(--accent-danger-dark, #c0392b) 100%);
+  color: white;
+}
+
+.idle-dropdown-icon--type {
+  background: var(--accent-primary);
+  color: white;
+}
+
+.idle-dropdown-icon--scan {
+  background: var(--bg-input);
+  color: var(--text-primary);
+  border: 1px solid var(--border-primary);
+}
+
+/* Manual Input State */
+.quick-record-manual {
+  padding: 0.5rem 0;
+}
+
+.quick-record-manual h3 {
+  margin: 0 0 1rem 0;
+  color: var(--text-primary);
+  font-size: 1.1rem;
+}
+
+.quick-record-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid var(--border-primary);
+  border-radius: 10px;
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-family: 'Bricolage Grotesque', sans-serif;
+  font-size: 0.95rem;
+  resize: none;
+  outline: none;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+}
+
+.quick-record-textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.quick-record-textarea::placeholder {
+  color: var(--text-tertiary);
+}
+
+.confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
 /* Dark mode adjustments */
 [data-theme="dark"] .quick-record-popup {
   box-shadow: 0 20px 60px rgba(10, 8, 4, 0.6);
@@ -307,5 +437,10 @@
 
   .dismiss-btn {
     order: 3;
+  }
+
+  .quick-record-dropdown {
+    top: 118px;
+    left: 16px;
   }
 }

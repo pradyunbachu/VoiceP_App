@@ -499,6 +499,87 @@ async def get_pantry_stats(
     }
 
 
+@router.post("/pantry/seed-demo")
+@limiter.limit("5/minute")
+async def seed_demo_pantry(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Bulk-insert demo pantry items for new users. Idempotent — skips if user already has items."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    # Check if user already has pantry items — return early if so
+    existing = supabase.table("pantry_items").select("id").eq("user_id", current_user["id"]).limit(1).execute()
+    if existing.data:
+        return {"message": "Pantry already has items, skipping demo seed", "seeded": False}
+
+    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now().isoformat()
+    user_id = current_user["id"]
+
+    demo_items = [
+        # Produce — staggered expiration for realistic alerts
+        {"name": "Bananas", "quantity": 2, "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")},
+        {"name": "Spinach", "quantity": 1, "unit": "bag", "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")},
+        {"name": "Carrots", "quantity": 6, "category": "Produce"},
+        {"name": "Bell Peppers", "quantity": 3, "category": "Produce"},
+        {"name": "Onions", "quantity": 4, "category": "Produce"},
+        {"name": "Tomatoes", "quantity": 3, "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d")},
+        # Dairy
+        {"name": "Milk", "quantity": 1, "unit": "gal", "category": "Dairy", "stock_status": "low"},
+        {"name": "Eggs", "quantity": 12, "category": "Dairy"},
+        {"name": "Greek Yogurt", "quantity": 2, "category": "Dairy"},
+        {"name": "Cheddar Cheese", "quantity": 1, "unit": "block", "category": "Dairy"},
+        # Meat & Seafood
+        {"name": "Chicken Breast", "quantity": 2, "unit": "lbs", "category": "Meat & Seafood", "expiration_date": (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")},
+        {"name": "Ground Beef", "quantity": 1, "unit": "lb", "category": "Meat & Seafood", "expiration_date": (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")},
+        # Grains & Pasta
+        {"name": "Rice", "quantity": 2, "unit": "lbs", "category": "Grains & Pasta"},
+        {"name": "Pasta", "quantity": 1, "unit": "box", "category": "Grains & Pasta"},
+        {"name": "Bread", "quantity": 1, "unit": "loaf", "category": "Grains & Pasta", "expiration_date": (datetime.now() + timedelta(days=3)).strftime("%Y-%m-%d")},
+        # Condiments
+        {"name": "Olive Oil", "quantity": 1, "unit": "bottle", "category": "Condiments"},
+        {"name": "Soy Sauce", "quantity": 1, "unit": "bottle", "category": "Condiments"},
+        # Frozen
+        {"name": "Frozen Broccoli", "quantity": 1, "unit": "bag", "category": "Frozen"},
+        # Snacks
+        {"name": "Granola Bars", "quantity": 6, "category": "Snacks"},
+    ]
+
+    created_items = []
+    for item in demo_items:
+        expiration_date = item.get("expiration_date")
+        expiration_predicted = False
+        if not expiration_date:
+            expiration_date = predict_expiration(item["name"], item["category"], today)
+            expiration_predicted = expiration_date is not None
+
+        row = {
+            "user_id": user_id,
+            "name": item["name"],
+            "quantity": item.get("quantity", 1),
+            "unit": item.get("unit"),
+            "category": item["category"],
+            "expiration_date": expiration_date,
+            "purchase_date": today,
+            "stock_status": item.get("stock_status", "full"),
+            "notes": "Demo item",
+            "expiration_predicted": expiration_predicted,
+            "created_at": now,
+            "updated_at": now,
+        }
+        response = supabase.table("pantry_items").insert(row).execute()
+        if response.data:
+            created_items.append(response.data[0])
+
+    return {
+        "message": f"Seeded {len(created_items)} demo pantry items",
+        "seeded": True,
+        "count": len(created_items),
+    }
+
+
 @router.post("/pantry/resync")
 @limiter.limit("10/minute")
 async def resync_pantry(
