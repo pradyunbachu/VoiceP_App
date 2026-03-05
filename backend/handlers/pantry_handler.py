@@ -71,6 +71,7 @@ def categorize_pantry_item(name: str) -> str:
     return "Other"
 
 
+def is_recognized_food(name: str) -> bool:
     """Check if the item name contains at least one known grocery word.
 
     Items that categorize as 'Other' and fail this check are likely
