@@ -10,6 +10,7 @@ const useAudioRecorder = () => {
   const streamRef = useRef<MediaStream | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const onStopCallbackRef = useRef<OnStopCallback | null>(null);
+  const lastStopTimeRef = useRef<number>(0);
 
   useEffect(() => {
     if (isRecording) {
@@ -37,7 +38,12 @@ const useAudioRecorder = () => {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   }, []);
 
+  const RECORDING_COOLDOWN_MS = 1500;
+
   const startRecording = useCallback(async (onStop: OnStopCallback) => {
+    // Cooldown guard: prevent rapid re-record after stopping
+    if (Date.now() - lastStopTimeRef.current < RECORDING_COOLDOWN_MS) return;
+
     onStopCallbackRef.current = onStop;
 
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -88,6 +94,7 @@ const useAudioRecorder = () => {
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      lastStopTimeRef.current = Date.now();
     }
   }, [isRecording]);
 

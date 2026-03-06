@@ -23,6 +23,8 @@ import {
   List,
   Download,
   RefreshCw,
+  ShoppingCart,
+  ChefHat,
 } from "lucide-react";
 import {
   KeyboardSensor,
@@ -44,10 +46,11 @@ import {
   useBulkDeletePantryItems,
   useResyncPantry,
   useUndoDelete,
+  useCreateShoppingListItem,
 } from "../hooks";
 import { exportPantryCsv } from "../lib/csvExport";
 import { detectCategory } from "../lib/categoryDetection";
-import { isExpired } from "../lib/pantryUtils";
+import { isExpired, isExpiringSoon } from "../lib/pantryUtils";
 import LoadingSkeleton from "./LoadingSkeleton";
 import PantryFilters from "./PantryFilters";
 import PantryBulkActions from "./PantryBulkActions";
@@ -60,6 +63,7 @@ interface Props {
   showToast: ShowToast;
   selectedGroupId: number | null | "demo";
   onSelectGroup: (groupId: number | null | "demo") => void;
+  onCookExpiring?: (itemNames: string[]) => void;
 }
 
 type ViewMode = "shelf" | "list";
@@ -87,7 +91,7 @@ interface EditFormData {
   expiration_predicted?: boolean;
 }
 
-const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup }) => {
+const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, onCookExpiring }) => {
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
@@ -195,6 +199,41 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup }) 
   const bulkDeleteMutation = useBulkDeletePantryItems();
   const resyncMutation = useResyncPantry();
   const { scheduleDelete } = useUndoDelete(showToast);
+  const addToShoppingListMutation = useCreateShoppingListItem();
+
+  // Derive low stock and expiring-soon items for action banners
+  const lowStockItems = useMemo<PantryItem[]>(() => {
+    return items.filter((item) => item.stock_status === "low" || item.stock_status === "out_of_stock");
+  }, [items]);
+
+  const expiringItems = useMemo<PantryItem[]>(() => {
+    return items.filter((item) => isExpiringSoon(item.expiration_date) && !isExpired(item.expiration_date));
+  }, [items]);
+
+  const handleAddLowStockToList = async () => {
+    if (lowStockItems.length === 0) return;
+    let added = 0;
+    for (const item of lowStockItems) {
+      try {
+        await addToShoppingListMutation.mutateAsync({
+          name: item.name,
+          quantity: 1,
+          unit: item.unit || "",
+          category: item.category || "",
+          notes: "",
+        });
+        added++;
+      } catch { /* skip duplicates or errors */ }
+    }
+    if (added > 0) {
+      showToast(`Added ${added} item${added !== 1 ? "s" : ""} to shopping list`, "success");
+    }
+  };
+
+  const handleCookExpiring = () => {
+    if (expiringItems.length === 0 || !onCookExpiring) return;
+    onCookExpiring(expiringItems.map((item) => item.name));
+  };
 
   // Server-side filtering has already been applied via query params,
   // so no additional client-side filtering is needed.
@@ -622,6 +661,35 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup }) 
                 <span className="stat-label">Expiring Soon</span>
               </div>
             </div>
+          )}
+        </div>
+      )}
+
+      {/* Kitchen Action Banners */}
+      {!isDemoMode && (lowStockItems.length > 0 || expiringItems.length > 0) && (
+        <div className="pantry-action-banners">
+          {lowStockItems.length > 0 && (
+            <button
+              className="pantry-action-banner pantry-action-banner--shopping"
+              onClick={handleAddLowStockToList}
+              disabled={addToShoppingListMutation.isPending}
+            >
+              <ShoppingCart size={16} />
+              <span>
+                {addToShoppingListMutation.isPending
+                  ? "Adding..."
+                  : `Add ${lowStockItems.length} low stock item${lowStockItems.length !== 1 ? "s" : ""} to shopping list`}
+              </span>
+            </button>
+          )}
+          {expiringItems.length > 0 && onCookExpiring && (
+            <button
+              className="pantry-action-banner pantry-action-banner--chef"
+              onClick={handleCookExpiring}
+            >
+              <ChefHat size={16} />
+              <span>Cook with {expiringItems.length} expiring item{expiringItems.length !== 1 ? "s" : ""}</span>
+            </button>
           )}
         </div>
       )}

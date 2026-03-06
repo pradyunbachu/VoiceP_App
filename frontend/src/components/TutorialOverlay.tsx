@@ -31,35 +31,35 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: null,
     title: "Welcome to Voxal!",
     description:
-      "Your voice-powered finance and kitchen assistant. We've stocked your pantry with sample items so you can explore right away — let's take a quick tour.",
-  },
-  {
-    id: "voxy-fab",
-    target: '[data-tutorial="voxy-fab"]',
-    title: "Meet Voxy",
-    description:
-      "Tap the mic button to record your voice, type a message, or scan a receipt. This is available on every page. Pro tip: hold spacebar to quick-record!",
+      "Your voice-powered kitchen assistant. We've stocked your pantry with sample items so you can explore right away — let's take a quick tour.",
   },
   {
     id: "quick-actions",
     target: '[data-tutorial="quick-actions"]',
     title: "Quick Actions",
     description:
-      "Log an expense, scan a receipt, add to your shopping list, or find a recipe — all in one tap.",
-  },
-  {
-    id: "expenses-card",
-    target: '[data-tutorial="expenses-card"]',
-    title: "Weekly Spending",
-    description:
-      "See your spending at a glance with a daily breakdown. Tap the card to dive into the full Expenses view where you can browse, edit, and filter every transaction.",
+      "Jump to your pantry, add to your shopping list, find a recipe, or use voice input — all in one tap.",
   },
   {
     id: "pantry-card",
     target: '[data-tutorial="pantry-card"]',
     title: "Pantry Alerts",
     description:
-      "Stay on top of low stock and expiring items. We've added some sample items that are expiring soon so you can see this in action — tap the card to manage your pantry!",
+      "Stay on top of low stock and expiring items. We've added some sample items that are expiring soon so you can see this in action — tap to manage your pantry!",
+  },
+  {
+    id: "shopping-card",
+    target: '[data-tutorial="shopping-card"]',
+    title: "Shopping List",
+    description:
+      "Keep track of what you need. When you buy something, tap the pantry icon to move it straight into your pantry. Low stock items can be added from the pantry page too!",
+  },
+  {
+    id: "expenses-card",
+    target: '[data-tutorial="expenses-card"]',
+    title: "Spending Overview",
+    description:
+      "See your weekly grocery spending at a glance. Tap the card for a full breakdown with filters and charts.",
   },
   {
     id: "budget-card",
@@ -69,32 +69,25 @@ const TUTORIAL_STEPS: TutorialStep[] = [
       "Set monthly spending limits by category and track your progress. The bar fills up as you spend — red means you're over budget.",
   },
   {
-    id: "shopping-card",
-    target: '[data-tutorial="shopping-card"]',
-    title: "Shopping List",
-    description:
-      "Your shopping list auto-removes items when you log a grocery purchase, so it always stays up to date. Ask Voxy to add items by voice!",
-  },
-  {
-    id: "finance",
-    target: '[data-tutorial="finance-tab"]',
-    title: "Finance Hub",
-    description:
-      "Your complete money management center. View spending charts, browse transactions, set budget limits, and get AI-powered insights that spot trends and saving opportunities.",
-  },
-  {
     id: "kitchen",
     target: '[data-tutorial="kitchen-tab"]',
-    title: "Kitchen Hub",
+    title: "Pantry",
     description:
-      "Manage your food here. Your pantry is pre-stocked with sample items — try the Chef to generate recipes from what's already there!",
+      "Your pantry is pre-stocked with sample items. Manage your inventory, and use the action banners to add low stock items to your shopping list or cook with expiring ones!",
   },
   {
     id: "nav",
     target: '[data-tutorial="nav-tabs"]',
     title: "Navigation",
     description:
-      "Use these tabs to move between sections. Tap Home to come back to this dashboard anytime. You're all set!",
+      "Pantry, Shopping, and Chef are right here in the top bar. Finance lives in the dropdown for when you need it. Tap Home to come back to the dashboard anytime.",
+  },
+  {
+    id: "voxy-fab",
+    target: '[data-tutorial="voxy-fab"]',
+    title: "Meet Voxy",
+    description:
+      "Tap the mic button to record your voice, type a message, or scan a receipt. Available on every page. Pro tip: hold spacebar to quick-record! You're all set!",
   },
 ];
 
@@ -111,7 +104,7 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
   const isFirst = currentStep === 0;
   const isLast = currentStep === TUTORIAL_STEPS.length - 1;
 
-  const updateSpotlight = useCallback((): void => {
+  const measureSpotlight = useCallback((): void => {
     if (!step.target) {
       setSpotlightRect(null);
       return;
@@ -131,16 +124,32 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
     });
   }, [step.target]);
 
+  // Scroll the target element into view, then measure its position
+  const scrollAndSpotlight = useCallback((): void => {
+    if (!step.target) {
+      setSpotlightRect(null);
+      return;
+    }
+    const el = document.querySelector(step.target);
+    if (!el) {
+      setSpotlightRect(null);
+      return;
+    }
+    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+    // Measure after scroll animation settles
+    setTimeout(measureSpotlight, 350);
+  }, [step.target, measureSpotlight]);
+
   useEffect(() => {
     if (!isOpen) return;
-    updateSpotlight();
-    window.addEventListener("resize", updateSpotlight);
-    window.addEventListener("scroll", updateSpotlight, true);
+    scrollAndSpotlight();
+    window.addEventListener("resize", measureSpotlight);
+    window.addEventListener("scroll", measureSpotlight, true);
     return () => {
-      window.removeEventListener("resize", updateSpotlight);
-      window.removeEventListener("scroll", updateSpotlight, true);
+      window.removeEventListener("resize", measureSpotlight);
+      window.removeEventListener("scroll", measureSpotlight, true);
     };
-  }, [isOpen, updateSpotlight]);
+  }, [isOpen, scrollAndSpotlight, measureSpotlight]);
 
   useEffect(() => {
     if (!isOpen) return;

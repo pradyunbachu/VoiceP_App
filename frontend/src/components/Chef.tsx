@@ -6,7 +6,7 @@
  * to get AI-powered recipe suggestions. Clicking a recipe card opens the
  * RecipeDetailPanel in a modal overlay; "I made this!" deducts pantry.
  */
-import { useState, useRef, useMemo, useCallback } from 'react';
+import { useState, useRef, useMemo, useCallback, useEffect } from 'react';
 import {
   DndContext,
   DragOverlay,
@@ -72,11 +72,13 @@ function DroppableBowl({ children, isOver }: { children: React.ReactNode; isOver
 interface ChefProps {
   showToast: ShowToast;
   selectedGroupId?: number | null | "demo";
+  initialBowlItemNames?: string[];
+  onInitialItemsConsumed?: () => void;
 }
 
 interface RecipeDetailResponse extends RecipeDetail {}
 
-const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId }) => {
+const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItemNames, onInitialItemsConsumed }) => {
   // State
   const [bowlItems, setBowlItems] = useState<PantryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -111,6 +113,19 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId }) => {
     if (!pantryData || !Array.isArray(pantryData)) return [];
     return pantryData as PantryItem[];
   }, [pantryData, isDemoMode]);
+
+  // Auto-populate bowl from initial items (e.g. "Cook with expiring items" from Pantry)
+  useEffect(() => {
+    if (!initialBowlItemNames || initialBowlItemNames.length === 0 || pantryItems.length === 0) return;
+    const nameLower = new Set(initialBowlItemNames.map((n) => n.toLowerCase()));
+    const matched = pantryItems.filter(
+      (item) => nameLower.has(item.name.toLowerCase()) && (item.quantity ?? 0) > 0 && item.stock_status !== 'out_of_stock'
+    );
+    if (matched.length > 0) {
+      setBowlItems(matched);
+    }
+    onInitialItemsConsumed?.();
+  }, [initialBowlItemNames, pantryItems, onInitialItemsConsumed]);
 
   // Filtered pantry list
   const filteredItems = useMemo(() => {

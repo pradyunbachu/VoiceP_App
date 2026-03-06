@@ -238,6 +238,14 @@
   color: var(--accent-danger);
 }
 
+.item-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  flex-shrink: 0;
+}
+
+.item-add-to-pantry,
 .item-delete {
   display: flex;
   align-items: center;
@@ -253,8 +261,14 @@
   transition: all 0.15s;
 }
 
+.shopping-item:hover .item-add-to-pantry,
 .shopping-item:hover .item-delete {
   opacity: 1;
+}
+
+.item-add-to-pantry:hover {
+  color: var(--accent-primary);
+  background: var(--accent-primary-bg);
 }
 
 .item-delete:hover {
@@ -262,6 +276,7 @@
   background: rgba(239, 68, 68, 0.1);
 }
 
+.item-add-to-pantry:disabled,
 .item-delete:disabled {
   cursor: not-allowed;
   opacity: 0.5;
@@ -449,6 +464,7 @@
     padding: 0.75rem 1rem;
   }
 
+  .item-add-to-pantry,
   .item-delete {
     opacity: 1;
   }

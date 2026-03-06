@@ -57,6 +57,9 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
   const cancelledRef = useRef<boolean>(false);
   const startedViaButtonRef = useRef<boolean>(false);
   const manualInputRef = useRef<HTMLTextAreaElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isProcessingRef = useRef<boolean>(false);
+  const lastStopTimeRef = useRef<number>(0);
 
   // React Query mutations
   const createExpenseMutation = useCreateExpense();
@@ -128,8 +131,11 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
     }
   };
 
+  const RECORDING_COOLDOWN_MS = 1500;
+
   const startRecording = useCallback(async (): Promise<void> => {
     if (isRecording || isProcessing) return;
+    if (Date.now() - lastStopTimeRef.current < RECORDING_COOLDOWN_MS) return;
 
     try {
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
@@ -191,10 +197,21 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
     if (mediaRecorderRef.current && isRecording) {
       mediaRecorderRef.current.stop();
       setIsRecording(false);
+      lastStopTimeRef.current = Date.now();
     }
   }, [isRecording]);
 
   const processAudio = async (audioBlob: Blob, mimeType: string = "audio/webm"): Promise<void> => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    // Cancel any in-flight request before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setIsTranscribing(true);
     setChatResponse(null);
 
@@ -220,6 +237,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
           headers: transcribeHeaders,
           credentials: "include",
           body: formData,
+          signal: abortController.signal,
         }
       );
 
@@ -232,11 +250,13 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
 
       await processText(transcriptData.transcript);
     } catch (error) {
+      if ((error as Error).name === "AbortError") return;
       const err = error as Error;
       console.error("Error processing audio:", err);
       setError(friendlyError(err.message));
     } finally {
       setIsTranscribing(false);
+      isProcessingRef.current = false;
     }
   };
 
@@ -304,6 +324,12 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
   };
 
   const handleDismiss = (): void => {
+    // Cancel any in-flight transcription/processing requests
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    isProcessingRef.current = false;
     // Stop any active recording and skip processing
     cancelledRef.current = true;
     if (mediaRecorderRef.current && mediaRecorderRef.current.state !== "inactive") {
@@ -333,7 +359,8 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
   // Manual input submission
   const handleManualSubmit = async (): Promise<void> => {
     const text = manualInput.trim();
-    if (!text || isProcessing) return;
+    if (!text || isProcessing || isProcessingRef.current) return;
+    isProcessingRef.current = true;
     setShowManualInput(false);
     setManualInput("");
     setIsTranscribing(true);
@@ -342,6 +369,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
       await processText(text);
     } finally {
       setIsTranscribing(false);
+      isProcessingRef.current = false;
     }
   };
 

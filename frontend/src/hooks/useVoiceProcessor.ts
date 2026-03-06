@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "./index";
 import { API_BASE_URL } from "../config/api";
@@ -30,6 +30,8 @@ const useVoiceProcessor = () => {
   const createExpenseSimpleMutation = useCreateExpenseSimple();
   const chatMutation = useChat();
   const removePurchasedMutation = useRemovePurchasedItems();
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const isProcessingRef = useRef(false);
 
   const loading = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
@@ -108,6 +110,16 @@ const useVoiceProcessor = () => {
   };
 
   const processAudio = async (audioBlob: Blob, mimeType = "audio/webm") => {
+    if (isProcessingRef.current) return;
+    isProcessingRef.current = true;
+
+    // Cancel any in-flight request before starting a new one
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     setIsTranscribing(true);
     setTranscript("");
     setExtractedExpense(null);
@@ -129,6 +141,7 @@ const useVoiceProcessor = () => {
         headers: transcribeHeaders,
         credentials: "include",
         body: formData,
+        signal: abortController.signal,
       });
 
       if (!transcriptResponse.ok) {
@@ -156,16 +169,20 @@ const useVoiceProcessor = () => {
         setChatResponse(chatResult as ChatResponse);
       }
     } catch (err) {
+      if ((err as Error).name === "AbortError") return;
       const e = err as Error;
       console.error("Error processing audio:", e);
       setError(getFriendlyError(e.message || "Unknown error occurred"));
     } finally {
       setIsTranscribing(false);
+      isProcessingRef.current = false;
     }
   };
 
   const processManualInput = async (input: string): Promise<boolean> => {
     if (!input.trim()) { setError("Please enter your message"); return false; }
+    if (isProcessingRef.current) return false;
+    isProcessingRef.current = true;
     setError(""); setTranscript(""); setExtractedExpense(null); setChatResponse(null);
 
     try {
@@ -183,10 +200,17 @@ const useVoiceProcessor = () => {
       console.error("Error processing manual input:", e);
       setError(getFriendlyError(e.message));
       return false;
+    } finally {
+      isProcessingRef.current = false;
     }
   };
 
   const clearState = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+      abortControllerRef.current = null;
+    }
+    isProcessingRef.current = false;
     setTranscript("");
     setExtractedExpense(null);
     setChatResponse(null);

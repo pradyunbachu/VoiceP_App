@@ -41,6 +41,7 @@ function AppContent() {
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedPantryGroup, setSelectedPantryGroup] = useState<number | null | "demo">(null);
+  const [chefInitialItems, setChefInitialItems] = useState<string[]>([]);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
 
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
@@ -264,6 +265,10 @@ function AppContent() {
               showToast={showToast}
               selectedGroupId={selectedPantryGroup}
               onSelectGroup={setSelectedPantryGroup}
+              onCookExpiring={(itemNames) => {
+                setChefInitialItems(itemNames);
+                setCurrentView("chef");
+              }}
             />
           </div>
         );
@@ -279,7 +284,7 @@ function AppContent() {
       case "chef":
         return (
           <div className="view-container" key="chef">
-            <Chef showToast={showToast} selectedGroupId={selectedPantryGroup} />
+            <Chef showToast={showToast} selectedGroupId={selectedPantryGroup} initialBowlItemNames={chefInitialItems} onInitialItemsConsumed={() => setChefInitialItems([])} />
           </div>
         );
       case "settings":

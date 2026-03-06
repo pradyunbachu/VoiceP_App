@@ -27,6 +27,7 @@ import {
   usePantryItems,
   useGrocerySuggestions,
   useUndoDelete,
+  useCreatePantryItem,
 } from "../hooks";
 import { useOnlineStatus } from "../hooks/queries/useShoppingList";
 import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
@@ -68,6 +69,7 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   const createMutation = useCreateShoppingListItem();
   const deleteMutation = useDeleteShoppingListItem();
   const clearMutation = useClearShoppingList();
+  const addToPantryMutation = useCreatePantryItem();
   const { scheduleDelete } = useUndoDelete(showToast);
 
   // Grocery autocomplete suggestions hook
@@ -275,6 +277,28 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
     }
   };
 
+  // Add a shopping item to the pantry and remove it from the list ("bought it")
+  const handleAddToPantry = async (item: ShoppingListItem) => {
+    try {
+      await addToPantryMutation.mutateAsync({
+        name: item.name,
+        quantity: item.quantity || 1,
+        unit: item.unit || "",
+        category: item.category || "",
+        stock_status: "full",
+        expiration_date: "",
+        purchase_date: new Date().toISOString().split("T")[0],
+        notes: "",
+      });
+      // Remove from shopping list after adding to pantry
+      await deleteMutation.mutateAsync(item.id);
+      showToast(`${item.name} added to pantry`, "success");
+    } catch (error) {
+      console.error("Error adding to pantry:", error);
+      showToast("Error adding item to pantry", "error");
+    }
+  };
+
   // Check if a pantry item is already represented in the shopping list
   // using the semantic match map (compares as strings for type safety).
   const isItemInShoppingList = (pantryItemId: number) => {
@@ -438,14 +462,24 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
                         </div>
                       )}
                     </div>
-                    <button
-                      className="item-delete"
-                      onClick={() => handleDelete(item.id)}
-                      disabled={deleteMutation.isPending || !isOnline}
-                      title="Remove item"
-                    >
-                      <Trash2 size={16} />
-                    </button>
+                    <div className="item-actions">
+                      <button
+                        className="item-add-to-pantry"
+                        onClick={() => handleAddToPantry(item)}
+                        disabled={addToPantryMutation.isPending || !isOnline}
+                        title="Bought — add to pantry"
+                      >
+                        <Package size={16} />
+                      </button>
+                      <button
+                        className="item-delete"
+                        onClick={() => handleDelete(item.id)}
+                        disabled={deleteMutation.isPending || !isOnline}
+                        title="Remove item"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
                   </li>
                 );
               })}

@@ -42,11 +42,11 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
           <Mic size={48} className="logo-icon" />
           <h1 className="landing-title">voxal</h1>
           <p className="landing-tagline">
-            Stop wasting food and money on groceries.
+            Your kitchen, organized by voice.
           </p>
           <p className="landing-description">
-            Say what you bought. We track the spending, stock your pantry, and
-            tell you what to cook before anything expires.
+            Track what's in your pantry, get recipes before food expires,
+            and keep your shopping list in sync — all with one sentence.
           </p>
           {!isAuthenticated ? (
             <button className="get-started-button" onClick={onGetStarted}>
@@ -59,10 +59,6 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
           )}
           <div className="highlight-pills">
             <div className="highlight-pill">
-              <Mic size={16} />
-              <span>Voice-First</span>
-            </div>
-            <div className="highlight-pill">
               <Package size={16} />
               <span>Smart Pantry</span>
             </div>
@@ -71,8 +67,12 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               <span>Meal Recipes</span>
             </div>
             <div className="highlight-pill">
-              <TrendingDown size={16} />
-              <span>Grocery Insights</span>
+              <ShoppingCart size={16} />
+              <span>Shopping Lists</span>
+            </div>
+            <div className="highlight-pill">
+              <Mic size={16} />
+              <span>Voice-First</span>
             </div>
           </div>
         </div>
@@ -90,15 +90,6 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
           </div>
           <div className="connector-line" />
           <div className="result-cards">
-            <div className="result-card result-card-blue">
-              <div className="result-card-icon blue">
-                <TrendingDown size={18} />
-              </div>
-              <div className="result-card-text">
-                <strong>Expense Logged</strong>
-                <span>$22 at Costco, filed under Groceries</span>
-              </div>
-            </div>
             <div className="result-card result-card-purple">
               <div className="result-card-icon purple">
                 <Package size={18} />
@@ -115,6 +106,15 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               <div className="result-card-text">
                 <strong>List Updated</strong>
                 <span>Items auto-checked off your shopping list</span>
+              </div>
+            </div>
+            <div className="result-card result-card-blue">
+              <div className="result-card-icon blue">
+                <TrendingDown size={18} />
+              </div>
+              <div className="result-card-text">
+                <strong>Expense Logged</strong>
+                <span>$22 at Costco, filed under Groceries</span>
               </div>
             </div>
           </div>
@@ -158,10 +158,10 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
             <div className="feature-icon red">
               <TrendingDown size={24} />
             </div>
-            <h3>Grocery Spending Insights</h3>
+            <h3>Grocery Spending</h3>
             <p>
-              See where your grocery money goes. Track by store, category, and
-              week.
+              Automatically track what you spend on groceries. See trends by
+              store and category.
             </p>
           </div>
         </div>
@@ -173,41 +173,41 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
         <div className="loop-steps">
           <div className="loop-step">
             <div className="loop-step-icon">
-              <Mic size={24} />
-            </div>
-            <strong>Speak</strong>
-            <span>Log groceries with your voice</span>
-          </div>
-          <ArrowRight size={20} className="loop-arrow" />
-          <div className="loop-step">
-            <div className="loop-step-icon">
               <Package size={24} />
             </div>
-            <strong>Auto-sorted</strong>
-            <span>Pantry + expenses update instantly</span>
+            <strong>Stock up</strong>
+            <span>Add groceries to your pantry</span>
           </div>
           <ArrowRight size={20} className="loop-arrow" />
           <div className="loop-step">
             <div className="loop-step-icon">
               <ChefHat size={24} />
             </div>
-            <strong>Get recipes</strong>
-            <span>Based on what you already have</span>
+            <strong>Cook</strong>
+            <span>Get recipes from what you have</span>
           </div>
           <ArrowRight size={20} className="loop-arrow" />
           <div className="loop-step">
             <div className="loop-step-icon">
               <ShoppingCart size={24} />
             </div>
-            <strong>Shop smart</strong>
-            <span>List updates for next trip</span>
+            <strong>Restock</strong>
+            <span>Shopping list fills automatically</span>
+          </div>
+          <ArrowRight size={20} className="loop-arrow" />
+          <div className="loop-step">
+            <div className="loop-step-icon">
+              <Mic size={24} />
+            </div>
+            <strong>Repeat</strong>
+            <span>Voice-log your next haul</span>
           </div>
         </div>
       </section>
 
       {/* Section 5: Bottom CTA */}
       <section className="landing-section landing-bottom-cta">
-        <h2>Your groceries, finally under control.</h2>
+        <h2>Your kitchen, finally under control.</h2>
         <p>Free to use. No credit card needed.</p>
         {!isAuthenticated ? (
           <button className="get-started-button" onClick={onGetStarted}>

@@ -8,7 +8,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
-import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, UtensilsCrossed, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
 
@@ -21,18 +21,13 @@ interface Props {
 
 const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) => {
   const [financeOpen, setFinanceOpen] = useState<boolean>(false);
-  const [kitchenOpen, setKitchenOpen] = useState<boolean>(false);
   const financeRef = useRef<HTMLDivElement>(null);
-  const kitchenRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside
+  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent): void => {
       if (financeRef.current && !financeRef.current.contains(event.target as Node)) {
         setFinanceOpen(false);
-      }
-      if (kitchenRef.current && !kitchenRef.current.contains(event.target as Node)) {
-        setKitchenOpen(false);
       }
     };
 
@@ -41,16 +36,10 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
   }, []);
 
   const isFinanceView = ["dashboard", "expenses", "budgets", "insights", "comparisons"].includes(currentView);
-  const isKitchenView = ["pantry", "shopping-list", "chef"].includes(currentView);
 
   const handleFinanceItemClick = (view: AppView): void => {
     onViewChange(view);
     setFinanceOpen(false);
-  };
-
-  const handleKitchenItemClick = (view: AppView): void => {
-    onViewChange(view);
-    setKitchenOpen(false);
   };
 
   return (
@@ -71,13 +60,40 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
           <span className="nav-label-full">Home</span>
         </button>
 
-        {/* VoxFinance Dropdown */}
+        {/* Pantry Tab */}
+        <button
+          className={`nav-tab ${currentView === "pantry" ? "active" : ""}`}
+          onClick={() => onViewChange("pantry")}
+          data-tutorial="kitchen-tab"
+        >
+          <Package size={18} />
+          <span className="nav-label-full">Pantry</span>
+        </button>
+
+        {/* Shopping List Tab */}
+        <button
+          className={`nav-tab ${currentView === "shopping-list" ? "active" : ""}`}
+          onClick={() => onViewChange("shopping-list")}
+        >
+          <ShoppingCart size={18} />
+          <span className="nav-label-full">Shopping</span>
+        </button>
+
+        {/* Chef Tab */}
+        <button
+          className={`nav-tab ${currentView === "chef" ? "active" : ""}`}
+          onClick={() => onViewChange("chef")}
+        >
+          <ChefHat size={18} />
+          <span className="nav-label-full">Chef</span>
+        </button>
+
+        {/* Finance Dropdown */}
         <div className="nav-dropdown" ref={financeRef}>
           <button
             className={`nav-tab nav-dropdown-trigger ${isFinanceView ? "active" : ""}`}
             onClick={() => {
               setFinanceOpen(!financeOpen);
-              setKitchenOpen(false);
             }}
             data-tutorial="finance-tab"
           >
@@ -121,47 +137,6 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
               >
                 <ArrowLeftRight size={16} />
                 <span>Compare</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* VoxKitchen Dropdown */}
-        <div className="nav-dropdown" ref={kitchenRef}>
-          <button
-            className={`nav-tab nav-dropdown-trigger ${isKitchenView ? "active" : ""}`}
-            onClick={() => {
-              setKitchenOpen(!kitchenOpen);
-              setFinanceOpen(false);
-            }}
-            data-tutorial="kitchen-tab"
-          >
-            <UtensilsCrossed size={18} />
-            <span className="nav-label-full">Kitchen</span>
-            <ChevronDown size={14} className={`dropdown-arrow ${kitchenOpen ? "open" : ""}`} />
-          </button>
-          {kitchenOpen && (
-            <div className="nav-dropdown-menu">
-              <button
-                className={`nav-dropdown-item ${currentView === "pantry" ? "active" : ""}`}
-                onClick={() => handleKitchenItemClick("pantry")}
-              >
-                <Package size={16} />
-                <span>Pantry</span>
-              </button>
-              <button
-                className={`nav-dropdown-item ${currentView === "shopping-list" ? "active" : ""}`}
-                onClick={() => handleKitchenItemClick("shopping-list")}
-              >
-                <ShoppingCart size={16} />
-                <span>Shopping List</span>
-              </button>
-              <button
-                className={`nav-dropdown-item ${currentView === "chef" ? "active" : ""}`}
-                onClick={() => handleKitchenItemClick("chef")}
-              >
-                <ChefHat size={16} />
-                <span>Chef</span>
               </button>
             </div>
           )}

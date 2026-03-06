@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useRef, useEffect } from "react";
 import type { FC } from "react";
 import {
   DollarSign,
@@ -8,10 +8,8 @@ import {
   Package,
   ChevronRight,
   ChefHat,
-  Flame,
   Wallet,
   Mic,
-  Camera,
   ListPlus,
   Sparkles,
   HelpCircle,
@@ -23,7 +21,6 @@ import {
   usePantryItems,
   useShoppingList,
   useCookStats,
-  useStreak,
   useBudgets,
 } from "../hooks";
 import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
@@ -73,7 +70,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
   const allPantryData = isDemoPantry ? DEMO_PANTRY_ITEMS : apiAllPantryData;
   const { data: shoppingItems, isLoading: shoppingLoading } = useShoppingList();
   const { data: cookStats, isLoading: cookStatsLoading } = useCookStats();
-  const { data: streak } = useStreak();
+  // streak hook removed — replaced by activity tracker
   const now = new Date();
   const { data: budgets } = useBudgets({
     month: now.getMonth() + 1,
@@ -164,6 +161,65 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
     };
   }, [expiringItems]);
 
+  // ── Monthly activity tracker ───────────────────────────────
+  const DAY_ABBRS = ["S", "M", "T", "W", "T", "F", "S"];
+  const activityDays = useMemo(() => {
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    const cookDates = new Set<number>();
+    if (cookStats?.recent_meals) {
+      for (const meal of cookStats.recent_meals) {
+        const d = new Date(meal.cooked_at);
+        if (d.getFullYear() === year && d.getMonth() === month) {
+          cookDates.add(d.getDate());
+        }
+      }
+    }
+
+    const expenseDates = new Set<number>();
+    if (expenseData?.expenses) {
+      for (const e of expenseData.expenses) {
+        const d = new Date(e.date);
+        if (d.getFullYear() === year && d.getMonth() === month) {
+          expenseDates.add(d.getDate());
+        }
+      }
+    }
+
+    const days: Array<{
+      day: number;
+      dayOfWeek: number;
+      cooked: boolean;
+      expense: boolean;
+      isToday: boolean;
+    }> = [];
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const date = new Date(year, month, d);
+      days.push({
+        day: d,
+        dayOfWeek: date.getDay(),
+        cooked: cookDates.has(d),
+        expense: expenseDates.has(d),
+        isToday: d === now.getDate(),
+      });
+    }
+
+    return days;
+  }, [now.getFullYear(), now.getMonth(), now.getDate(), cookStats, expenseData]);
+
+  const activityScrollRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = activityScrollRef.current;
+    if (!el) return;
+    const todayEl = el.querySelector(".activity-day--today");
+    if (todayEl) {
+      todayEl.scrollIntoView({ inline: "center", block: "nearest" });
+    }
+  }, [activityDays]);
+
   const isLoading =
     expensesLoading || statsLoading || lowStockLoading || pantryLoading || shoppingLoading || cookStatsLoading;
 
@@ -181,15 +237,9 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
               {getGreeting()}, {firstName}
             </h1>
             <p className="home-date">{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-            <p>Here's what's happening this week</p>
+            <p>Here's what's happening in your kitchen</p>
           </div>
           <div className="home-greeting-actions">
-            {streak && streak.current_streak > 0 && (
-              <div className="home-streak" title={`${streak.current_streak}-day logging streak`}>
-                <Flame size={18} />
-                <span className="home-streak-count">{streak.current_streak}</span>
-              </div>
-            )}
             {onShowTutorial && (
               <button className="home-tutorial-btn" onClick={onShowTutorial} title="Replay tutorial">
                 <HelpCircle size={16} />
@@ -201,13 +251,9 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
 
       {/* ── Quick Actions ──────────────────────────────────── */}
       <div className="home-quick-actions" data-tutorial="quick-actions">
-        <button className="home-quick-btn" onClick={() => onOpenVoxy?.()}>
-          <Mic size={18} />
-          <span>Log expense</span>
-        </button>
-        <button className="home-quick-btn" onClick={() => onOpenVoxy?.()}>
-          <Camera size={18} />
-          <span>Scan receipt</span>
+        <button className="home-quick-btn" onClick={() => onNavigate("pantry")}>
+          <Package size={18} />
+          <span>Pantry</span>
         </button>
         <button className="home-quick-btn" onClick={() => onNavigate("shopping-list")}>
           <ListPlus size={18} />
@@ -217,6 +263,67 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
           <ChefHat size={18} />
           <span>Cook</span>
         </button>
+        <button className="home-quick-btn" onClick={() => onOpenVoxy?.()}>
+          <Mic size={18} />
+          <span>Voice input</span>
+        </button>
+      </div>
+
+      {/* ── Monthly Activity Tracker ─────────────────────────── */}
+      <div className="home-activity-tracker">
+        <div className="home-activity-header">
+          <span className="home-activity-month">
+            {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
+          </span>
+          <div className="home-activity-legend">
+            <span className="home-activity-legend-item">
+              <span className="home-activity-dot home-activity-dot--cook" />
+              Cooked
+            </span>
+            <span className="home-activity-legend-item">
+              <span className="home-activity-dot home-activity-dot--expense" />
+              Expense
+            </span>
+          </div>
+        </div>
+        <div className="home-activity-scroll" ref={activityScrollRef}>
+          <div className="home-activity-grid">
+            {/* Day letter row */}
+            <div className="home-activity-row home-activity-row--labels">
+              {activityDays.map((d) => (
+                <span key={`lbl-${d.day}`} className={`home-activity-cell home-activity-label${d.isToday ? " activity-day--today" : ""}`}>
+                  {DAY_ABBRS[d.dayOfWeek]}
+                </span>
+              ))}
+            </div>
+            {/* Day number row */}
+            <div className="home-activity-row home-activity-row--numbers">
+              {activityDays.map((d) => (
+                <span key={`num-${d.day}`} className={`home-activity-cell home-activity-number${d.isToday ? " today" : ""}`}>
+                  {d.day}
+                </span>
+              ))}
+            </div>
+            {/* Cook row */}
+            <div className="home-activity-row">
+              {activityDays.map((d) => (
+                <span
+                  key={`cook-${d.day}`}
+                  className={`home-activity-cell home-activity-square${d.cooked ? " home-activity-square--cook" : " home-activity-square--empty"}`}
+                />
+              ))}
+            </div>
+            {/* Expense row */}
+            <div className="home-activity-row">
+              {activityDays.map((d) => (
+                <span
+                  key={`exp-${d.day}`}
+                  className={`home-activity-cell home-activity-square${d.expense ? " home-activity-square--expense" : " home-activity-square--empty"}`}
+                />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ── Recipe Nudge (only if urgent items) ────────────── */}
@@ -228,50 +335,8 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         </button>
       )}
 
-      {/* ── Two-column: Expenses + Pantry ──────────────────── */}
+      {/* ── Two-column: Pantry Alerts + Shopping ─────────── */}
       <div className="home-grid">
-        {/* Expenses Card */}
-        <button className="home-card home-card--expenses" onClick={() => onNavigate("expenses")} data-tutorial="expenses-card">
-          <div className="home-card-header">
-            <div className="home-card-icon home-card-icon--expenses">
-              <DollarSign size={20} />
-            </div>
-            <div className="home-card-title">
-              <h3>This Week's Expenses</h3>
-              <ChevronRight size={16} className="home-card-arrow" />
-            </div>
-          </div>
-          <div className="home-card-body">
-            {isLoading ? (
-              <div className="home-card-skeleton" />
-            ) : (
-              <>
-                <div className="home-stat-row">
-                  <span className="home-stat-value">${weeklyExpenses.total.toFixed(2)}</span>
-                  <span className="home-stat-label">
-                    {weeklyExpenses.count} purchase{weeklyExpenses.count !== 1 ? "s" : ""}
-                  </span>
-                </div>
-
-                {/* Sparkline */}
-                <div className="home-sparkline">
-                  {dailySpending.map((amount, i) => (
-                    <div key={i} className="home-sparkline-col">
-                      <div
-                        className={`home-sparkline-bar${i === todayIdx ? " today" : ""}${amount === 0 ? " empty" : ""}`}
-                        style={{ height: `${Math.max((amount / maxSpend) * 40, 2)}px` }}
-                      />
-                      <span className={`home-sparkline-label${i === todayIdx ? " today" : ""}`}>
-                        {DAY_LABELS[i]}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </button>
-
         {/* Pantry Alerts Card */}
         <button className="home-card home-card--pantry" onClick={() => onNavigate("pantry")} data-tutorial="pantry-card">
           <div className="home-card-header">
@@ -324,52 +389,6 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
                   )}
                 </div>
               </>
-            )}
-          </div>
-        </button>
-      </div>
-
-      {/* ── Two-column: Budget + Shopping ──────────────────── */}
-      <div className="home-grid">
-        {/* Budget Snapshot */}
-        <button className="home-card home-card--budget" onClick={() => onNavigate("budgets")} data-tutorial="budget-card">
-          <div className="home-card-header">
-            <div className="home-card-icon home-card-icon--budget">
-              <Wallet size={20} />
-            </div>
-            <div className="home-card-title">
-              <h3>Budget</h3>
-              <ChevronRight size={16} className="home-card-arrow" />
-            </div>
-          </div>
-          <div className="home-card-body">
-            {isLoading ? (
-              <div className="home-card-skeleton" />
-            ) : budgets && budgets.length > 0 && topBudget ? (
-              <div className="home-budget-list">
-                {budgets.slice(0, 3).map((b) => {
-                  const pct = Math.min(b.percentage_used, 100);
-                  const overBudget = b.percentage_used > 100;
-                  return (
-                    <div key={b.id} className="home-budget-row">
-                      <div className="home-budget-info">
-                        <span className="home-budget-cat">{b.category}</span>
-                        <span className="home-budget-nums">
-                          ${b.actual_spending.toFixed(0)} / ${b.amount.toFixed(0)}
-                        </span>
-                      </div>
-                      <div className="home-budget-track">
-                        <div
-                          className={`home-budget-fill${overBudget ? " over" : pct > 80 ? " warn" : ""}`}
-                          style={{ width: `${Math.min(pct, 100)}%` }}
-                        />
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              <p className="home-empty-hint">No budgets set this month</p>
             )}
           </div>
         </button>
@@ -459,6 +478,94 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             <p className="home-empty-hint">No meals cooked yet this week</p>
           )}
         </div>
+      </div>
+
+      {/* ── Two-column: Expenses + Budget (secondary) ──────── */}
+      <div className="home-grid">
+        {/* Expenses Card */}
+        <button className="home-card home-card--expenses" onClick={() => onNavigate("expenses")} data-tutorial="expenses-card">
+          <div className="home-card-header">
+            <div className="home-card-icon home-card-icon--expenses">
+              <DollarSign size={20} />
+            </div>
+            <div className="home-card-title">
+              <h3>This Week's Spending</h3>
+              <ChevronRight size={16} className="home-card-arrow" />
+            </div>
+          </div>
+          <div className="home-card-body">
+            {isLoading ? (
+              <div className="home-card-skeleton" />
+            ) : (
+              <>
+                <div className="home-stat-row">
+                  <span className="home-stat-value">${weeklyExpenses.total.toFixed(2)}</span>
+                  <span className="home-stat-label">
+                    {weeklyExpenses.count} purchase{weeklyExpenses.count !== 1 ? "s" : ""}
+                  </span>
+                </div>
+
+                {/* Sparkline */}
+                <div className="home-sparkline">
+                  {dailySpending.map((amount, i) => (
+                    <div key={i} className="home-sparkline-col">
+                      <div
+                        className={`home-sparkline-bar${i === todayIdx ? " today" : ""}${amount === 0 ? " empty" : ""}`}
+                        style={{ height: `${Math.max((amount / maxSpend) * 40, 2)}px` }}
+                      />
+                      <span className={`home-sparkline-label${i === todayIdx ? " today" : ""}`}>
+                        {DAY_LABELS[i]}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </button>
+
+        {/* Budget Snapshot */}
+        <button className="home-card home-card--budget" onClick={() => onNavigate("budgets")} data-tutorial="budget-card">
+          <div className="home-card-header">
+            <div className="home-card-icon home-card-icon--budget">
+              <Wallet size={20} />
+            </div>
+            <div className="home-card-title">
+              <h3>Budget</h3>
+              <ChevronRight size={16} className="home-card-arrow" />
+            </div>
+          </div>
+          <div className="home-card-body">
+            {isLoading ? (
+              <div className="home-card-skeleton" />
+            ) : budgets && budgets.length > 0 && topBudget ? (
+              <div className="home-budget-list">
+                {budgets.slice(0, 3).map((b) => {
+                  const pct = Math.min(b.percentage_used, 100);
+                  const overBudget = b.percentage_used > 100;
+                  return (
+                    <div key={b.id} className="home-budget-row">
+                      <div className="home-budget-info">
+                        <span className="home-budget-cat">{b.category}</span>
+                        <span className="home-budget-nums">
+                          ${b.actual_spending.toFixed(0)} / ${b.amount.toFixed(0)}
+                        </span>
+                      </div>
+                      <div className="home-budget-track">
+                        <div
+                          className={`home-budget-fill${overBudget ? " over" : pct > 80 ? " warn" : ""}`}
+                          style={{ width: `${Math.min(pct, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <p className="home-empty-hint">No budgets set this month</p>
+            )}
+          </div>
+        </button>
       </div>
     </div>
   );

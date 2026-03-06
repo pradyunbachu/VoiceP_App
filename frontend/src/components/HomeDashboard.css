@@ -36,23 +36,6 @@
   margin-bottom: var(--space-1);
 }
 
-/* Streak badge */
-.home-streak {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-2) var(--space-3);
-  background: var(--accent-warning-bg);
-  border: 1px solid rgba(212, 160, 53, 0.25);
-  border-radius: var(--radius-full);
-  color: var(--accent-warning);
-  flex-shrink: 0;
-}
-
-.home-streak-count {
-  font-size: 0.95rem;
-  font-weight: 700;
-}
 
 .home-greeting-actions {
   display: flex;
@@ -111,6 +94,123 @@
   background: var(--bg-card-hover);
   border-color: var(--border-primary);
   color: var(--text-primary);
+}
+
+/* ── Monthly Activity Tracker ───────────────────────────────── */
+.home-activity-tracker {
+  margin-bottom: var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.home-activity-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: var(--space-3);
+}
+
+.home-activity-month {
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.home-activity-legend {
+  display: flex;
+  gap: var(--space-3);
+}
+
+.home-activity-legend-item {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.7rem;
+}
+
+.home-activity-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+}
+
+.home-activity-dot--cook {
+  background: var(--accent-primary);
+}
+
+.home-activity-dot--expense {
+  background: var(--accent-purple);
+}
+
+.home-activity-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+}
+
+.home-activity-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.home-activity-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: max-content;
+}
+
+.home-activity-row {
+  display: flex;
+  gap: 3px;
+}
+
+.home-activity-cell {
+  width: 22px;
+  height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.home-activity-label {
+  color: var(--text-muted);
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.home-activity-number {
+  color: var(--text-tertiary);
+  font-size: 0.6rem;
+  font-weight: 500;
+}
+
+.home-activity-number.today {
+  color: var(--accent-primary);
+  font-weight: 700;
+}
+
+.home-activity-square {
+  border-radius: 3px;
+  width: 18px;
+  height: 18px;
+  margin: 2px;
+}
+
+.home-activity-square--empty {
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-secondary);
+}
+
+.home-activity-square--cook {
+  background: var(--accent-primary);
+}
+
+.home-activity-square--expense {
+  background: var(--accent-purple);
 }
 
 /* ── Recipe Nudge ───────────────────────────────────────────── */

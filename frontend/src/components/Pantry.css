@@ -159,6 +159,56 @@
   letter-spacing: 0.03em;
 }
 
+/* Kitchen Action Banners */
+.pantry-action-banners {
+  display: flex;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+  flex-wrap: wrap;
+}
+
+.pantry-action-banner {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-3) var(--space-4);
+  border-radius: var(--radius-lg);
+  font-family: inherit;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid;
+  flex: 1;
+  min-width: 200px;
+}
+
+.pantry-action-banner:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.pantry-action-banner--shopping {
+  background: var(--accent-primary-bg);
+  border-color: var(--accent-primary-border);
+  color: var(--accent-primary);
+}
+
+.pantry-action-banner--shopping:hover:not(:disabled) {
+  background: var(--accent-primary-bg-hover);
+}
+
+.pantry-action-banner--chef {
+  background: var(--accent-warning-bg);
+  border-color: rgba(212, 160, 53, 0.2);
+  color: var(--accent-warning);
+}
+
+.pantry-action-banner--chef:hover:not(:disabled) {
+  background: rgba(212, 160, 53, 0.12);
+  border-color: rgba(212, 160, 53, 0.3);
+}
+
 /* Form Styles */
 .pantry-form {
   background: var(--bg-card);
@@ -1137,8 +1187,8 @@
 
 /* Dark mode shelf status buttons */
 [data-theme="dark"] .shelf-status-btn {
-  background: rgba(38, 32, 24, 0.8);
-  border-color: rgba(200, 191, 178, 0.08);
+  background: var(--bg-card-hover);
+  border-color: var(--border-secondary);
   color: var(--text-secondary);
 }
 
