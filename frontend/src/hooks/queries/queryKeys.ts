@@ -78,7 +78,7 @@ export const queryKeys = {
     all: ['pantry'] as const,
     items: (filters: PantryItemFilters) => [...queryKeys.pantry.all, 'items', filters] as const,
     infinite: (filters: InfinitePantryFilters = {}) => [...queryKeys.pantry.all, 'infinite', filters] as const,
-    stats: () => [...queryKeys.pantry.all, 'stats'] as const,
+    stats: (groupId?: number) => [...queryKeys.pantry.all, 'stats', groupId] as const,
     groups: () => [...queryKeys.pantry.all, 'groups'] as const,
     groupDetail: (id: number | string) => [...queryKeys.pantry.all, 'group', id] as const,
   },

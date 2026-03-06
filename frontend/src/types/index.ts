@@ -488,6 +488,9 @@ export interface AuthContextValue {
     first_name?: string;
     last_name?: string;
   }) => Promise<{ error: unknown }>;
+  resetPassword: (email: string) => Promise<{ error: unknown }>;
+  updatePassword: (password: string) => Promise<{ error: unknown }>;
+  passwordRecovery: boolean;
 }
 
 // ── Theme ──────────────────────────────────────────────────────────────

@@ -356,6 +356,22 @@
   color: var(--accent-primary);
 }
 
+/* ==================== OFFLINE BANNER ==================== */
+.shopping-offline-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  margin-bottom: 1rem;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  border-radius: 10px;
+  color: var(--accent-warning, #f59e0b);
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
 /* ==================== SUGGESTIONS DROPDOWN ==================== */
 .suggestions-dropdown {
   position: absolute;

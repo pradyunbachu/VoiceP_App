@@ -26,6 +26,7 @@ import {
   useStreak,
   useBudgets,
 } from "../hooks";
+import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
 import type { AppView, ShowToast, PantryItem, Expense } from "../types";
 import "./HomeDashboard.css";
 
@@ -34,6 +35,7 @@ interface Props {
   onNavigate: (view: AppView) => void;
   onShowTutorial?: () => void;
   onOpenVoxy?: () => void;
+  selectedPantryGroup?: number | null | "demo";
 }
 
 const getGreeting = (): string => {
@@ -45,7 +47,7 @@ const getGreeting = (): string => {
 
 const DAY_LABELS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy }) => {
+const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, selectedPantryGroup }) => {
   const { user } = useAuth();
   const firstName =
     user?.user_metadata?.first_name ||
@@ -62,9 +64,13 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy }) =>
     sortBy: "date",
     sortOrder: "desc",
   });
-  const { data: pantryStats, isLoading: statsLoading } = usePantryStats();
-  const { data: lowStockData, isLoading: lowStockLoading } = usePantryItems({ stock_status: "low" });
-  const { data: allPantryData, isLoading: pantryLoading } = usePantryItems();
+  const isDemoPantry = selectedPantryGroup === "demo";
+  const pantryGroupId = isDemoPantry ? undefined : (selectedPantryGroup ?? undefined);
+  const { data: pantryStats, isLoading: statsLoading } = usePantryStats(pantryGroupId as number | undefined);
+  const { data: apiLowStockData, isLoading: lowStockLoading } = usePantryItems({ stock_status: "low", group_id: pantryGroupId as number | undefined });
+  const { data: apiAllPantryData, isLoading: pantryLoading } = usePantryItems({ group_id: pantryGroupId as number | undefined });
+  const lowStockData = isDemoPantry ? DEMO_PANTRY_ITEMS.filter(i => i.stock_status === "low") : apiLowStockData;
+  const allPantryData = isDemoPantry ? DEMO_PANTRY_ITEMS : apiAllPantryData;
   const { data: shoppingItems, isLoading: shoppingLoading } = useShoppingList();
   const { data: cookStats, isLoading: cookStatsLoading } = useCookStats();
   const { data: streak } = useStreak();
@@ -174,6 +180,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy }) =>
             <h1>
               {getGreeting()}, {firstName}
             </h1>
+            <p className="home-date">{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
             <p>Here's what's happening this week</p>
           </div>
           <div className="home-greeting-actions">

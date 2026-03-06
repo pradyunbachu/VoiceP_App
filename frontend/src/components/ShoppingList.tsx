@@ -16,6 +16,7 @@ import {
   Plus,
   Check,
   CheckCircle,
+  WifiOff,
 } from "lucide-react";
 import {
   useShoppingList,
@@ -27,16 +28,19 @@ import {
   useGrocerySuggestions,
   useUndoDelete,
 } from "../hooks";
+import { useOnlineStatus } from "../hooks/queries/useShoppingList";
 import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
 import LoadingSkeleton from "./LoadingSkeleton";
+import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
 import type { ShowToast, ShoppingListItem, PantryItem, PantryMatch, GroceryItem, StockStatus } from "../types";
 import "./ShoppingList.css";
 
 interface Props {
   showToast: ShowToast;
+  selectedPantryGroup?: number | null | "demo";
 }
 
-const ShoppingList: React.FC<Props> = ({ showToast }) => {
+const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   const [newItemText, setNewItemText] = useState<string>("");
   const [suggestions, setSuggestions] = useState<GroceryItem[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -45,12 +49,16 @@ const ShoppingList: React.FC<Props> = ({ showToast }) => {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const editInputRef = useRef<HTMLInputElement | null>(null);
   const suggestionsRef = useRef<HTMLUListElement | null>(null);
+  const isOnline = useOnlineStatus();
 
   // Fetch shopping items, optionally scoped to a shared group
   const { data: shoppingItems = [], isLoading: loading } = useShoppingList(
     selectedGroupId ? { group_id: selectedGroupId } : {}
   );
-  const { data: pantryItems = [] as PantryItem[] } = usePantryItems({});
+  const isDemoMode = selectedPantryGroup === "demo";
+  const pantryGroupId = isDemoMode ? undefined : (selectedPantryGroup ?? undefined);
+  const { data: apiPantryItems = [] as PantryItem[] } = usePantryItems({ group_id: pantryGroupId as number | undefined });
+  const pantryItems = isDemoMode ? DEMO_PANTRY_ITEMS : apiPantryItems;
 
   // AI-powered semantic matching: maps each shopping item to its closest
   // pantry counterpart (e.g. "2% milk" matches pantry's "Milk").
@@ -322,7 +330,7 @@ const ShoppingList: React.FC<Props> = ({ showToast }) => {
           <button
             className="clear-all-btn"
             onClick={handleClearAll}
-            disabled={clearMutation.isPending}
+            disabled={clearMutation.isPending || !isOnline}
             title="Clear all items"
           >
             <Trash2 size={16} />
@@ -330,6 +338,14 @@ const ShoppingList: React.FC<Props> = ({ showToast }) => {
           </button>
         )}
       </div>
+
+      {/* Offline banner */}
+      {!isOnline && (
+        <div className="shopping-offline-banner">
+          <WifiOff size={14} />
+          <span>You're offline — viewing your cached list</span>
+        </div>
+      )}
 
       {/* Group Selector */}
       <ShoppingListGroupSelector
@@ -351,7 +367,7 @@ const ShoppingList: React.FC<Props> = ({ showToast }) => {
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             placeholder="Add an item..."
-            disabled={createMutation.isPending}
+            disabled={createMutation.isPending || !isOnline}
             aria-autocomplete="list"
             aria-controls="grocery-suggestions"
             aria-activedescendant={selectedIndex >= 0 ? `suggestion-${selectedIndex}` : undefined}
@@ -425,7 +441,7 @@ const ShoppingList: React.FC<Props> = ({ showToast }) => {
                     <button
                       className="item-delete"
                       onClick={() => handleDelete(item.id)}
-                      disabled={deleteMutation.isPending}
+                      disabled={deleteMutation.isPending || !isOnline}
                       title="Remove item"
                     >
                       <Trash2 size={16} />

@@ -6,7 +6,10 @@
  * ingredient list, and step-by-step instructions. Handles loading
  * and error states while the AI generates the recipe.
  */
-import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat } from 'lucide-react';
+import { useState } from 'react';
+import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat, ShoppingCart, Check } from 'lucide-react';
+import { useCreateShoppingListItem } from '../hooks';
+import type { ShowToast } from '../types';
 import './RecipeDetailModal.css';
 
 interface RecipeIngredient {
@@ -42,9 +45,15 @@ interface Props {
   onClose: () => void;
   onCookMeal?: (name: string, ingredients: Array<{ item: string; amount: string }>) => void;
   isCooking?: boolean;
+  /** Ingredient names the user already has in their pantry/bowl */
+  availableIngredients?: string[];
+  showToast?: ShowToast;
 }
 
-const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose, onCookMeal, isCooking }) => {
+const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose, onCookMeal, isCooking, availableIngredients, showToast }) => {
+  const createShoppingItem = useCreateShoppingListItem();
+  const [addedToList, setAddedToList] = useState(false);
+
   const handleCookClick = () => {
     if (!recipe || !onCookMeal || isCooking) return;
     const ingredients = (recipe.ingredients || []).map((ing) => {
@@ -52,6 +61,43 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose,
       return { item: ing.item, amount: ing.amount };
     });
     onCookMeal(recipe.name, ingredients);
+  };
+
+  // Determine which recipe ingredients the user doesn't already have
+  const missingIngredients = recipe?.ingredients?.filter((ing) => {
+    const name = typeof ing === 'string' ? ing : ing.item;
+    if (!availableIngredients || availableIngredients.length === 0) return true;
+    const lower = name.toLowerCase();
+    return !availableIngredients.some(
+      (avail) => lower.includes(avail.toLowerCase()) || avail.toLowerCase().includes(lower)
+    );
+  }) || [];
+
+  const handleAddToShoppingList = async () => {
+    if (missingIngredients.length === 0 || addedToList) return;
+    try {
+      await Promise.all(
+        missingIngredients.map((ing) => {
+          const name = typeof ing === 'string' ? ing : `${ing.amount} ${ing.item}`.trim();
+          return createShoppingItem.mutateAsync({
+            name,
+            quantity: 1,
+            unit: '',
+            category: '',
+            notes: recipe?.name ? `For: ${recipe.name}` : '',
+          });
+        })
+      );
+      setAddedToList(true);
+      if (showToast) {
+        showToast(
+          `${missingIngredients.length} ingredient${missingIngredients.length !== 1 ? 's' : ''} added to shopping list`,
+          'success'
+        );
+      }
+    } catch {
+      if (showToast) showToast('Failed to add items to shopping list', 'error');
+    }
   };
 
   return (
@@ -169,6 +215,30 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose,
                 ))}
               </ol>
             </div>
+
+            {/* Add missing ingredients to shopping list */}
+            {missingIngredients.length > 0 && (
+              <div className="recipe-shopping-action">
+                <button
+                  className={`recipe-shopping-btn${addedToList ? ' added' : ''}`}
+                  onClick={handleAddToShoppingList}
+                  disabled={addedToList || createShoppingItem.isPending}
+                >
+                  {createShoppingItem.isPending ? (
+                    <Loader size={16} className="recipe-spinner" />
+                  ) : addedToList ? (
+                    <Check size={16} />
+                  ) : (
+                    <ShoppingCart size={16} />
+                  )}
+                  {createShoppingItem.isPending
+                    ? 'Adding...'
+                    : addedToList
+                      ? 'Added to shopping list'
+                      : `Add ${missingIngredients.length} missing ingredient${missingIngredients.length !== 1 ? 's' : ''} to list`}
+                </button>
+              </div>
+            )}
 
             {onCookMeal && (
               <div className="recipe-cook-action">

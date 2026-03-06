@@ -253,6 +253,47 @@
   color: var(--accent-primary);
 }
 
+/* "Add to shopping list" action */
+.recipe-shopping-action {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recipe-shopping-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border: 1px solid var(--accent-primary, #3b82f6);
+  border-radius: var(--radius-md);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-primary, #3b82f6);
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recipe-shopping-btn:hover:not(:disabled) {
+  background: rgba(59, 130, 246, 0.15);
+}
+
+.recipe-shopping-btn.added {
+  border-color: var(--accent-success, #22c55e);
+  background: rgba(34, 197, 94, 0.08);
+  color: var(--accent-success, #22c55e);
+  cursor: default;
+}
+
+.recipe-shopping-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
 /* "I made this!" cook action */
 .recipe-cook-action {
   margin-top: 1.25rem;

@@ -40,6 +40,59 @@ from routes.pantry_sharing import verify_pantry_group_membership
 
 router = APIRouter()
 
+# Unit words that may appear as a prefix in item names from expense extraction.
+# e.g. "bottle of chipotle sauce" or "Bottled Chipotle Sauce"
+import re as _re
+_UNIT_WORDS = (
+    r"lbs?|oz|kg|g|gallons?|gal|liters?|bags?|boxes?|cans?|bottles?|packs?|"
+    r"cartons?|jars?|pieces?|pcs?|dozen|bunch(?:es)?|loaf|loaves|slices?|"
+    r"cups?|pints?|quarts?|tubs?|rolls?|sticks?|bars?|containers?"
+)
+_UNIT_PREFIX_RE = _re.compile(
+    rf"^({_UNIT_WORDS})\s+(?:of\s+)?(.+)$", _re.IGNORECASE
+)
+_ADJECTIVE_UNIT_RE = _re.compile(
+    r"^(bottled|canned|boxed|bagged|jarred|sliced|packed)\s+(.+)$", _re.IGNORECASE
+)
+_ADJECTIVE_TO_UNIT = {
+    "bottled": "bottle", "canned": "can", "boxed": "box", "bagged": "bag",
+    "jarred": "jar", "sliced": "slice", "packed": "pack",
+}
+
+
+def _normalize_item_name(name: str, unit: Optional[str] = None) -> tuple[str, Optional[str], Optional[int]]:
+    """Strip unit prefixes from item names, returning (clean_name, unit, quantity).
+
+    Examples:
+      "Bottle of Chipotle Sauce" → ("Chipotle Sauce", "bottle", 1)
+      "Bottled Chipotle Sauce"   → ("Chipotle Sauce", "bottle", 1)
+      "2 lbs chicken"            → ("chicken", "lbs", 2)
+      "Chipotle Sauce"           → ("Chipotle Sauce", None, None)
+    """
+    trimmed = name.strip()
+
+    # Pattern: leading number + unit -- "2 lbs chicken"
+    num_unit_match = _re.match(
+        rf"^(\d+(?:\.\d+)?)\s+({_UNIT_WORDS})\s+(?:of\s+)?(.+)$", trimmed, _re.IGNORECASE
+    )
+    if num_unit_match:
+        raw = float(num_unit_match.group(1))
+        qty = int(raw) if raw == int(raw) else raw
+        return num_unit_match.group(3).strip(), num_unit_match.group(2).lower(), qty
+
+    # Pattern: adjective form -- "Bottled Chipotle Sauce"
+    adj_match = _ADJECTIVE_UNIT_RE.match(trimmed)
+    if adj_match:
+        u = _ADJECTIVE_TO_UNIT.get(adj_match.group(1).lower(), adj_match.group(1).lower())
+        return adj_match.group(2).strip(), u, 1
+
+    # Pattern: unit prefix without number -- "bottle of chipotle sauce"
+    prefix_match = _UNIT_PREFIX_RE.match(trimmed)
+    if prefix_match:
+        return prefix_match.group(2).strip(), prefix_match.group(1).lower(), 1
+
+    return trimmed, unit, None
+
 
 def _can_access_item(current_user_id: str, item_owner_id: str) -> bool:
     """Check if current user can access an item: either they own it,
@@ -206,14 +259,26 @@ async def create_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
+    # Normalize unit prefixes out of the name
+    item_name = item.name
+    item_unit = item.unit
+    item_qty = item.quantity
+    clean_name, parsed_unit, parsed_qty = _normalize_item_name(item_name, item_unit)
+    if clean_name != item_name:
+        item_name = clean_name
+        if parsed_unit and not item_unit:
+            item_unit = parsed_unit
+        if parsed_qty is not None and (item_qty is None or item_qty == 1):
+            item_qty = parsed_qty
+
     purchase = item.purchase_date or datetime.now().strftime("%Y-%m-%d")
 
     # Check for existing item with same name — merge instead of duplicating
-    existing = _find_existing_pantry_item(current_user["id"], item.name)
+    existing = _find_existing_pantry_item(current_user["id"], item_name)
     if existing:
-        merged = _merge_pantry_item(existing, item.quantity or 1, purchase)
+        merged = _merge_pantry_item(existing, item_qty or 1, purchase)
         return {
-            "message": f"Updated quantity for {item.name}",
+            "message": f"Updated quantity for {item_name}",
             "merged": True,
             **merged
         }
@@ -223,14 +288,14 @@ async def create_pantry_item(
     expiration_date = item.expiration_date
     expiration_predicted = False
     if not expiration_date:
-        expiration_date = predict_expiration(item.name, item.category, purchase)
+        expiration_date = predict_expiration(item_name, item.category, purchase)
         expiration_predicted = expiration_date is not None
 
     response = supabase.table("pantry_items").insert({
         "user_id": current_user["id"],
-        "name": item.name,
-        "quantity": item.quantity or 1,
-        "unit": item.unit,
+        "name": item_name,
+        "quantity": item_qty or 1,
+        "unit": item_unit,
         "category": item.category or "Other",
         "expiration_date": expiration_date,
         "purchase_date": purchase,
@@ -278,6 +343,16 @@ async def auto_populate_pantry_from_expense(
         item_expiration = item_data.get("expiration_date")
         item_purchase = expense.get("date")
         item_qty = item_data.get("quantity", 1)
+        item_unit = item_data.get("unit")
+
+        # Strip unit prefixes from name (e.g. "Bottle of Chipotle Sauce" → "Chipotle Sauce")
+        clean_name, parsed_unit, parsed_qty = _normalize_item_name(item_name, item_unit)
+        if clean_name != item_name:
+            item_name = clean_name
+            if parsed_unit and not item_unit:
+                item_unit = parsed_unit
+            if parsed_qty is not None and item_qty in (1, None):
+                item_qty = parsed_qty
 
         # Spell-correct item name before lookup (fixes OCR typos)
         correction = correct_item_name(item_name)
@@ -302,7 +377,7 @@ async def auto_populate_pantry_from_expense(
             "user_id": current_user["id"],
             "name": item_name,
             "quantity": item_qty,
-            "unit": item_data.get("unit"),
+            "unit": item_unit,
             "category": item_category,
             "expiration_date": item_expiration,
             "purchase_date": item_purchase,
@@ -456,13 +531,22 @@ async def delete_pantry_item(
 @limiter.limit("30/minute")
 async def get_pantry_stats(
     request: Request,
-    current_user: dict = Depends(get_current_user_dependency)
+    current_user: dict = Depends(get_current_user_dependency),
+    group_id: Optional[int] = None
 ):
     """Get pantry statistics"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    response = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"]).execute()
+    target_user_id = current_user["id"]
+    if group_id is not None:
+        if not verify_pantry_group_membership(current_user["id"], group_id):
+            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
+        if group_resp.data:
+            target_user_id = group_resp.data[0]["owner_id"]
+
+    response = supabase.table("pantry_items").select("*").eq("user_id", target_user_id).execute()
     items = response.data if response.data else []
 
     total_items = len(items)

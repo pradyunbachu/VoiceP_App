@@ -66,16 +66,20 @@ export const usePantryItems = (filters: PantryItemFilters = {}) => {
   });
 };
 
-export const usePantryStats = () => {
+export const usePantryStats = (groupId?: number) => {
   const { getToken, session } = useAuth();
 
   return useQuery<PantryStats>({
-    queryKey: queryKeys.pantry.stats(),
+    queryKey: queryKeys.pantry.stats(groupId),
     queryFn: async (): Promise<PantryStats> => {
       const token = await getToken();
       if (!token) throw new Error('No authentication token');
 
-      const response = await fetch(`${API_BASE_URL}/api/pantry/stats`, {
+      const params = new URLSearchParams();
+      if (groupId != null) params.append('group_id', String(groupId));
+      const qs = params.toString();
+
+      const response = await fetch(`${API_BASE_URL}/api/pantry/stats${qs ? `?${qs}` : ''}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 

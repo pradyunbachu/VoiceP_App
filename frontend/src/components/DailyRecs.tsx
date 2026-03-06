@@ -349,6 +349,8 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
                 onClose={closeRecipePanel}
                 onCookMeal={handleCookMeal}
                 isCooking={cookMeal.isPending}
+                availableIngredients={data?.available_ingredients?.split(', ').filter(Boolean)}
+                showToast={showToast}
               />
             )}
           </div>

@@ -18,15 +18,18 @@ interface Props {
   showToast?: ShowToast;
 }
 
+type FormMode = "login" | "signup" | "forgot";
+
 const Login: FC<Props> = ({ onLogin }) => {
-  const [isLogin, setIsLogin] = useState<boolean>(true);
+  const [mode, setMode] = useState<FormMode>("login");
   const [username, setUsername] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [password, setPassword] = useState<string>("");
   const [error, setError] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  const { signIn, signUp, signInWithGoogle } = useAuth();
+  const { signIn, signUp, signInWithGoogle, resetPassword } = useAuth();
 
   const handleGoogleLogin = async (): Promise<void> => {
     setError("");
@@ -40,13 +43,30 @@ const Login: FC<Props> = ({ onLogin }) => {
     }
   };
 
+  const handleForgotPassword = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
+    e.preventDefault();
+    setError("");
+    setSuccessMessage("");
+    setLoading(true);
+
+    try {
+      const { error } = await resetPassword(email);
+      if (error) throw error;
+      setSuccessMessage("Check your email for a password reset link.");
+    } catch (error: unknown) {
+      setError((error as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError("");
     setLoading(true);
 
     try {
-      if (isLogin) {
+      if (mode === "login") {
         // Login with Supabase
         const { data, error } = await signIn(email, password);
         if (error) throw error;
@@ -94,81 +114,119 @@ const Login: FC<Props> = ({ onLogin }) => {
     <div className="login-container">
       <div className="login-card">
         <div className="login-header">
-          <h2>{isLogin ? "Login" : "Create Account"}</h2>
+          <h2>{mode === "login" ? "Login" : mode === "signup" ? "Create Account" : "Reset Password"}</h2>
           <p>
-            {isLogin
+            {mode === "login"
               ? "Welcome back to voxal"
-              : "Start tracking your expenses"}
+              : mode === "signup"
+              ? "Start tracking your expenses"
+              : "Enter your email to receive a reset link"}
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="login-form">
-          {!isLogin && (
+        {mode === "forgot" ? (
+          <form onSubmit={handleForgotPassword} className="login-form">
             <div className="form-group">
-              <label htmlFor="username">Username</label>
+              <label htmlFor="email">Email</label>
               <input
-                id="username"
-                type="text"
-                value={username}
-                onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 required
-                placeholder="Enter your username"
-                minLength={3}
+                placeholder="Enter your email"
               />
-              <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-                Must be at least 3 characters
-              </small>
             </div>
-          )}
 
-          <div className="form-group">
-            <label htmlFor="email">Email</label>
-            <input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
-              required
-              placeholder="Enter your email"
-            />
-          </div>
+            {error && <div className="error-message">{error}</div>}
+            {successMessage && <div className="success-message">{successMessage}</div>}
 
-          <div className="form-group">
-            <label htmlFor="password">Password</label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
-              required
-              placeholder="Enter your password"
-              minLength={6}
-            />
-            {!isLogin && (
-              <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
-                Must be at least 6 characters
-              </small>
+            <button type="submit" className="submit-button" disabled={loading}>
+              {loading ? "Sending..." : "Send Reset Link"}
+            </button>
+          </form>
+        ) : (
+          <form onSubmit={handleSubmit} className="login-form">
+            {mode === "signup" && (
+              <div className="form-group">
+                <label htmlFor="username">Username</label>
+                <input
+                  id="username"
+                  type="text"
+                  value={username}
+                  onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)}
+                  required
+                  placeholder="Enter your username"
+                  minLength={3}
+                />
+                <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                  Must be at least 3 characters
+                </small>
+              </div>
             )}
-          </div>
 
-          {error && <div className="error-message">{error}</div>}
+            <div className="form-group">
+              <label htmlFor="email">Email</label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
+                required
+                placeholder="Enter your email"
+              />
+            </div>
 
-          <button type="submit" className="submit-button" disabled={loading}>
-            {loading ? (
-              "Processing..."
-            ) : isLogin ? (
-              <>
-                <LogIn size={18} />
-                <span>Login</span>
-              </>
-            ) : (
-              <>
-                <UserPlus size={18} />
-                <span>Create Account</span>
-              </>
+            <div className="form-group">
+              <label htmlFor="password">Password</label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
+                required
+                placeholder="Enter your password"
+                minLength={6}
+              />
+              {mode === "signup" && (
+                <small style={{ color: "var(--text-muted)", fontSize: "0.8rem", marginTop: "0.25rem" }}>
+                  Must be at least 6 characters
+                </small>
+              )}
+            </div>
+
+            {mode === "login" && (
+              <div style={{ textAlign: "right", marginTop: "-0.5rem" }}>
+                <button
+                  type="button"
+                  onClick={() => { setMode("forgot"); setError(""); setSuccessMessage(""); }}
+                  className="switch-button"
+                  style={{ fontSize: "0.85rem" }}
+                >
+                  Forgot password?
+                </button>
+              </div>
             )}
-          </button>
-        </form>
+
+            {error && <div className="error-message">{error}</div>}
+
+            <button type="submit" className="submit-button" disabled={loading}>
+              {loading ? (
+                "Processing..."
+              ) : mode === "login" ? (
+                <>
+                  <LogIn size={18} />
+                  <span>Login</span>
+                </>
+              ) : (
+                <>
+                  <UserPlus size={18} />
+                  <span>Create Account</span>
+                </>
+              )}
+            </button>
+          </form>
+        )}
 
         <div className="divider">
           <span>or</span>
@@ -203,18 +261,40 @@ const Login: FC<Props> = ({ onLogin }) => {
 
         <div className="login-switch">
           <p>
-            {isLogin ? "Don't have an account? " : "Already have an account? "}
-            <button
-              type="button"
-              onClick={() => {
-                setIsLogin(!isLogin);
-                setError("");
-                setUsername("");
-              }}
-              className="switch-button"
-            >
-              {isLogin ? "Sign up" : "Login"}
-            </button>
+            {mode === "forgot" ? (
+              <>
+                Remember your password?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); setError(""); setSuccessMessage(""); }}
+                  className="switch-button"
+                >
+                  Back to Login
+                </button>
+              </>
+            ) : mode === "login" ? (
+              <>
+                Don't have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("signup"); setError(""); setUsername(""); }}
+                  className="switch-button"
+                >
+                  Sign up
+                </button>
+              </>
+            ) : (
+              <>
+                Already have an account?{" "}
+                <button
+                  type="button"
+                  onClick={() => { setMode("login"); setError(""); setUsername(""); }}
+                  className="switch-button"
+                >
+                  Login
+                </button>
+              </>
+            )}
           </p>
         </div>
       </div>

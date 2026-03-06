@@ -2,14 +2,16 @@
  * useShoppingList.ts
  * React Query hooks for the shopping list feature.
  * - useShoppingList: fetches shopping list items with category/group/sort filters.
- *   Uses staleTime=0 and aggressive refetch to keep the list fresh.
+ *   Persists data to localStorage for offline access.
  * - useShoppingPantryMatches: POST-based query that uses AI to semantically match
  *   shopping list items against pantry items, cached for 30 s.
  */
 import { useQuery } from '@tanstack/react-query';
+import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from './queryKeys';
+import { persistShoppingList, loadPersistedShoppingList } from '../../lib/queryClient';
 import type { ShoppingListItem, PantryItem, PantryMatch } from '../../types';
 
 interface ShoppingListFilters {
@@ -19,11 +21,31 @@ interface ShoppingListFilters {
   sort_order?: string;
 }
 
+// ── Online status hook ──────────────────────────────────────────────
+
+function subscribe(cb: () => void) {
+  window.addEventListener('online', cb);
+  window.addEventListener('offline', cb);
+  return () => {
+    window.removeEventListener('online', cb);
+    window.removeEventListener('offline', cb);
+  };
+}
+const getSnapshot = () => navigator.onLine;
+
+export const useOnlineStatus = () => useSyncExternalStore(subscribe, getSnapshot);
+
+// ── Shopping list query ─────────────────────────────────────────────
+
 export const useShoppingList = (filters: ShoppingListFilters = {}) => {
   const { getToken, session } = useAuth();
   const { category, group_id, sort_by = 'created_at', sort_order = 'desc' } = filters;
+  const isOnline = useOnlineStatus();
 
-  return useQuery<ShoppingListItem[]>({
+  // Seed initialData from localStorage so the list renders instantly / offline
+  const cachedItems = loadPersistedShoppingList<ShoppingListItem[]>();
+
+  const query = useQuery<ShoppingListItem[]>({
     queryKey: queryKeys.shoppingList.items(filters),
     queryFn: async (): Promise<ShoppingListItem[]> => {
       const token = await getToken();
@@ -50,12 +72,23 @@ export const useShoppingList = (filters: ShoppingListFilters = {}) => {
       const data: { items?: ShoppingListItem[] } = await response.json();
       return data.items || [];
     },
-    enabled: !!session,
+    enabled: !!session && isOnline,
+    // Use cached data as placeholder so the list shows immediately
+    placeholderData: cachedItems ?? undefined,
     // Don't cache shopping list aggressively - always refetch when component mounts
     staleTime: 0,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
   });
+
+  // Persist to localStorage whenever we get fresh server data
+  useEffect(() => {
+    if (query.data && query.data !== cachedItems) {
+      persistShoppingList(query.data);
+    }
+  }, [query.data]);
+
+  return query;
 };
 
 /**
@@ -67,6 +100,7 @@ export const useShoppingPantryMatches = (
   pantryItems: PantryItem[] = []
 ) => {
   const { getToken, session } = useAuth();
+  const isOnline = useOnlineStatus();
 
   const hasShoppingItems = shoppingItems.length > 0;
   const hasPantryItems = pantryItems.length > 0;
@@ -97,7 +131,7 @@ export const useShoppingPantryMatches = (
       const data: { matches?: Record<string, PantryMatch> } = await response.json();
       return data.matches || {};
     },
-    enabled: !!session && hasShoppingItems && hasPantryItems,
+    enabled: !!session && isOnline && hasShoppingItems && hasPantryItems,
     // Cache for 30 seconds to avoid too many API calls
     staleTime: 30000,
     refetchOnMount: true,

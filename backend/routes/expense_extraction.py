@@ -31,6 +31,36 @@ from services.expense_extraction import (
     extract_expense_simple
 )
 from cache import api_cache
+from routes.pantry import _normalize_item_name
+
+
+def _normalize_items_string(items_str: str) -> str:
+    """Normalize each comma-separated item in the expense items string.
+
+    Only strips unit-as-name patterns (no leading number):
+      "Bottle of Chipotle Sauce" → "Chipotle Sauce"
+      "Bottled Water"            → "Water"
+    Preserves quantity+unit patterns as-is for readability:
+      "2 bags of chips"          → "2 bags of chips"  (unchanged)
+      "6 chocolates"             → "6 chocolates"     (unchanged)
+    """
+    if not items_str:
+        return items_str
+    parts = []
+    for raw in items_str.split(","):
+        raw = raw.strip()
+        if not raw:
+            continue
+        clean_name, parsed_unit, parsed_qty = _normalize_item_name(raw)
+        # Only apply normalization when there was NO leading number
+        # (i.e. "bottle of X" or "Bottled X", not "2 bags of chips")
+        if clean_name != raw.strip() and parsed_qty in (1, None):
+            # Title-case the cleaned name for consistent display
+            parts.append(clean_name.title())
+        else:
+            parts.append(raw.strip())
+    return ", ".join(parts)
+
 
 router = APIRouter()
 
@@ -49,6 +79,7 @@ async def extract_expense_simple_endpoint(
 
     try:
         expense_data = extract_expense_simple(transcript)
+        expense_data["items"] = _normalize_items_string(expense_data.get("items", ""))
 
         if supabase is None:
             raise HTTPException(status_code=500, detail="Database not configured")
@@ -254,6 +285,9 @@ Return JSON array only, no other text."""
                 raise HTTPException(status_code=500, detail="Database not configured")
 
             for expense in validated_expenses:
+                # Normalize item names (strip unit prefixes like "Bottle of ...")
+                expense["items"] = _normalize_items_string(expense.get("items", ""))
+
                 date_str = expense.get("date", "")
                 if date_str and (date_str.lower() in ["yesterday", "tomorrow", "today"] or "ago" in date_str.lower() or "last week" in date_str.lower()):
                     date = parse_relative_date(transcript)
@@ -349,6 +383,7 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
                         raise HTTPException(status_code=500, detail="Database not configured")
 
                     for expense in validated_expenses:
+                        expense["items"] = _normalize_items_string(expense.get("items", ""))
                         date = expense.get("date", today_str)
                         if not re.match(r'\d{4}-\d{2}-\d{2}', str(date)):
                             date = parse_relative_date(transcript)
@@ -415,6 +450,7 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
         raise HTTPException(status_code=500, detail="Database not configured")
 
     for expense_data in expenses_data:
+        expense_data["items"] = _normalize_items_string(expense_data.get("items", ""))
         is_recurring = expense_data.get("is_recurring", False)
         recurring_interval = expense_data.get("recurring_interval")
         recurring_unit = expense_data.get("recurring_unit")

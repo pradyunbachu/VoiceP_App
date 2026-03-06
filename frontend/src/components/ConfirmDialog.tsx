@@ -22,7 +22,7 @@ const ConfirmDialog: FC<Props> = ({ message, onConfirm, onCancel, confirmLabel =
     <div className="confirm-overlay" onClick={onCancel}>
       {/* Stop propagation so clicking inside the dialog doesn't dismiss it */}
       <div className="confirm-dialog" onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
-        <div className="confirm-icon">
+        <div className={`confirm-icon${danger ? "" : " info"}`}>
           <AlertTriangle size={28} />
         </div>
         <p className="confirm-message">{message}</p>

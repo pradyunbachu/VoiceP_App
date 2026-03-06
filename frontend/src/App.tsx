@@ -22,6 +22,7 @@ import DailyRecs from "./components/DailyRecs";
 import TutorialOverlay from "./components/TutorialOverlay";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
+import UpdatePassword from "./components/UpdatePassword";
 import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
@@ -31,7 +32,7 @@ import "./App.css";
 
 function AppContent() {
   const queryClient = useQueryClient();
-  const { session, user: authUser, loading: authLoading, signOut, getToken } = useAuth();
+  const { session, user: authUser, loading: authLoading, signOut, getToken, passwordRecovery, updatePassword } = useAuth();
 
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [token, setToken] = useState<string | null>(null);
@@ -152,6 +153,22 @@ function AppContent() {
   }
 
   const renderView = () => {
+    if (passwordRecovery) {
+      return (
+        <UpdatePassword
+          onUpdate={async (newPassword: string) => {
+            const { error } = await updatePassword(newPassword);
+            if (error) {
+              showToast((error as Error).message || "Failed to update password", "error");
+            } else {
+              showToast("Password updated successfully!", "success");
+              setCurrentView("home");
+            }
+          }}
+        />
+      );
+    }
+
     if (!isAuthenticated) {
       if (currentView === "landing") {
         return (
@@ -182,6 +199,7 @@ function AppContent() {
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
               onOpenVoxy={() => quickRecordRef.current?.triggerOpen()}
+              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -254,6 +272,7 @@ function AppContent() {
           <div className="view-container" key="shopping-list">
             <ShoppingList
               showToast={showToast}
+              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -277,6 +296,7 @@ function AppContent() {
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
               onOpenVoxy={() => quickRecordRef.current?.triggerOpen()}
+              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );

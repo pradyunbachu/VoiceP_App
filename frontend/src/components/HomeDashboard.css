@@ -30,6 +30,12 @@
   font-size: 0.95rem;
 }
 
+.home-greeting .home-date {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin-bottom: var(--space-1);
+}
+
 /* Streak badge */
 .home-streak {
   display: flex;

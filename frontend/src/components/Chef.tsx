@@ -456,6 +456,8 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId }) => {
             onClose={closeRecipePanel}
             onCookMeal={handleCookMeal}
             isCooking={cookMeal.isPending}
+            availableIngredients={bowlIngredientNames}
+            showToast={showToast}
           />
         )}
       </div>

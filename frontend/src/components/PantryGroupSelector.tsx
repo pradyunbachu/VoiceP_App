@@ -52,6 +52,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<number | null>(null);
+  const [pendingSwitchTo, setPendingSwitchTo] = useState<{ id: number | null | "demo"; name: string } | null>(null);
 
   const { data: groups = [] } = usePantryGroups() as { data: GroupWithMeta[] | undefined };
   const createMutation = useCreatePantryGroup();
@@ -144,6 +145,23 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
+  const handleSwitchPantry = (id: number | null | "demo", name: string) => {
+    if (id === selectedGroupId) {
+      setIsOpen(false);
+      return;
+    }
+    setPendingSwitchTo({ id, name });
+  };
+
+  const confirmSwitch = () => {
+    if (pendingSwitchTo) {
+      onSelectGroup(pendingSwitchTo.id);
+      setIsOpen(false);
+      setExpandedGroupId(null);
+    }
+    setPendingSwitchTo(null);
+  };
+
   const toggleExpand = (id: number | string, e: React.MouseEvent) => {
     e.stopPropagation();
     setExpandedGroupId(expandedGroupId === id ? null : id);
@@ -172,11 +190,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
             <div className="group-option-row">
               <button
                 className={`group-option ${!selectedGroupId ? "active" : ""}`}
-                onClick={() => {
-                  onSelectGroup(null);
-                  setIsOpen(false);
-                  setExpandedGroupId(null);
-                }}
+                onClick={() => handleSwitchPantry(null, "My Pantry")}
               >
                 <span>My Pantry</span>
               </button>
@@ -236,11 +250,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
             <div className="group-option-row">
               <button
                 className={`group-option ${selectedGroupId === "demo" ? "active" : ""}`}
-                onClick={() => {
-                  onSelectGroup("demo");
-                  setIsOpen(false);
-                  setExpandedGroupId(null);
-                }}
+                onClick={() => handleSwitchPantry("demo", "Demo Pantry")}
               >
                 <div className="group-option-info">
                   <span>Demo Pantry</span>
@@ -256,11 +266,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
               <div className="group-option-row">
                 <button
                   className={`group-option ${selectedGroupId === group.id ? "active" : ""}`}
-                  onClick={() => {
-                    onSelectGroup(group.id);
-                    setIsOpen(false);
-                    setExpandedGroupId(null);
-                  }}
+                  onClick={() => handleSwitchPantry(group.id, group.name)}
                 >
                   <div className="group-option-info">
                     <span>{group.name}</span>
@@ -404,6 +410,15 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
           confirmLabel="Delete"
           onConfirm={() => handleDelete(confirmDeleteGroupId)}
           onCancel={() => setConfirmDeleteGroupId(null)}
+        />
+      )}
+      {pendingSwitchTo && (
+        <ConfirmDialog
+          message={`Switch to "${pendingSwitchTo.name}"? All stats and pantry data throughout the app will reflect this pantry.`}
+          confirmLabel="Switch"
+          danger={false}
+          onConfirm={confirmSwitch}
+          onCancel={() => setPendingSwitchTo(null)}
         />
       )}
     </div>

@@ -11,6 +11,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
+  const [passwordRecovery, setPasswordRecovery] = useState(false);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -20,10 +21,13 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      async (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         setLoading(false);
+        if (event === 'PASSWORD_RECOVERY') {
+          setPasswordRecovery(true);
+        }
       }
     );
 
@@ -86,6 +90,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     return { error };
   };
 
+  const resetPassword = async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+    return { error };
+  };
+
+  const updatePassword = async (newPassword: string) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (!error) {
+      setPasswordRecovery(false);
+    }
+    return { error };
+  };
+
   const value: AuthContextValue = {
     user,
     session,
@@ -96,6 +115,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     signInWithGoogle,
     getToken,
     updateUserProfile,
+    resetPassword,
+    updatePassword,
+    passwordRecovery,
   };
 
   return (

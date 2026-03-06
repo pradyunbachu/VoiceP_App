@@ -181,7 +181,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup }) 
     : (viewMode === 'shelf' ? (shelfItems as PantryItem[]) : listItems);
   const loading: boolean = isDemoMode ? false : (viewMode === 'shelf' ? shelfLoading : listLoading);
 
-  const { data: stats } = usePantryStats();
+  const { data: stats } = usePantryStats(apiGroupId as number | undefined);
 
   // Fetch all out-of-stock items (used for "Discard Out of Stock" button)
   const { data: oosItems } = usePantryItems({ stock_status: 'out_of_stock', group_id: apiGroupId });

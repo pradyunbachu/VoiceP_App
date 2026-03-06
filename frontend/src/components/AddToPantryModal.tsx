@@ -35,9 +35,25 @@ interface Props {
   onSuccess?: () => void;
 }
 
+// Unit words that can appear as prefixes (with or without a leading number).
+const UNIT_WORDS =
+  "lbs?|oz|kg|g|gallons?|gal|liters?|bags?|boxes?|cans?|bottles?|packs?|" +
+  "cartons?|jars?|pieces?|pcs?|dozen|bunch(?:es)?|loaf|loaves|slices?|" +
+  "cups?|pints?|quarts?|tubs?|rolls?|sticks?|bars?|containers?";
+
+// Adjective forms the LLM sometimes uses: "Bottled X", "Canned X", "Boxed X"
+const ADJECTIVE_UNIT_RE =
+  /^(bottled|canned|boxed|bagged|jarred|sliced|packed)\s+(.+)$/i;
+const ADJECTIVE_TO_UNIT: Record<string, string> = {
+  bottled: "bottle", canned: "can", boxed: "box", bagged: "bag",
+  jarred: "jar", sliced: "slice", packed: "pack",
+};
+
 const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
+
   // Extract quantity, unit, and name from a single item string.
-  // Supports patterns like "6 chocolates", "2 lbs chicken", "eggs x12", "eggs (12)".
+  // Supports patterns like "6 chocolates", "2 lbs chicken", "eggs x12",
+  // "eggs (12)", "bottle of chipotle sauce", "Bottled Chipotle Sauce".
   const parseQuantityFromItem = (itemStr: string): ParsedQuantity => {
     const trimmed = itemStr.trim();
 
@@ -49,7 +65,7 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
 
       // Check for unit words between quantity and name
       const unitMatch = rest.match(
-        /^(lbs?|oz|kg|g|gallons?|liters?|bags?|boxes?|cans?|bottles?|packs?|dozen)\s+(?:of\s+)?(.+)$/i
+        new RegExp(`^(${UNIT_WORDS})\\s+(?:of\\s+)?(.+)$`, "i")
       );
       if (unitMatch) {
         return { quantity: qty, unit: unitMatch[1], name: unitMatch[2] };
@@ -75,6 +91,21 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
         unit: "",
         name: parenMatch[1].trim(),
       };
+    }
+
+    // Pattern 4: adjective form -- "Bottled Chipotle Sauce" → unit=bottle, name="Chipotle Sauce"
+    const adjMatch = trimmed.match(ADJECTIVE_UNIT_RE);
+    if (adjMatch) {
+      const unit = ADJECTIVE_TO_UNIT[adjMatch[1].toLowerCase()] || adjMatch[1].toLowerCase();
+      return { quantity: 1, unit, name: adjMatch[2].trim() };
+    }
+
+    // Pattern 5: unit prefix without number -- "bottle of chipotle sauce", "bag of rice"
+    const unitPrefixMatch = trimmed.match(
+      new RegExp(`^(${UNIT_WORDS})\\s+(?:of\\s+)?(.+)$`, "i")
+    );
+    if (unitPrefixMatch) {
+      return { quantity: 1, unit: unitPrefixMatch[1], name: unitPrefixMatch[2].trim() };
     }
 
     // No quantity found -- default to 1
