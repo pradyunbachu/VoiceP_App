@@ -11,7 +11,7 @@ import { DollarSign, Plus, Trash2, Edit2, Check, X, Download } from "lucide-reac
 import { CATEGORIES } from "../constants/categories";
 import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from "../hooks";
 import { exportBudgetsCsv } from "../lib/csvExport";
-import LoadingSkeleton from "./LoadingSkeleton";
+import MixingBowlLoader from "./MixingBowlLoader";
 import ConfirmDialog from "./ConfirmDialog";
 import type { ShowToast, Budget } from "../types";
 import "./BudgetManagement.css";
@@ -176,7 +176,7 @@ const BudgetManagement: React.FC<Props> = ({ showToast }) => {
   if (loading) {
     return (
       <div className="budget-management">
-        <LoadingSkeleton type="card" count={3} />
+        <MixingBowlLoader size="lg" label="Loading budgets..." />
       </div>
     );
   }

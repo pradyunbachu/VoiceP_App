@@ -23,7 +23,7 @@ import {
   MessageSquare,
 } from 'lucide-react';
 import { useSpendingComparison, queryKeys } from '../hooks';
-import LoadingSkeleton from './LoadingSkeleton';
+import MixingBowlLoader from './MixingBowlLoader';
 import type { ShowToast, SpendingComparison as SpendingComparisonType, CategoryComparison, StoreComparison } from '../types';
 import './SpendingComparisons.css';
 
@@ -108,8 +108,7 @@ const SpendingComparisons: React.FC<Props> = ({ showToast }) => {
           <h2>Spending Comparisons</h2>
         </div>
         <div className="loading-container">
-          <LoadingSkeleton type="card" count={4} />
-          <LoadingSkeleton type="chart" />
+          <MixingBowlLoader size="lg" label="Comparing spending..." />
         </div>
       </div>
     );

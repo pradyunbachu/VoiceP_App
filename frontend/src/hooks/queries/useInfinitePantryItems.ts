@@ -7,6 +7,7 @@
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import type { PaginatedPantryItems } from '../../types';
 
@@ -25,7 +26,7 @@ interface InfinitePantryPage extends PaginatedPantryItems {
 }
 
 export const useInfinitePantryItems = (filters: InfinitePantryFilters = {}) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
   const {
     category,
     stock_status,
@@ -40,9 +41,6 @@ export const useInfinitePantryItems = (filters: InfinitePantryFilters = {}) => {
   return useInfiniteQuery<InfinitePantryPage>({
     queryKey: queryKeys.pantry.infinite(queryFilters),
     queryFn: async ({ pageParam = 1 }): Promise<InfinitePantryPage> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
       const params = new URLSearchParams();
       params.append('paginate', 'true');
       params.append('page', String(pageParam));
@@ -54,12 +52,10 @@ export const useInfinitePantryItems = (filters: InfinitePantryFilters = {}) => {
       params.append('sort_by', sort_by);
       params.append('sort_order', sort_order);
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/pantry?${params.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await authFetch(
+        `${API_BASE_URL}/api/pantry?${params.toString()}`
       );
 
-      if (response.status === 401) throw new Error('Session expired');
       if (!response.ok) throw new Error('Failed to fetch pantry items');
 
       return response.json();

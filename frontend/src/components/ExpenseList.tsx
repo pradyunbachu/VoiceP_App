@@ -14,7 +14,7 @@ import { exportExpensesCsv } from "../lib/csvExport";
 import { useAuth } from "../context/AuthContext";
 import { API_BASE_URL } from "../config/api";
 import AddToPantryModal from "./AddToPantryModal";
-import LoadingSkeleton from "./LoadingSkeleton";
+import MixingBowlLoader from "./MixingBowlLoader";
 import type { ShowToast, Expense, PantryItem } from "../types";
 import "./ExpenseList.css";
 
@@ -272,7 +272,7 @@ const ExpenseList: React.FC<Props> = ({ showToast }) => {
     return (
       <div className="expense-list">
         <h2>Recent Expenses</h2>
-        <LoadingSkeleton type="card" count={3} />
+        <MixingBowlLoader size="lg" label="Loading expenses..." />
       </div>
     );
   }

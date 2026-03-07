@@ -7,25 +7,17 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import type { Analytics } from '../../types';
 
 export const useAnalytics = () => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
 
   return useQuery<Analytics>({
     queryKey: queryKeys.analytics.summary(),
     queryFn: async (): Promise<Analytics> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(`${API_BASE_URL}/api/analytics`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
+      const response = await authFetch(`${API_BASE_URL}/api/analytics`);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch analytics: ${response.status}`);

@@ -25,6 +25,7 @@ import {
 } from "../hooks";
 import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
 import type { AppView, ShowToast, PantryItem, Expense } from "../types";
+import MixingBowlLoader from "./MixingBowlLoader";
 import "./HomeDashboard.css";
 
 interface Props {
@@ -350,7 +351,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
           </div>
           <div className="home-card-body">
             {isLoading ? (
-              <div className="home-card-skeleton" />
+              <MixingBowlLoader size="sm" />
             ) : (
               <>
                 <div className="home-alert-section">
@@ -413,7 +414,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
           </div>
           <div className="home-card-body">
             {isLoading ? (
-              <div className="home-card-skeleton" />
+              <MixingBowlLoader size="sm" />
             ) : shoppingItems && shoppingItems.length > 0 ? (
               <div className="home-shopping-chips">
                 {shoppingItems.slice(0, 8).map((item) => (
@@ -453,7 +454,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         </div>
         <div className="home-card-body">
           {isLoading ? (
-            <div className="home-card-skeleton" />
+            <MixingBowlLoader size="sm" />
           ) : cookStats && cookStats.recent_meals.length > 0 ? (
             <>
               <div className="home-meals-list">
@@ -495,7 +496,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
           </div>
           <div className="home-card-body">
             {isLoading ? (
-              <div className="home-card-skeleton" />
+              <MixingBowlLoader size="sm" />
             ) : (
               <>
                 <div className="home-stat-row">
@@ -537,7 +538,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
           </div>
           <div className="home-card-body">
             {isLoading ? (
-              <div className="home-card-skeleton" />
+              <MixingBowlLoader size="sm" />
             ) : budgets && budgets.length > 0 && topBudget ? (
               <div className="home-budget-list">
                 {budgets.slice(0, 3).map((b) => {

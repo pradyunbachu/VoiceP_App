@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { SessionExpiredError } from "./lib/authFetch";
+import SessionExpiredBanner from "./components/SessionExpiredBanner";
 import Navigation from "./components/Navigation";
 import LandingPage from "./components/LandingPage";
 import Login from "./components/Login";
@@ -14,7 +16,7 @@ import Settings from "./components/Settings";
 import SpendingInsights from "./components/SpendingInsights";
 import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
-import LoadingSkeleton from "./components/LoadingSkeleton";
+import MixingBowlLoader from "./components/MixingBowlLoader";
 import QuickRecordPopup from "./components/QuickRecordPopup";
 import type { QuickRecordPopupHandle } from "./components/QuickRecordPopup";
 import VoxyFAB from "./components/VoxyFAB";
@@ -42,6 +44,7 @@ function AppContent() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedPantryGroup, setSelectedPantryGroup] = useState<number | null | "demo">(null);
   const [chefInitialItems, setChefInitialItems] = useState<string[]>([]);
+  const [sessionExpired, setSessionExpired] = useState(false);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
 
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
@@ -67,6 +70,7 @@ function AppContent() {
           id: authUser.id,
           email: authUser.email!,
           username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "User",
+          avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || undefined,
         });
         setIsAuthenticated(true);
         if (currentView === "landing" || currentView === "login") {
@@ -87,6 +91,30 @@ function AppContent() {
       return () => clearTimeout(timer);
     }
   }, [isAuthenticated]);
+
+  // Listen for SessionExpiredError from any query/mutation
+  useEffect(() => {
+    const cache = queryClient.getQueryCache();
+    const unsubscribe = cache.subscribe((event) => {
+      if (
+        event.type === "updated" &&
+        event.query.state.status === "error" &&
+        event.query.state.error instanceof SessionExpiredError
+      ) {
+        setSessionExpired(true);
+      }
+    });
+    return () => unsubscribe();
+  }, [queryClient]);
+
+  // Clear the expired banner when the user successfully re-authenticates
+  useEffect(() => {
+    if (session && sessionExpired) {
+      setSessionExpired(false);
+      // Refetch all active queries with fresh token
+      queryClient.invalidateQueries();
+    }
+  }, [session, sessionExpired, queryClient]);
 
   // Seed demo pantry for first-time users (fire-and-forget)
   useEffect(() => {
@@ -109,6 +137,16 @@ function AppContent() {
   }, []);
 
   const [showClearAllConfirm, setShowClearAllConfirm] = useState(false);
+
+  const handleSessionSignIn = useCallback(async () => {
+    await signOut();
+    queryClient.clear();
+    setToken(null);
+    setUser(null);
+    setIsAuthenticated(false);
+    setSessionExpired(false);
+    setCurrentView("login");
+  }, [signOut, queryClient]);
 
   const handleClearAll = async () => {
     try {
@@ -146,7 +184,7 @@ function AppContent() {
       <div className="app">
         <main className="app-main">
           <div className="loading-container">
-            <LoadingSkeleton type="card" count={1} />
+            <MixingBowlLoader size="lg" label="Loading..." />
           </div>
         </main>
       </div>
@@ -209,8 +247,7 @@ function AppContent() {
           <div className="view-container" key="dashboard">
             {loading && !analytics ? (
               <div className="loading-container">
-                <LoadingSkeleton type="chart" />
-                <LoadingSkeleton type="card" count={3} />
+                <MixingBowlLoader size="lg" label="Loading analytics..." />
               </div>
             ) : analytics ? (
               <AnalyticsDashboard
@@ -310,6 +347,7 @@ function AppContent() {
 
   return (
     <div className="app">
+      {sessionExpired && <SessionExpiredBanner onSignIn={handleSessionSignIn} />}
       <ToastContainer toasts={toasts} removeToast={removeToast} />
       {isAuthenticated && (
         <ErrorBoundary name="navigation">

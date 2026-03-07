@@ -51,7 +51,7 @@ import {
 import { exportPantryCsv } from "../lib/csvExport";
 import { detectCategory } from "../lib/categoryDetection";
 import { isExpired, isExpiringSoon } from "../lib/pantryUtils";
-import LoadingSkeleton from "./LoadingSkeleton";
+import MixingBowlLoader from "./MixingBowlLoader";
 import PantryFilters from "./PantryFilters";
 import PantryBulkActions from "./PantryBulkActions";
 import PantryGroupSelector from "./PantryGroupSelector";
@@ -831,7 +831,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       {/* Items Display */}
       {loading ? (
         <div className="loading-state">
-          <LoadingSkeleton type="card" count={6} />
+          <MixingBowlLoader size="lg" label="Loading pantry..." />
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state">

@@ -31,7 +31,7 @@ import {
 } from "../hooks";
 import { useOnlineStatus } from "../hooks/queries/useShoppingList";
 import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
-import LoadingSkeleton from "./LoadingSkeleton";
+import MixingBowlLoader from "./MixingBowlLoader";
 import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
 import type { ShowToast, ShoppingListItem, PantryItem, PantryMatch, GroceryItem, StockStatus } from "../types";
 import "./ShoppingList.css";
@@ -427,7 +427,7 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
         <div className="list-content">
           {loading ? (
             <div className="list-loading">
-              <LoadingSkeleton type="list" count={5} />
+              <MixingBowlLoader size="md" label="Loading list..." />
             </div>
           ) : shoppingItems.length === 0 ? (
             <div className="list-empty">

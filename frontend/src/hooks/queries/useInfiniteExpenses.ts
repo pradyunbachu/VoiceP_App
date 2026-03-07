@@ -8,6 +8,7 @@
 import { useInfiniteQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import type { PaginatedExpenses } from '../../types';
 
@@ -24,7 +25,7 @@ interface InfiniteExpensePage extends PaginatedExpenses {
 }
 
 export const useInfiniteExpenses = (params: InfiniteExpenseParams = {}) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
   const { search, category, sortBy, sortOrder, pageSize = 20 } = params;
 
   const filters: InfiniteExpenseParams = { search, category, sortBy, sortOrder, pageSize };
@@ -32,9 +33,6 @@ export const useInfiniteExpenses = (params: InfiniteExpenseParams = {}) => {
   return useInfiniteQuery<InfiniteExpensePage>({
     queryKey: queryKeys.expenses.infinite(filters),
     queryFn: async ({ pageParam = 1 }): Promise<InfiniteExpensePage> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
       const urlParams = new URLSearchParams();
       urlParams.append('page', String(pageParam));
       urlParams.append('page_size', String(pageSize));
@@ -43,12 +41,10 @@ export const useInfiniteExpenses = (params: InfiniteExpenseParams = {}) => {
       if (sortBy) urlParams.append('sort_by', sortBy);
       if (sortOrder) urlParams.append('sort_order', sortOrder);
 
-      const response = await fetch(
-        `${API_BASE_URL}/api/expenses?${urlParams.toString()}`,
-        { headers: { Authorization: `Bearer ${token}` } }
+      const response = await authFetch(
+        `${API_BASE_URL}/api/expenses?${urlParams.toString()}`
       );
 
-      if (response.status === 401) throw new Error('Session expired');
       if (!response.ok) throw new Error(`Failed to fetch expenses: ${response.status}`);
 
       return response.json();

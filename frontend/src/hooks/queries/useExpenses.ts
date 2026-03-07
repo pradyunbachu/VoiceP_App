@@ -7,11 +7,12 @@
 import { useQuery, keepPreviousData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import type { PaginatedExpenses, ExpenseFilters } from '../../types';
 
 export const useExpenses = (params: ExpenseFilters = {}) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
   const { page, pageSize, search, category, sortBy, sortOrder, exportAll } = params;
 
   const filters: ExpenseFilters = { page, pageSize, search, category, sortBy, sortOrder, exportAll };
@@ -19,9 +20,6 @@ export const useExpenses = (params: ExpenseFilters = {}) => {
   return useQuery<PaginatedExpenses>({
     queryKey: queryKeys.expenses.list(filters),
     queryFn: async (): Promise<PaginatedExpenses> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
       const urlParams = new URLSearchParams();
       if (page) urlParams.append('page', String(page));
       if (pageSize) urlParams.append('page_size', String(pageSize));
@@ -33,13 +31,7 @@ export const useExpenses = (params: ExpenseFilters = {}) => {
 
       const url = `${API_BASE_URL}/api/expenses${urlParams.toString() ? '?' + urlParams.toString() : ''}`;
 
-      const response = await fetch(url, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
+      const response = await authFetch(url);
 
       if (!response.ok) {
         throw new Error(`Failed to fetch expenses: ${response.status}`);

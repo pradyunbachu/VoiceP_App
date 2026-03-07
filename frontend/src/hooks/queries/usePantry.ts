@@ -8,6 +8,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import type { PantryItem, PantryStats, PaginatedPantryItems } from '../../types';
 
@@ -24,15 +25,12 @@ interface PantryItemFilters {
 }
 
 export const usePantryItems = (filters: PantryItemFilters = {}) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
   const { category, stock_status, sort_by = 'name', sort_order = 'asc', search, page, page_size, paginate } = filters;
 
   return useQuery<PantryItem[] | PaginatedPantryItems>({
     queryKey: queryKeys.pantry.items(filters),
     queryFn: async (): Promise<PantryItem[] | PaginatedPantryItems> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
       const params = new URLSearchParams();
       if (category) params.append('category', category);
       if (stock_status) params.append('stock_status', stock_status);
@@ -44,13 +42,7 @@ export const usePantryItems = (filters: PantryItemFilters = {}) => {
       params.append('sort_by', sort_by);
       params.append('sort_order', sort_order);
 
-      const response = await fetch(`${API_BASE_URL}/api/pantry?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
+      const response = await authFetch(`${API_BASE_URL}/api/pantry?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch pantry items');
@@ -67,25 +59,16 @@ export const usePantryItems = (filters: PantryItemFilters = {}) => {
 };
 
 export const usePantryStats = (groupId?: number) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
 
   return useQuery<PantryStats>({
     queryKey: queryKeys.pantry.stats(groupId),
     queryFn: async (): Promise<PantryStats> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
       const params = new URLSearchParams();
       if (groupId != null) params.append('group_id', String(groupId));
       const qs = params.toString();
 
-      const response = await fetch(`${API_BASE_URL}/api/pantry/stats${qs ? `?${qs}` : ''}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
+      const response = await authFetch(`${API_BASE_URL}/api/pantry/stats${qs ? `?${qs}` : ''}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch pantry stats');

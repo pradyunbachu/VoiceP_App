@@ -144,7 +144,20 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
 
       </div>
       <div className="nav-user">
-        {user && <span className="nav-username">{user.username}</span>}
+        {user && (
+          user.avatar_url ? (
+            <img
+              src={user.avatar_url}
+              alt={user.username}
+              className="nav-avatar"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="nav-avatar nav-avatar-fallback">
+              {user.username.charAt(0).toUpperCase()}
+            </div>
+          )
+        )}
         <button
           className={`nav-settings ${currentView === "settings" ? "active" : ""}`}
           onClick={() => onViewChange("settings")}

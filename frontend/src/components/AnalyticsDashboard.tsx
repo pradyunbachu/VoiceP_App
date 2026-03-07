@@ -11,7 +11,7 @@ import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, Cart
 import { TrendingUp, DollarSign, ShoppingBag, Calendar, Trash2, Wallet, AlertTriangle, X, Maximize2 } from 'lucide-react'
 import { useTheme } from '../context/ThemeContext'
 import { useBudgets } from '../hooks'
-import LoadingSkeleton from './LoadingSkeleton'
+import MixingBowlLoader from './MixingBowlLoader'
 import type { Analytics, Budget, ShowToast } from '../types'
 import './AnalyticsDashboard.css'
 
@@ -288,7 +288,7 @@ const AnalyticsDashboard: React.FC<Props> = ({ analytics, onClearAll, showToast 
           </select>
         </div>
         {loadingBudgets ? (
-          <LoadingSkeleton type="card" count={3} />
+          <MixingBowlLoader size="md" label="Loading budgets..." />
         ) : budgets.length > 0 ? (
           <div className="budget-comparison-grid">
             {budgets.map((budget: Budget) => {

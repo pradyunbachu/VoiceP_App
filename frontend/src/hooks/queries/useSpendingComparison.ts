@@ -7,6 +7,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { getCsrfHeaders } from '../../lib/csrf';
 import { queryKeys } from './queryKeys';
 import type { SpendingComparison } from '../../types';
@@ -17,18 +18,14 @@ export const useSpendingComparison = (
   compareMonth: number,
   compareYear: number
 ) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
 
   return useQuery<SpendingComparison>({
     queryKey: queryKeys.comparison.months(currentMonth, currentYear, compareMonth, compareYear),
     queryFn: async (): Promise<SpendingComparison> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(`${API_BASE_URL}/api/spending-comparison`, {
+      const response = await authFetch(`${API_BASE_URL}/api/spending-comparison`, {
         method: 'POST',
         headers: getCsrfHeaders({
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         }),
         credentials: 'include',
@@ -39,10 +36,6 @@ export const useSpendingComparison = (
           compare_year: compareYear,
         }),
       });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
 
       if (!response.ok) {
         throw new Error(`Failed to fetch comparison: ${response.status}`);

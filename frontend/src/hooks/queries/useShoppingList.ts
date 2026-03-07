@@ -10,6 +10,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
+import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import { persistShoppingList, loadPersistedShoppingList } from '../../lib/queryClient';
 import type { ShoppingListItem, PantryItem, PantryMatch } from '../../types';
@@ -38,7 +39,7 @@ export const useOnlineStatus = () => useSyncExternalStore(subscribe, getSnapshot
 // ── Shopping list query ─────────────────────────────────────────────
 
 export const useShoppingList = (filters: ShoppingListFilters = {}) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
   const { category, group_id, sort_by = 'created_at', sort_order = 'desc' } = filters;
   const isOnline = useOnlineStatus();
 
@@ -48,22 +49,13 @@ export const useShoppingList = (filters: ShoppingListFilters = {}) => {
   const query = useQuery<ShoppingListItem[]>({
     queryKey: queryKeys.shoppingList.items(filters),
     queryFn: async (): Promise<ShoppingListItem[]> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
       const params = new URLSearchParams();
       if (category) params.append('category', category);
       if (group_id) params.append('group_id', String(group_id));
       params.append('sort_by', sort_by);
       params.append('sort_order', sort_order);
 
-      const response = await fetch(`${API_BASE_URL}/api/shopping-list?${params.toString()}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
+      const response = await authFetch(`${API_BASE_URL}/api/shopping-list?${params.toString()}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch shopping list');
@@ -99,7 +91,7 @@ export const useShoppingPantryMatches = (
   shoppingItems: ShoppingListItem[] = [],
   pantryItems: PantryItem[] = []
 ) => {
-  const { getToken, session } = useAuth();
+  const { session } = useAuth();
   const isOnline = useOnlineStatus();
 
   const hasShoppingItems = shoppingItems.length > 0;
@@ -109,20 +101,12 @@ export const useShoppingPantryMatches = (
     // Include item counts in query key to trigger refetch when lists change
     queryKey: [...queryKeys.shoppingList.pantryMatches(), shoppingItems.length, pantryItems.length],
     queryFn: async (): Promise<Record<string, PantryMatch>> => {
-      const token = await getToken();
-      if (!token) throw new Error('No authentication token');
-
-      const response = await fetch(`${API_BASE_URL}/api/shopping-list/match-pantry`, {
+      const response = await authFetch(`${API_BASE_URL}/api/shopping-list/match-pantry`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
       });
-
-      if (response.status === 401) {
-        throw new Error('Session expired');
-      }
 
       if (!response.ok) {
         throw new Error('Failed to fetch pantry matches');

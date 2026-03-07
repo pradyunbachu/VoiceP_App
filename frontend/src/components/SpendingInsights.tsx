@@ -27,7 +27,7 @@ import {
   Target
 } from 'lucide-react';
 import { useSpendingInsights, queryKeys } from '../hooks';
-import LoadingSkeleton from './LoadingSkeleton';
+import MixingBowlLoader from './MixingBowlLoader';
 import type { ShowToast, SpendingInsights as SpendingInsightsType, KeyFinding, Recommendation, TopCategory, TopStore, BudgetStatus } from '../types';
 import './SpendingInsights.css';
 
@@ -108,8 +108,7 @@ const SpendingInsights: React.FC<Props> = ({ showToast }) => {
           <h2>Spending Insights</h2>
         </div>
         <div className="loading-container">
-          <LoadingSkeleton type="card" count={4} />
-          <LoadingSkeleton type="chart" />
+          <MixingBowlLoader size="lg" label="Crunching numbers..." />
         </div>
       </div>
     );
