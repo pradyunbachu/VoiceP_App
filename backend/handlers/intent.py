@@ -22,6 +22,9 @@ import json
 
 from config import groq_client
 
+import logging
+logger = logging.getLogger(__name__)
+
 INTENT_DETECTION_PROMPT = """You are an intent classifier for a voice assistant that helps users track expenses and pantry items.
 
 Analyze the user message and classify it into ONE of these intents:
@@ -145,7 +148,7 @@ def detect_intent(message: str) -> dict:
 
         return json.loads(content)
     except Exception as e:
-        print(f"Intent detection error: {e}")
+        logger.error("Intent detection error: %s", e)
         return simple_intent_detection(message)
 
 

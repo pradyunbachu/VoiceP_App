@@ -16,6 +16,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 
 from config import supabase, SUPABASE_JWT_SECRET, get_jwks_key
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Security bearer for JWT tokens
 security = HTTPBearer()
@@ -69,7 +72,7 @@ async def get_current_user_dependency(credentials: HTTPAuthorizationCredentials 
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token has expired")
     except jwt.InvalidTokenError as e:
-        print(f"JWT Error: {e}")
+        logger.error("JWT validation error: %s", e)
         raise credentials_exception
 
     # Look up display name from profiles; fall back to email prefix if no profile exists

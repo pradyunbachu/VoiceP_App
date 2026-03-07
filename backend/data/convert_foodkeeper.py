@@ -16,7 +16,10 @@ Run:  python3 backend/data/convert_foodkeeper.py
 """
 
 import json
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 JSON_PATH = os.path.join(SCRIPT_DIR, "foodkeeper.json")
@@ -206,7 +209,7 @@ def convert():
             break
 
     if not product_sheet:
-        print("ERROR: No 'Product' sheet found in FoodKeeper JSON")
+        logger.error("No 'Product' sheet found in FoodKeeper JSON")
         return
 
     usda_items: dict[str, int] = {}
@@ -242,14 +245,14 @@ def convert():
         json.dump(shelf_data, f, indent=2)
         f.write("\n")
 
-    print(f"USDA items extracted: {len(usda_items)}")
-    print(f"Rows skipped (no usable shelf life): {skipped}")
-    print(f"Hand-curated overrides kept: {len(existing_items)}")
-    print(f"Final merged item count: {len(shelf_data['items'])}")
+    logger.info("USDA items extracted: %d", len(usda_items))
+    logger.info("Rows skipped (no usable shelf life): %d", skipped)
+    logger.info("Hand-curated overrides kept: %d", len(existing_items))
+    logger.info("Final merged item count: %d", len(shelf_data["items"]))
 
     # Spot checks for correctness
     items = shelf_data["items"]
-    print("\nSpot checks (verifying no false substring matches):")
+    logger.info("Spot checks (verifying no false substring matches):")
     checks = [
         ("butter", 30, "hand-curated"),
         ("ground beef", 2, "hand-curated"),
@@ -263,15 +266,15 @@ def convert():
         status = ""
         if expected is not None:
             status = " OK" if val == expected else " MISMATCH"
-        print(f"  {item}: {val}{status} — {note}")
+        logger.info("  %s: %s%s — %s", item, val, status, note)
 
     # Verify dangerous keys are NOT present
-    print("\nBlocked key verification (should all be ABSENT):")
+    logger.info("Blocked key verification (should all be ABSENT):")
     dangerous = ["nut", "ice", "sea", "eat", "oat", "cat", "food", "drink",
                   "meal", "white", "black", "red", "frozen", "bag", "can"]
     for key in dangerous:
         present = key in items
-        print(f"  '{key}': {'PRESENT (BAD!)' if present else 'absent (good)'}")
+        logger.info("  '%s': %s", key, "PRESENT (BAD!)" if present else "absent (good)")
 
 
 if __name__ == "__main__":

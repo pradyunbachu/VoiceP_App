@@ -21,6 +21,9 @@ import json
 from datetime import datetime
 from typing import Optional
 from config import groq_client
+import logging
+
+logger = logging.getLogger(__name__)
 
 VISION_RECEIPT_PROMPT = """You are a receipt parser. Look at this receipt image and extract the expense information.
 
@@ -56,7 +59,7 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
     Returns a dict with store, items, amount, date, category or None on failure.
     """
     if not groq_client:
-        print("Groq client not initialized")
+        logger.warning("Groq client not initialized")
         return None
 
     try:
@@ -64,7 +67,7 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
         if "," in image_base64:
             image_base64 = image_base64.split(",", 1)[1]
 
-        print(f"Sending image to Groq Vision API (size: {len(image_base64)} chars)...")
+        logger.info("Sending image to Groq Vision API (size: %d chars)", len(image_base64))
 
         response = groq_client.chat.completions.create(
             model="meta-llama/llama-4-scout-17b-16e-instruct",
@@ -90,7 +93,7 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
             timeout=30.0  # 30 second timeout
         )
 
-        print("Groq Vision API response received")
+        logger.info("Groq Vision API response received")
 
         result_text = response.choices[0].message.content.strip()
 
@@ -107,14 +110,14 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
         return validate_receipt_data(parsed)
 
     except json.JSONDecodeError as e:
-        print(f"JSON parsing error: {e}")
-        print(f"Raw response: {result_text}")
+        logger.error("JSON parsing error: %s", e)
+        logger.debug("Raw response: %s", result_text)
         return None
     except TimeoutError:
-        print("Groq API request timed out after 30 seconds")
+        logger.error("Groq API request timed out after 30 seconds")
         return None
     except Exception as e:
-        print(f"Groq vision receipt parsing error: {type(e).__name__}: {e}")
+        logger.error("Groq vision receipt parsing error: %s: %s", type(e).__name__, e)
         return None
 
 
@@ -166,7 +169,7 @@ def validate_receipt_data(data: dict) -> Optional[dict]:
         }
 
     except Exception as e:
-        print(f"Receipt validation error: {e}")
+        logger.error("Receipt validation error: %s", e)
         return None
 
 

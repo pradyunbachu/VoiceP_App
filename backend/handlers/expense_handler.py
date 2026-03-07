@@ -22,6 +22,9 @@ from datetime import datetime, timedelta
 
 from config import supabase
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 async def handle_expense_query(user_id: str, sub_intent: str, entities: dict) -> dict:
     """Handle expense-related queries."""
@@ -135,7 +138,7 @@ async def _handle_spending_comparison(user_id: str, entities: dict) -> dict:
             "query_type": "spending_comparison"
         }
     except Exception as e:
-        print(f"Spending comparison error: {e}")
+        logger.error("Spending comparison error: %s", e)
         return {
             "message": "Failed to compare spending. Please try again.",
             "query_type": "spending_comparison"
@@ -211,7 +214,7 @@ async def handle_expense_delete(user_id: str, entities: dict, original_message: 
             "query_type": "expense_delete"
         }
     except Exception as e:
-        print(f"Expense delete error: {e}")
+        logger.error("Expense delete error: %s", e)
         return {
             "success": False,
             "message": "Failed to delete expense. Please try again.",
@@ -301,7 +304,7 @@ async def handle_store_trip(user_id: str, entities: dict, original_message: str)
                     }).execute()
                     added_items.append(item_name.title())
                 except Exception as e:
-                    print(f"Error adding pantry item from store trip: {e}")
+                    logger.error("Error adding pantry item from store trip: %s", e)
 
             return {
                 "success": True,
@@ -324,7 +327,7 @@ async def handle_store_trip(user_id: str, entities: dict, original_message: str)
                 "query_type": "store_trip"
             }
     except Exception as e:
-        print(f"Store trip error: {e}")
+        logger.error("Store trip error: %s", e)
         return {
             "success": False,
             "message": "Failed to process store trip. Please try again.",
@@ -369,7 +372,7 @@ async def handle_mark_subscription(user_id: str, entities: dict) -> dict:
             "query_type": "mark_subscription"
         }
     except Exception as e:
-        print(f"Mark subscription error: {e}")
+        logger.error("Mark subscription error: %s", e)
         return {
             "success": False,
             "message": "Failed to mark as subscription. Please try again.",

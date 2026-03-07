@@ -12,6 +12,9 @@ from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from cache import api_cache, make_cache_key
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -95,5 +98,5 @@ async def get_user_streak(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Failed to calculate streak: {e}")
+        logger.error("Failed to calculate streak: %s", e)
         raise HTTPException(status_code=500, detail="Failed to calculate streak")

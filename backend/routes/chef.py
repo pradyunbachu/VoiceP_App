@@ -16,6 +16,9 @@ from config import groq_client
 from auth import get_current_user_dependency
 from rate_limit import limiter
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -69,7 +72,7 @@ Rules:
 
         return json.loads(content)
     except Exception as e:
-        print(f"Chef suggestions generation error: {e}")
+        logger.error("Chef suggestions generation error: %s", e)
         return None
 
 

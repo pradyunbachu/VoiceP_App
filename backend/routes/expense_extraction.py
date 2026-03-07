@@ -31,6 +31,10 @@ from services.expense_extraction import (
     extract_expense_simple
 )
 from cache import api_cache
+import logging
+
+logger = logging.getLogger(__name__)
+
 from routes.pantry import _normalize_item_name
 
 
@@ -112,7 +116,7 @@ async def extract_expense_simple_endpoint(
             "message": "Expense saved successfully (using simple extraction)"
         }
     except Exception as e:
-        print(f"Simple extraction error: {e}")
+        logger.error("Simple extraction error: %s", e)
         raise HTTPException(status_code=500, detail="Failed to extract expense from transcript")
 
 @router.post("/extract-expense")
@@ -274,7 +278,7 @@ Return JSON array only, no other text."""
                     validated = validate_expense(expense_data, today_str)
                     validated_expenses.append(validated)
                 except ValueError as e:
-                    print(f"Validation error for expense: {e}, skipping...")
+                    logger.warning("Validation error for expense: %s, skipping", e)
                     continue
 
             if not validated_expenses:
@@ -330,7 +334,7 @@ Return JSON array only, no other text."""
                     "recurring_unit": recurring_unit
                 })
 
-            print(f"Groq extraction successful: {len(saved_expenses)} expense(s) saved")
+            logger.info("Groq extraction successful: %d expense(s) saved", len(saved_expenses))
             api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
             api_cache.invalidate_prefix(f"insights:{current_user['id']}")
             api_cache.invalidate_prefix(f"streak:{current_user['id']}")
@@ -341,7 +345,7 @@ Return JSON array only, no other text."""
             }
 
         except (json.JSONDecodeError, ValueError, KeyError) as e:
-            print(f"First Groq extraction attempt failed: {e}, trying simpler prompt...")
+            logger.warning("First Groq extraction attempt failed: %s, trying simpler prompt", e)
             try:
                 simple_prompt = f"""Extract expense from: "{transcript}"
 
@@ -431,16 +435,14 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
                         "message": f"{len(saved_expenses)} expense(s) saved successfully (using Groq - retry)"
                     }
             except Exception as retry_error:
-                print(f"Retry also failed: {retry_error}")
+                logger.error("Retry also failed: %s", retry_error)
         except Exception as e:
-            print(f"Groq error: {str(e)}")
-            import traceback
-            traceback.print_exc()
+            logger.exception("Groq error")
 
     # Fallback to simple extraction if Groq fails or unavailable
-    print("Using simple extraction (Groq unavailable or failed)")
+    logger.info("Using simple extraction (Groq unavailable or failed)")
     expenses_data = extract_expense_simple(transcript)
-    print(f"Simple extraction result: {expenses_data}")
+    logger.debug("Simple extraction result: %s", expenses_data)
 
     if not isinstance(expenses_data, list):
         expenses_data = [expenses_data]

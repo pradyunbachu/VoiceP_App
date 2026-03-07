@@ -29,6 +29,9 @@ from datetime import datetime, timedelta
 
 from config import supabase, groq_client
 
+import logging
+logger = logging.getLogger(__name__)
+
 # Load grocery categories from shared JSON
 _data_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "grocery_categories.json")
 with open(_data_path, "r") as f:
@@ -220,7 +223,7 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
                     "id": response.data[0].get("id")
                 })
         except Exception as e:
-            print(f"Error adding pantry item '{item_name}': {e}")
+            logger.error("Error adding pantry item '%s': %s", item_name, e)
 
     return {
         "added_items": added_items,
@@ -306,7 +309,7 @@ async def handle_pantry_remove(user_id: str, entities: dict, original_message: s
             "query_type": "pantry_remove"
         }
     except Exception as e:
-        print(f"Pantry remove error: {e}")
+        logger.error("Pantry remove error: %s", e)
         return {
             "success": False,
             "removed_count": 0,
@@ -432,7 +435,7 @@ Only include items that are actually in the pantry list above. Be practical abou
             "query_type": "cooking_deduct"
         }
     except Exception as e:
-        print(f"Cooking deduct error: {e}")
+        logger.error("Cooking deduct error: %s", e)
         return {
             "success": False,
             "message": "Failed to deduct ingredients. Please try again.",

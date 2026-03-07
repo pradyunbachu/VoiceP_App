@@ -26,6 +26,9 @@ from auth import get_current_user_dependency
 from rate_limit import limiter
 from schemas import ExpenseCreate, ExpenseUpdate, BulkDeleteRequest
 from cache import api_cache
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -73,7 +76,7 @@ async def create_expense(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Failed to create expense: {e}")
+        logger.error("Failed to create expense: %s", e)
         raise HTTPException(status_code=500, detail="Failed to create expense")
 
 

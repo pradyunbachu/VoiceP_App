@@ -496,12 +496,12 @@ async def delete_pantry_items_bulk(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    deleted_count = 0
-    for item_id in bulk_request.item_ids:
-        response = supabase.table("pantry_items").delete().eq("id", item_id).eq("user_id", current_user["id"]).execute()
-        if response.data:
-            deleted_count += 1
+    response = supabase.table("pantry_items").delete()\
+        .in_("id", bulk_request.item_ids)\
+        .eq("user_id", current_user["id"])\
+        .execute()
 
+    deleted_count = len(response.data) if response.data else 0
     return {"message": f"{deleted_count} item(s) deleted successfully", "deleted_count": deleted_count}
 
 @router.delete("/pantry/{item_id}")

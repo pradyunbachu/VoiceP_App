@@ -23,6 +23,9 @@ from auth import get_current_user_dependency
 from rate_limit import limiter
 from cache import api_cache, make_cache_key
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -104,7 +107,7 @@ Keep it short and practical."""
 
         return json.loads(content)
     except Exception as e:
-        print(f"Daily recs meal generation error: {e}")
+        logger.error("Daily recs meal generation error: %s", e)
         return None
 
 
@@ -271,7 +274,7 @@ Estimate nutrition per serving. Use the available ingredients where possible. Ke
 
         return json.loads(content)
     except Exception as e:
-        print(f"Recipe detail generation error: {e}")
+        logger.error("Recipe detail generation error: %s", e)
         return None
 
 

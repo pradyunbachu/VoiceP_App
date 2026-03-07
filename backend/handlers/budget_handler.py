@@ -21,6 +21,9 @@ from datetime import datetime
 
 from config import supabase
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def parse_budget_amount(message: str) -> float | None:
     """Extract a dollar amount from a message."""
@@ -122,7 +125,7 @@ async def handle_budget_query(user_id: str, sub_intent: str, entities: dict) -> 
             "query_type": "budget_query"
         }
     except Exception as e:
-        print(f"Budget query error: {e}")
+        logger.error("Budget query error: %s", e)
         return {
             "message": "Failed to check budget status. Please try again.",
             "query_type": "budget_query"
@@ -225,7 +228,7 @@ async def handle_budget_set(user_id: str, entities: dict, original_message: str)
                 "query_type": "budget_set"
             }
     except Exception as e:
-        print(f"Budget set error: {e}")
+        logger.error("Budget set error: %s", e)
         return {
             "success": False,
             "message": "Failed to set budget. Please try again.",
@@ -327,7 +330,7 @@ async def handle_share_list(user_id: str, entities: dict, original_message: str)
             "query_type": "share_list"
         }
     except Exception as e:
-        print(f"Share list error: {e}")
+        logger.error("Share list error: %s", e)
         return {
             "success": False,
             "message": "Failed to share list. Please try again.",

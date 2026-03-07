@@ -19,6 +19,9 @@ from rate_limit import limiter
 from schemas import ReceiptScanRequest, ReceiptScanResponse
 from services.receipt_parsing import parse_receipt_with_vision
 from cache import api_cache
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -88,5 +91,5 @@ async def scan_receipt(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Error saving receipt expense: {e}")
+        logger.error("Error saving receipt expense: %s", e)
         raise HTTPException(status_code=500, detail="Failed to save expense from receipt")

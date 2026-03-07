@@ -7,6 +7,7 @@ under the /api prefix, and runs a one-time recurring-expense check on startup.
 # ============================================================================
 # VOXAL API - MAIN ENTRY POINT
 # ============================================================================
+import logging
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
@@ -18,6 +19,16 @@ from slowapi.errors import RateLimitExceeded
 
 from config import supabase
 from rate_limit import limiter
+
+# ============================================================================
+# LOGGING CONFIGURATION
+# ============================================================================
+logging.basicConfig(
+    level=logging.DEBUG if os.getenv("ENVIRONMENT", "development") != "production" else logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
+logger = logging.getLogger(__name__)
 from services.recurring import process_due_recurring_expenses
 from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, pantry_sharing, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs, streak, cook_meal, chef
 from middleware.csrf import CSRFMiddleware, get_csrf_token
@@ -32,9 +43,9 @@ async def lifespan(app: FastAPI):
     try:
         created = process_due_recurring_expenses()
         if created and created > 0:
-            print(f"Startup: Created {created} recurring expense(s)")
+            logger.info("Startup: Created %d recurring expense(s)", created)
     except Exception as e:
-        print(f"Startup recurring check error: {e}")
+        logger.error("Startup recurring check error: %s", e)
     yield
 
 # ============================================================================

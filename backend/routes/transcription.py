@@ -15,6 +15,9 @@ import httpx
 from config import deepgram_api_key, deepgram_available
 from auth import get_current_user_dependency
 from rate_limit import limiter
+import logging
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -85,15 +88,13 @@ async def transcribe_audio(
             )
 
     except httpx.HTTPStatusError as e:
-        print(f"Deepgram API HTTP error: {e.response.status_code} - {e.response.text}")
+        logger.error("Deepgram API HTTP error: %d - %s", e.response.status_code, e.response.text)
         raise HTTPException(
             status_code=502,
             detail="Transcription service error"
         )
     except Exception as e:
-        print(f"Deepgram transcription error: {str(e)}")
-        import traceback
-        traceback.print_exc()
+        logger.exception("Deepgram transcription error")
         raise HTTPException(
             status_code=500,
             detail="Transcription failed"

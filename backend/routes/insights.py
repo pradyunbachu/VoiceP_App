@@ -27,6 +27,9 @@ from rate_limit import limiter
 from schemas import InsightsRequest, InsightsResponse, SpendingComparisonRequest
 from cache import api_cache, make_cache_key
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # ============================================================================
@@ -114,7 +117,7 @@ SPENDING PATTERNS:
 
         return json.loads(content)
     except Exception as e:
-        print(f"AI insights generation error: {e}")
+        logger.error("AI insights generation error: %s", e)
         return None
 
 

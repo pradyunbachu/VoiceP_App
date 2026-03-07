@@ -24,6 +24,9 @@ from schemas import (
     BulkShoppingListDeleteRequest
 )
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 
@@ -463,6 +466,6 @@ async def match_shopping_to_pantry(
         return {"matches": simple_matches, "method": "ai_enhanced"}
 
     except Exception as e:
-        print(f"AI matching error: {e}")
+        logger.error("AI matching error: %s", e)
         # Return simple matches on error
         return {"matches": simple_matches, "method": "simple_fallback"}

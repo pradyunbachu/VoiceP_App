@@ -17,6 +17,9 @@ from auth import get_current_user_dependency
 from rate_limit import limiter
 from services.recurring import process_due_recurring_expenses
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.post("/recurring/process")
@@ -30,7 +33,7 @@ async def process_recurring(request: Request, current_user: dict = Depends(get_c
             "created_count": created
         }
     except Exception as e:
-        print(f"Error processing recurring expenses: {e}")
+        logger.error("Error processing recurring expenses: %s", e)
         raise HTTPException(status_code=500, detail="Error processing recurring expenses")
 
 @router.get("/recurring")

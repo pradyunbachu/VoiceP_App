@@ -21,6 +21,9 @@ import json
 
 from config import supabase, groq_client
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 async def handle_suggestion(user_id: str, sub_intent: str, entities: dict) -> dict:
     """Generate shopping suggestions based on shopping list and pantry status."""
@@ -197,7 +200,7 @@ Prioritize meals that use expiring ingredients. Keep it practical and simple."""
             "query_type": "meal_suggestion"
         }
     except Exception as e:
-        print(f"Meal suggestion error: {e}")
+        logger.error("Meal suggestion error: %s", e)
         return {
             "meals": [],
             "pantry_count": len(full_items),
@@ -276,7 +279,7 @@ async def handle_reminder_check(user_id: str, entities: dict, original_message: 
             "query_type": "reminder_check"
         }
     except Exception as e:
-        print(f"Reminder check error: {e}")
+        logger.error("Reminder check error: %s", e)
         return {
             "success": False,
             "message": "Failed to check item. Please try again.",
@@ -362,7 +365,7 @@ Keep meals practical, varied, and use up expiring items early in the week."""
             "query_type": "meal_plan_week"
         }
     except Exception as e:
-        print(f"Meal plan week error: {e}")
+        logger.error("Meal plan week error: %s", e)
         return {
             "meal_plan": [],
             "message": "Could not generate weekly meal plan. Please try again.",
@@ -446,7 +449,7 @@ Consider that pantry items are already available (no cost). Only estimate cost f
             "query_type": "budget_meal"
         }
     except Exception as e:
-        print(f"Budget meal error: {e}")
+        logger.error("Budget meal error: %s", e)
         return {
             "meals": [],
             "message": "Could not generate budget meal suggestions. Please try again.",

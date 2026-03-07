@@ -21,6 +21,9 @@ from datetime import datetime
 
 from config import supabase
 
+import logging
+logger = logging.getLogger(__name__)
+
 
 def parse_purchased_items(message: str) -> list:
     """Parse item names from a purchase message."""
@@ -139,7 +142,7 @@ async def handle_shopping_complete(user_id: str, entities: dict, original_messag
                 if resp.data:
                     pantry_added.append(item_name.title())
             except Exception as e:
-                print(f"Error auto-adding '{item_name}' to pantry: {e}")
+                logger.error("Error auto-adding '%s' to pantry: %s", item_name, e)
 
     return {
         "removed_items": removed_items,
@@ -218,7 +221,7 @@ async def handle_shopping_list_add(user_id: str, entities: dict, original_messag
                     "id": response.data[0].get("id")
                 })
         except Exception as e:
-            print(f"Error adding shopping list item '{item_name}': {e}")
+            logger.error("Error adding shopping list item '%s': %s", item_name, e)
 
     return {
         "added_items": added_items,
@@ -298,7 +301,7 @@ async def handle_shopping_list_remove(user_id: str, entities: dict, original_mes
             if response.data:
                 deleted_count += 1
         except Exception as e:
-            print(f"Error removing shopping list item: {e}")
+            logger.error("Error removing shopping list item: %s", e)
 
     if deleted_count == 0 and shopping_items:
         return {
@@ -340,7 +343,7 @@ async def handle_shopping_clear(user_id: str) -> dict:
             "query_type": "shopping_clear"
         }
     except Exception as e:
-        print(f"Shopping clear error: {e}")
+        logger.error("Shopping clear error: %s", e)
         return {
             "message": "Failed to clear shopping list. Please try again.",
             "query_type": "shopping_clear"

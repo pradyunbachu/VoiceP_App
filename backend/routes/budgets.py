@@ -25,6 +25,9 @@ from auth import get_current_user_dependency
 from rate_limit import limiter
 from schemas import BudgetCreate, BudgetUpdate
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 @router.get("/budgets")
@@ -152,7 +155,7 @@ async def create_budget(
     except HTTPException:
         raise
     except Exception as e:
-        print(f"Failed to create budget: {e}")
+        logger.error("Failed to create budget: %s", e)
         raise HTTPException(status_code=500, detail="Failed to create budget")
 
 @router.put("/budgets/{budget_id}")

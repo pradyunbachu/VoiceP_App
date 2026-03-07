@@ -21,6 +21,9 @@ from auth import get_current_user_dependency
 from rate_limit import limiter
 from cache import api_cache, make_cache_key
 
+import logging
+logger = logging.getLogger(__name__)
+
 router = APIRouter()
 
 # Estimated dollar value saved per expiring item diverted from waste
@@ -211,7 +214,7 @@ async def cook_meal(
             "estimated_savings": estimated_savings,
         }).execute()
     except Exception as e:
-        print(f"Failed to record cooked meal: {e}")
+        logger.error("Failed to record cooked meal: %s", e)
         # Non-fatal — deductions already applied
 
     # Invalidate related caches
@@ -263,7 +266,7 @@ async def cook_stats(
         )
         rows = resp.data or []
     except Exception as e:
-        print(f"Failed to fetch cook stats: {e}")
+        logger.error("Failed to fetch cook stats: %s", e)
         rows = []
 
     week_meals_cooked = len(rows)

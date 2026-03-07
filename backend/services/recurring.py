@@ -17,6 +17,9 @@ times on the same day.
 import calendar
 from datetime import datetime, timedelta
 from config import supabase
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Safety limit: max number of catch-up entries per recurring expense per run
 MAX_CATCHUP_ITERATIONS = 52
@@ -29,7 +32,7 @@ def process_due_recurring_expenses(user_id=None):
     When user_id is provided, only processes that user's recurring expenses.
     """
     if supabase is None:
-        print("Supabase not configured, skipping recurring expense processing")
+        logger.warning("Supabase not configured, skipping recurring expense processing")
         return
 
     today = datetime.now().date()
@@ -107,7 +110,7 @@ def process_due_recurring_expenses(user_id=None):
                     if insert_response.data:
                         created_count += 1
                 except Exception as e:
-                    print(f"Error creating recurring expense: {e}")
+                    logger.error("Error creating recurring expense: %s", e)
 
             # Advance to next due date
             next_due = _advance_date(next_due, recurring_interval, recurring_unit, original_day)

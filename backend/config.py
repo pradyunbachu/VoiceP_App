@@ -19,6 +19,9 @@ import httpx
 from jwt import PyJWK
 from groq import Groq
 from supabase import create_client, Client
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Load environment variables
 load_dotenv()
@@ -32,12 +35,12 @@ SUPABASE_JWT_SECRET = os.getenv("SUPABASE_JWT_SECRET", "")  # used for HS256 JWT
 
 # Initialize Supabase client
 if not SUPABASE_URL or not SUPABASE_KEY:
-    print("WARNING: SUPABASE_URL and SUPABASE_KEY not set. Please set them in .env file")
-    print("Get your credentials from: https://supabase.com/dashboard")
+    logger.warning("SUPABASE_URL and SUPABASE_KEY not set. Please set them in .env file")
+    logger.warning("Get your credentials from: https://supabase.com/dashboard")
     supabase: Optional[Client] = None
 else:
     supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
-    print("Supabase client initialized successfully")
+    logger.info("Supabase client initialized successfully")
 
 # ============================================================================
 # JWKS CACHE FOR JWT VALIDATION
@@ -74,7 +77,7 @@ def get_jwks_key(kid: str):
 
         return jwks_cache.get(kid)
     except Exception as e:
-        print(f"Error fetching JWKS: {e}")
+        logger.error("Error fetching JWKS: %s", e)
         return None
 
 # ============================================================================
@@ -82,8 +85,8 @@ def get_jwks_key(kid: str):
 # ============================================================================
 groq_api_key = os.getenv("GROQ_API_KEY", "")
 if not groq_api_key or groq_api_key == "your_groq_api_key_here":
-    print("WARNING: GROQ_API_KEY not set. Please set your API key in .env file")
-    print("Get a free API key at: https://console.groq.com/")
+    logger.warning("GROQ_API_KEY not set. Please set your API key in .env file")
+    logger.warning("Get a free API key at: https://console.groq.com/")
     groq_client = None
 else:
     groq_client = Groq(api_key=groq_api_key)
@@ -93,8 +96,8 @@ else:
 # ============================================================================
 deepgram_api_key = os.getenv("DEEPGRAM_API_KEY", "")
 if not deepgram_api_key or deepgram_api_key == "your_deepgram_api_key_here":
-    print("WARNING: DEEPGRAM_API_KEY not set. Please set your API key in .env file")
-    print("Get a free API key at: https://console.deepgram.com/")
+    logger.warning("DEEPGRAM_API_KEY not set. Please set your API key in .env file")
+    logger.warning("Get a free API key at: https://console.deepgram.com/")
     deepgram_available = False
 else:
     deepgram_available = True
