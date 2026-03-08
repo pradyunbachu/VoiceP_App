@@ -8,6 +8,7 @@
  */
 import { useState } from "react";
 import type { FC, FormEvent, ChangeEvent } from "react";
+import { motion } from "framer-motion";
 import { LogIn, UserPlus } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import type { AppUser, ShowToast } from "../types";
@@ -112,7 +113,12 @@ const Login: FC<Props> = ({ onLogin }) => {
 
   return (
     <div className="login-container">
-      <div className="login-card">
+      <motion.div
+        className="login-card"
+        initial={{ opacity: 0, y: 24, scale: 0.97 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        transition={{ duration: 0.4, ease: "easeOut" }}
+      >
         <div className="login-header">
           <h2>{mode === "login" ? "Login" : mode === "signup" ? "Create Account" : "Reset Password"}</h2>
           <p>
@@ -297,7 +303,7 @@ const Login: FC<Props> = ({ onLogin }) => {
             )}
           </p>
         </div>
-      </div>
+      </motion.div>
     </div>
   );
 };

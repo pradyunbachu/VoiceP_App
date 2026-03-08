@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect } from "react";
 import type { FC } from "react";
+import { motion } from "framer-motion";
 import {
   DollarSign,
   AlertTriangle,
@@ -228,10 +229,25 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
   const maxSpend = Math.max(...dailySpending, 1);
   const todayIdx = now.getDay();
 
+  const stagger = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.07 } },
+  };
+
+  const fadeUp = {
+    hidden: { opacity: 0, y: 16 },
+    show: { opacity: 1, y: 0, transition: { duration: 0.35, ease: "easeOut" as const } },
+  };
+
   return (
-    <div className="home-dashboard">
+    <motion.div
+      className="home-dashboard"
+      variants={stagger}
+      initial="hidden"
+      animate="show"
+    >
       {/* ── Greeting + Streak ──────────────────────────────── */}
-      <div className="home-greeting">
+      <motion.div className="home-greeting" variants={fadeUp}>
         <div className="home-greeting-row">
           <div>
             <h1>
@@ -248,10 +264,10 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Quick Actions ──────────────────────────────────── */}
-      <div className="home-quick-actions" data-tutorial="quick-actions">
+      <motion.div className="home-quick-actions" data-tutorial="quick-actions" variants={fadeUp}>
         <button className="home-quick-btn" onClick={() => onNavigate("pantry")}>
           <Package size={18} />
           <span>Pantry</span>
@@ -268,10 +284,10 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
           <Mic size={18} />
           <span>Voice input</span>
         </button>
-      </div>
+      </motion.div>
 
       {/* ── Monthly Activity Tracker ─────────────────────────── */}
-      <div className="home-activity-tracker">
+      <motion.div className="home-activity-tracker" variants={fadeUp}>
         <div className="home-activity-header">
           <span className="home-activity-month">
             {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
@@ -325,19 +341,19 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             </div>
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Recipe Nudge (only if urgent items) ────────────── */}
       {recipeNudge && (
-        <button className="home-nudge" onClick={() => onNavigate("chef")}>
+        <motion.button className="home-nudge" onClick={() => onNavigate("chef")} variants={fadeUp}>
           <Sparkles size={16} />
           <span>{recipeNudge.label}</span>
           <ChevronRight size={14} className="home-card-arrow" />
-        </button>
+        </motion.button>
       )}
 
       {/* ── Two-column: Pantry Alerts + Shopping ─────────── */}
-      <div className="home-grid">
+      <motion.div className="home-grid" variants={fadeUp}>
         {/* Pantry Alerts Card */}
         <button className="home-card home-card--pantry" onClick={() => onNavigate("pantry")} data-tutorial="pantry-card">
           <div className="home-card-header">
@@ -433,10 +449,10 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             )}
           </div>
         </button>
-      </div>
+      </motion.div>
 
       {/* ── Meals This Week ────────────────────────────────── */}
-      <div className="home-card home-card--meals">
+      <motion.div className="home-card home-card--meals" variants={fadeUp}>
         <div className="home-card-header">
           <div className="home-card-icon home-card-icon--meals">
             <ChefHat size={20} />
@@ -479,10 +495,10 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             <p className="home-empty-hint">No meals cooked yet this week</p>
           )}
         </div>
-      </div>
+      </motion.div>
 
       {/* ── Two-column: Expenses + Budget (secondary) ──────── */}
-      <div className="home-grid">
+      <motion.div className="home-grid" variants={fadeUp}>
         {/* Expenses Card */}
         <button className="home-card home-card--expenses" onClick={() => onNavigate("expenses")} data-tutorial="expenses-card">
           <div className="home-card-header">
@@ -567,8 +583,8 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             )}
           </div>
         </button>
-      </div>
-    </div>
+      </motion.div>
+    </motion.div>
   );
 };
 

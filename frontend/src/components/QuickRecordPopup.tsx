@@ -9,6 +9,7 @@
  * to add items to the pantry. Non-expense intents render inline chat responses.
  */
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ReceiptScanner from "./ReceiptScanner";
@@ -443,8 +444,21 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
   if (isIdle) {
     return (
       <>
-        <div className="idle-backdrop" onClick={handleDismiss} />
-        <div className="quick-record-dropdown" onClick={(e: React.MouseEvent) => e.stopPropagation()}>
+        <motion.div
+          className="idle-backdrop"
+          onClick={handleDismiss}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+        />
+        <motion.div
+          className="quick-record-dropdown"
+          onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          initial={{ opacity: 0, y: 12, scale: 0.9 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          exit={{ opacity: 0, y: 12, scale: 0.9 }}
+          transition={{ type: "spring", stiffness: 400, damping: 25 }}
+        >
           <button className="idle-dropdown-btn" onClick={() => { startedViaButtonRef.current = true; startRecording(); }}>
             <div className="idle-dropdown-icon idle-dropdown-icon--mic">
               <Mic size={18} />
@@ -463,7 +477,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
             </div>
             <span>Scan</span>
           </button>
-        </div>
+        </motion.div>
       </>
     );
   }
@@ -471,10 +485,21 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
   return (
     <>
       {!showPantryModal && (
-      <div className="quick-record-overlay" onClick={handleDismiss}>
-        <div
+      <motion.div
+        className="quick-record-overlay"
+        onClick={handleDismiss}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.2 }}
+      >
+        <motion.div
           className="quick-record-popup"
           onClick={(e: React.MouseEvent) => e.stopPropagation()}
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          transition={{ type: "spring", stiffness: 350, damping: 25 }}
         >
           {/* Manual Input State */}
           {showManualInput && !isProcessing && !extractedExpense && !chatResponse && (
@@ -620,8 +645,8 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
               </div>
             </div>
           )}
-        </div>
-      </div>
+        </motion.div>
+      </motion.div>
       )}
 
       {/* Pantry Modal */}

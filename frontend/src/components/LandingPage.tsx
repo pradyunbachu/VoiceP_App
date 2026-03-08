@@ -8,6 +8,7 @@
  * label based on authentication state.
  */
 import type { FC } from "react";
+import { motion } from "framer-motion";
 import {
   Mic,
   LogIn,
@@ -19,6 +20,16 @@ import {
   ChefHat,
 } from "lucide-react";
 import "./LandingPage.css";
+
+const fadeUp = {
+  hidden: { opacity: 0, y: 24 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: "easeOut" as const } },
+};
+
+const stagger = {
+  hidden: {},
+  visible: { transition: { staggerChildren: 0.1 } },
+};
 
 interface Props {
   onGetStarted: () => void;
@@ -37,17 +48,24 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
       )}
 
       {/* Section 1: Hero */}
-      <section className="landing-hero">
+      <motion.section
+        className="landing-hero"
+        variants={stagger}
+        initial="hidden"
+        animate="visible"
+      >
         <div className="landing-hero-content">
-          <Mic size={48} className="logo-icon" />
-          <h1 className="landing-title">voxal</h1>
-          <p className="landing-tagline">
+          <motion.div variants={fadeUp}>
+            <Mic size={48} className="logo-icon" />
+          </motion.div>
+          <motion.h1 className="landing-title" variants={fadeUp}>voxal</motion.h1>
+          <motion.p className="landing-tagline" variants={fadeUp}>
             Your kitchen, organized by voice.
-          </p>
-          <p className="landing-description">
+          </motion.p>
+          <motion.p className="landing-description" variants={fadeUp}>
             Track what's in your pantry, get recipes before food expires,
             and keep your shopping list in sync — all with one sentence.
-          </p>
+          </motion.p>
           {!isAuthenticated ? (
             <button className="get-started-button" onClick={onGetStarted}>
               Get Started
@@ -57,7 +75,7 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               Go to Dashboard
             </button>
           )}
-          <div className="highlight-pills">
+          <motion.div className="highlight-pills" variants={fadeUp}>
             <div className="highlight-pill">
               <Package size={16} />
               <span>Smart Pantry</span>
@@ -74,14 +92,20 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               <Mic size={16} />
               <span>Voice-First</span>
             </div>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Section 2: One sentence does it all */}
-      <section className="landing-section landing-voice-demo">
-        <h2 className="landing-section-title">One sentence does it all</h2>
-        <div className="voice-demo-container">
+      <motion.section
+        className="landing-section landing-voice-demo"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={stagger}
+      >
+        <motion.h2 className="landing-section-title" variants={fadeUp}>One sentence does it all</motion.h2>
+        <motion.div className="voice-demo-container" variants={fadeUp}>
           <div className="voice-bubble">
             <Mic size={20} className="voice-bubble-icon" />
             <span>
@@ -118,13 +142,19 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* Section 3: Feature cards */}
-      <section className="landing-section landing-features">
+      <motion.section
+        className="landing-section landing-features"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.2 }}
+        variants={stagger}
+      >
         <div className="feature-grid">
-          <div className="feature-card">
+          <motion.div className="feature-card" variants={fadeUp}>
             <div className="feature-icon blue">
               <Package size={24} />
             </div>
@@ -133,8 +163,8 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               Know exactly what you have. See expiration dates at a glance. No
               more buying duplicates or throwing out food.
             </p>
-          </div>
-          <div className="feature-card">
+          </motion.div>
+          <motion.div className="feature-card" variants={fadeUp}>
             <div className="feature-icon purple">
               <ChefHat size={24} />
             </div>
@@ -143,8 +173,8 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               Ask what you can cook tonight. Get answers based on what's actually
               in your pantry.
             </p>
-          </div>
-          <div className="feature-card">
+          </motion.div>
+          <motion.div className="feature-card" variants={fadeUp}>
             <div className="feature-icon amber">
               <ShoppingCart size={24} />
             </div>
@@ -153,8 +183,8 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               Auto-generated from meal plans. Share with your partner or
               roommates.
             </p>
-          </div>
-          <div className="feature-card">
+          </motion.div>
+          <motion.div className="feature-card" variants={fadeUp}>
             <div className="feature-icon red">
               <TrendingDown size={24} />
             </div>
@@ -163,14 +193,20 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
               Automatically track what you spend on groceries. See trends by
               store and category.
             </p>
-          </div>
+          </motion.div>
         </div>
-      </section>
+      </motion.section>
 
       {/* Section 4: The Loop */}
-      <section className="landing-section landing-loop">
-        <h2 className="landing-section-title">The Loop</h2>
-        <div className="loop-steps">
+      <motion.section
+        className="landing-section landing-loop"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.3 }}
+        variants={stagger}
+      >
+        <motion.h2 className="landing-section-title" variants={fadeUp}>The Loop</motion.h2>
+        <motion.div className="loop-steps" variants={fadeUp}>
           <div className="loop-step">
             <div className="loop-step-icon">
               <Package size={24} />
@@ -202,13 +238,19 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
             <strong>Repeat</strong>
             <span>Voice-log your next haul</span>
           </div>
-        </div>
-      </section>
+        </motion.div>
+      </motion.section>
 
       {/* Section 5: Bottom CTA */}
-      <section className="landing-section landing-bottom-cta">
-        <h2>Your kitchen, finally under control.</h2>
-        <p>Free to use. No credit card needed.</p>
+      <motion.section
+        className="landing-section landing-bottom-cta"
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, amount: 0.5 }}
+        variants={stagger}
+      >
+        <motion.h2 variants={fadeUp}>Your kitchen, finally under control.</motion.h2>
+        <motion.p variants={fadeUp}>Free to use. No credit card needed.</motion.p>
         {!isAuthenticated ? (
           <button className="get-started-button" onClick={onGetStarted}>
             Get Started
@@ -218,7 +260,7 @@ const LandingPage: FC<Props> = ({ onGetStarted, onLogin, isAuthenticated = false
             Go to Dashboard
           </button>
         )}
-      </section>
+      </motion.section>
     </div>
   );
 };

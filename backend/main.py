@@ -28,6 +28,11 @@ logging.basicConfig(
     format="%(asctime)s [%(levelname)s] %(name)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+# Suppress noisy HTTP/2 debug logs from supabase/httpx internals
+logging.getLogger("httpcore").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
+logging.getLogger("hpack").setLevel(logging.WARNING)
+logging.getLogger("groq").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 from services.recurring import process_due_recurring_expenses
 from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, pantry_sharing, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs, streak, cook_meal, chef

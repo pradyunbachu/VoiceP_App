@@ -1,4 +1,5 @@
 import type { FC } from "react";
+import { motion } from "framer-motion";
 import { LogIn } from "lucide-react";
 import "./SessionExpiredBanner.css";
 
@@ -7,13 +8,18 @@ interface Props {
 }
 
 const SessionExpiredBanner: FC<Props> = ({ onSignIn }) => (
-  <div className="session-banner">
+  <motion.div
+    className="session-banner"
+    initial={{ y: -60, opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    transition={{ type: "spring", stiffness: 300, damping: 25 }}
+  >
     <span>Your session has expired.</span>
     <button className="session-banner-btn" onClick={onSignIn}>
       <LogIn size={14} />
       Sign in
     </button>
-  </div>
+  </motion.div>
 );
 
 export default SessionExpiredBanner;

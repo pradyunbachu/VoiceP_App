@@ -7,6 +7,7 @@
  * on demand and cached in a ref to avoid redundant API calls).
  */
 import { useState, useEffect, useRef } from 'react';
+import { AnimatePresence, motion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, Clock, AlertTriangle, ShoppingCart, UtensilsCrossed, Loader, X, RefreshCw, Send } from 'lucide-react';
 import { useDailyRecs, useRecipeDetail, useCookMeal, useCookStats } from '../hooks';
 import RecipeDetailPanel from './RecipeDetailModal';
@@ -274,10 +275,18 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
         <ChevronLeft size={14} />
       </button>
 
+      <AnimatePresence>
       {open && (
         <>
           {/* Backdrop overlay */}
-          <div className="daily-recs-backdrop" onClick={() => setOpen(false)} />
+          <motion.div
+            className="daily-recs-backdrop"
+            onClick={() => setOpen(false)}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
+          />
 
           <button
             className={`daily-recs-toggle close ${recipeOpen ? 'recipe-shifted' : ''}`}
@@ -356,6 +365,7 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
           </div>
         </>
       )}
+      </AnimatePresence>
     </>
   );
 };

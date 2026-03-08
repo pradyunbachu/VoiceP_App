@@ -5,6 +5,7 @@
  * Renders nothing when there are no toasts to avoid an empty DOM node.
  */
 import type { FC } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import Toast from "./Toast";
 import type { Toast as ToastType } from "../types";
 import "./Toast.css";
@@ -19,16 +20,25 @@ const ToastContainer: FC<Props> = ({ toasts, removeToast }) => {
 
   return (
     <div className="toast-container">
-      {toasts.map((toast) => (
-        <Toast
-          key={toast.id}
-          message={toast.message}
-          type={toast.type}
-          onClose={() => removeToast(toast.id)}
-          duration={toast.duration}
-          action={toast.action}
-        />
-      ))}
+      <AnimatePresence>
+        {toasts.map((toast) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, x: 80, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, x: 80, scale: 0.9 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
+          >
+            <Toast
+              message={toast.message}
+              type={toast.type}
+              onClose={() => removeToast(toast.id)}
+              duration={toast.duration}
+              action={toast.action}
+            />
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 };

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { AnimatePresence, motion } from "framer-motion";
 import { SessionExpiredError } from "./lib/authFetch";
 import SessionExpiredBanner from "./components/SessionExpiredBanner";
 import Navigation from "./components/Navigation";
@@ -31,6 +32,17 @@ import { ThemeProvider } from "./context/ThemeContext";
 import { useAnalytics, useClearAllExpenses } from "./hooks";
 import type { AppUser, AppView, Toast as ToastType, ToastAction } from "./types";
 import "./App.css";
+
+const pageVariants = {
+  initial: { opacity: 0, y: 12 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -8 },
+};
+
+const pageTransition = {
+  duration: 0.25,
+  ease: "easeOut" as const,
+};
 
 function AppContent() {
   const queryClient = useQueryClient();
@@ -362,21 +374,37 @@ function AppContent() {
         </ErrorBoundary>
       )}
       <ErrorBoundary name="view" key={currentView}>
-        <main className={isAuthenticated ? "app-main" : ""}>{renderView()}</main>
+        <main className={isAuthenticated ? "app-main" : ""}>
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentView}
+              variants={pageVariants}
+              initial="initial"
+              animate="animate"
+              exit="exit"
+              transition={pageTransition}
+              style={{ width: "100%" }}
+            >
+              {renderView()}
+            </motion.div>
+          </AnimatePresence>
+        </main>
       </ErrorBoundary>
       {isAuthenticated && <DailyRecs showToast={showToast} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
-      {showClearAllConfirm && (
-        <ConfirmDialog
-          message="Are you sure you want to delete ALL expenses? This action cannot be undone."
-          confirmLabel="Delete All"
-          onConfirm={() => {
-            handleClearAll();
-            setShowClearAllConfirm(false);
-          }}
-          onCancel={() => setShowClearAllConfirm(false)}
-        />
-      )}
+      <AnimatePresence>
+        {showClearAllConfirm && (
+          <ConfirmDialog
+            message="Are you sure you want to delete ALL expenses? This action cannot be undone."
+            confirmLabel="Delete All"
+            onConfirm={() => {
+              handleClearAll();
+              setShowClearAllConfirm(false);
+            }}
+            onCancel={() => setShowClearAllConfirm(false)}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

@@ -436,7 +436,8 @@ async def match_shopping_to_pantry(
                 {"role": "system", "content": "You are a helpful assistant that matches grocery items. Always respond with valid JSON only."},
                 {"role": "user", "content": prompt}
             ],
-            temperature=0.1
+            temperature=0.1,
+            max_tokens=1024
         )
 
         content = response.choices[0].message.content.strip()

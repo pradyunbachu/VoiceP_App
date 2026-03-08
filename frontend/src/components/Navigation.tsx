@@ -8,6 +8,7 @@
  */
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
+import { AnimatePresence, motion } from "framer-motion";
 import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
@@ -101,45 +102,53 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
             <span className="nav-label-full">Finance</span>
             <ChevronDown size={14} className={`dropdown-arrow ${financeOpen ? "open" : ""}`} />
           </button>
-          {financeOpen && (
-            <div className="nav-dropdown-menu">
-              <button
-                className={`nav-dropdown-item ${currentView === "dashboard" ? "active" : ""}`}
-                onClick={() => handleFinanceItemClick("dashboard")}
+          <AnimatePresence>
+            {financeOpen && (
+              <motion.div
+                className="nav-dropdown-menu"
+                initial={{ opacity: 0, y: -8, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -8, scale: 0.95 }}
+                transition={{ duration: 0.15, ease: "easeOut" }}
               >
-                <BarChart3 size={16} />
-                <span>Dashboard</span>
-              </button>
-              <button
-                className={`nav-dropdown-item ${currentView === "expenses" ? "active" : ""}`}
-                onClick={() => handleFinanceItemClick("expenses")}
-              >
-                <List size={16} />
-                <span>Expenses</span>
-              </button>
-              <button
-                className={`nav-dropdown-item ${currentView === "budgets" ? "active" : ""}`}
-                onClick={() => handleFinanceItemClick("budgets")}
-              >
-                <Wallet size={16} />
-                <span>Budgets</span>
-              </button>
-              <button
-                className={`nav-dropdown-item ${currentView === "insights" ? "active" : ""}`}
-                onClick={() => handleFinanceItemClick("insights")}
-              >
-                <Sparkles size={16} />
-                <span>Insights</span>
-              </button>
-              <button
-                className={`nav-dropdown-item ${currentView === "comparisons" ? "active" : ""}`}
-                onClick={() => handleFinanceItemClick("comparisons")}
-              >
-                <ArrowLeftRight size={16} />
-                <span>Compare</span>
-              </button>
-            </div>
-          )}
+                <button
+                  className={`nav-dropdown-item ${currentView === "dashboard" ? "active" : ""}`}
+                  onClick={() => handleFinanceItemClick("dashboard")}
+                >
+                  <BarChart3 size={16} />
+                  <span>Dashboard</span>
+                </button>
+                <button
+                  className={`nav-dropdown-item ${currentView === "expenses" ? "active" : ""}`}
+                  onClick={() => handleFinanceItemClick("expenses")}
+                >
+                  <List size={16} />
+                  <span>Expenses</span>
+                </button>
+                <button
+                  className={`nav-dropdown-item ${currentView === "budgets" ? "active" : ""}`}
+                  onClick={() => handleFinanceItemClick("budgets")}
+                >
+                  <Wallet size={16} />
+                  <span>Budgets</span>
+                </button>
+                <button
+                  className={`nav-dropdown-item ${currentView === "insights" ? "active" : ""}`}
+                  onClick={() => handleFinanceItemClick("insights")}
+                >
+                  <Sparkles size={16} />
+                  <span>Insights</span>
+                </button>
+                <button
+                  className={`nav-dropdown-item ${currentView === "comparisons" ? "active" : ""}`}
+                  onClick={() => handleFinanceItemClick("comparisons")}
+                >
+                  <ArrowLeftRight size={16} />
+                  <span>Compare</span>
+                </button>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
 
       </div>
