@@ -14,6 +14,7 @@ import ShoppingList from "./components/ShoppingList";
 import Chef from "./components/Chef";
 import HomeDashboard from "./components/HomeDashboard";
 import Settings from "./components/Settings";
+import MealPlanner from "./components/MealPlanner";
 import SpendingInsights from "./components/SpendingInsights";
 import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
@@ -334,6 +335,15 @@ function AppContent() {
         return (
           <div className="view-container" key="chef">
             <Chef showToast={showToast} selectedGroupId={selectedPantryGroup} initialBowlItemNames={chefInitialItems} onInitialItemsConsumed={() => setChefInitialItems([])} />
+          </div>
+        );
+      case "meal-planner":
+        return (
+          <div className="view-container" key="meal-planner">
+            <MealPlanner
+              showToast={showToast}
+              selectedPantryGroup={selectedPantryGroup}
+            />
           </div>
         );
       case "settings":

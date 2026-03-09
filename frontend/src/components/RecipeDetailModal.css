@@ -253,6 +253,37 @@
   color: var(--accent-primary);
 }
 
+/* "Start Cooking" hands-free action */
+.recipe-cooking-action {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recipe-start-cooking-btn {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1px solid var(--accent-primary, #3b82f6);
+  border-radius: var(--radius-md);
+  background: rgba(59, 130, 246, 0.08);
+  color: var(--accent-primary, #3b82f6);
+  font-size: 0.9rem;
+  font-weight: 700;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.recipe-start-cooking-btn:hover {
+  background: rgba(59, 130, 246, 0.15);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(59, 130, 246, 0.2);
+}
+
 /* "Add to shopping list" action */
 .recipe-shopping-action {
   margin-top: 1.25rem;

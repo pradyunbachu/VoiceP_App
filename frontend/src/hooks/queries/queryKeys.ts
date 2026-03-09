@@ -121,4 +121,10 @@ export const queryKeys = {
     all: ['cookStats'] as const,
   },
 
+  // Meal Planner
+  mealPlan: {
+    all: ['mealPlan'] as const,
+    week: (weekStart: string) => [...queryKeys.mealPlan.all, 'week', weekStart] as const,
+  },
+
 } as const;

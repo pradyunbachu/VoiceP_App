@@ -444,6 +444,40 @@ export type ShowToast = (
   action?: ToastAction | null
 ) => void;
 
+// ── Meal Planner ──────────────────────────────────────────────────────
+
+export type MealSlot = "breakfast" | "lunch" | "dinner";
+export type DayOfWeek = "monday" | "tuesday" | "wednesday" | "thursday" | "friday" | "saturday" | "sunday";
+
+export interface PlannedMealIngredient {
+  item: string;
+  amount: string;
+  in_pantry: boolean;
+}
+
+export interface PlannedMeal {
+  id: number;
+  day: DayOfWeek;
+  slot: MealSlot;
+  recipe_name: string;
+  description?: string;
+  time_minutes?: number;
+  ingredients: PlannedMealIngredient[];
+  week_start: string;
+}
+
+export interface MissingIngredient {
+  item: string;
+  amount: string;
+  needed_for: string[];
+}
+
+export interface WeeklyMealPlan {
+  week_start: string;
+  meals: PlannedMeal[];
+  shopping_summary: MissingIngredient[];
+}
+
 // ── Views ──────────────────────────────────────────────────────────────
 
 export type AppView =
@@ -458,6 +492,7 @@ export type AppView =
   | "pantry"
   | "shopping-list"
   | "chef"
+  | "meal-planner"
   | "settings";
 
 // ── Auth ───────────────────────────────────────────────────────────────

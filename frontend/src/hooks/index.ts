@@ -86,8 +86,22 @@ export {
   useDeletePantryGroup,
 } from './mutations/usePantryGroupMutations';
 
+// Meal plan queries
+export { useMealPlan } from './queries/useMealPlan';
+
+// Meal plan mutations
+export {
+  useCreatePlannedMeal,
+  useDeletePlannedMeal,
+  useGenerateMealPlan,
+  useAddMealPlanToShoppingList,
+} from './mutations/useMealPlanMutations';
+
 // Audio recording
 export { default as useAudioRecorder } from './useAudioRecorder';
+
+// Web Speech Recognition (cooking mode - no Deepgram credits)
+export { useWebSpeechRecognition } from './useWebSpeechRecognition';
 
 // Grocery suggestions
 export { useGrocerySuggestions } from './useGrocerySuggestions';

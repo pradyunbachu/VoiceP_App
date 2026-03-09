@@ -7,8 +7,9 @@
  * and error states while the AI generates the recipe.
  */
 import { useState } from 'react';
-import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat, ShoppingCart, Check } from 'lucide-react';
+import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat, ShoppingCart, Check, Play } from 'lucide-react';
 import { useCreateShoppingListItem } from '../hooks';
+import CookingMode from './CookingMode';
 import type { ShowToast } from '../types';
 import './RecipeDetailModal.css';
 
@@ -53,6 +54,7 @@ interface Props {
 const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose, onCookMeal, isCooking, availableIngredients, showToast }) => {
   const createShoppingItem = useCreateShoppingListItem();
   const [addedToList, setAddedToList] = useState(false);
+  const [cookingModeOpen, setCookingModeOpen] = useState(false);
 
   const handleCookClick = () => {
     if (!recipe || !onCookMeal || isCooking) return;
@@ -102,6 +104,18 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose,
 
   return (
     <>
+      {cookingModeOpen && recipe && onCookMeal && (
+        <CookingMode
+          recipe={recipe}
+          onCookMeal={(name, ingredients) => {
+            onCookMeal(name, ingredients);
+            setCookingModeOpen(false);
+          }}
+          isCooking={isCooking || false}
+          onClose={() => setCookingModeOpen(false)}
+          showToast={showToast}
+        />
+      )}
       <div className="recipe-panel-header">
         <button className="recipe-back-btn" onClick={onClose}>
           <ChevronLeft size={16} />
@@ -215,6 +229,19 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose,
                 ))}
               </ol>
             </div>
+
+            {/* Start Cooking — hands-free mode */}
+            {recipe.instructions && recipe.instructions.length > 0 && onCookMeal && (
+              <div className="recipe-cooking-action">
+                <button
+                  className="recipe-start-cooking-btn"
+                  onClick={() => setCookingModeOpen(true)}
+                >
+                  <Play size={16} />
+                  Start Cooking
+                </button>
+              </div>
+            )}
 
             {/* Add missing ingredients to shopping list */}
             {missingIngredients.length > 0 && (

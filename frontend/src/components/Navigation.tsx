@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings, CalendarDays } from "lucide-react";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
 
@@ -87,6 +87,15 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
         >
           <ChefHat size={18} />
           <span className="nav-label-full">Chef</span>
+        </button>
+
+        {/* Planner Tab */}
+        <button
+          className={`nav-tab ${currentView === "meal-planner" ? "active" : ""}`}
+          onClick={() => onViewChange("meal-planner")}
+        >
+          <CalendarDays size={18} />
+          <span className="nav-label-full">Planner</span>
         </button>
 
         {/* Finance Dropdown */}

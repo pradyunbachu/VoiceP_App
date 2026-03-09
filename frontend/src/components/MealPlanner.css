@@ -1,0 +1,650 @@
+/* ============================================================================
+   MEAL PLANNER
+   ============================================================================ */
+
+.meal-planner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: var(--space-4) var(--space-4) var(--space-8);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* ── Header ──────────────────────────────────────────────────────── */
+
+.mp-header {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.mp-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+}
+
+.mp-title {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--text-primary);
+}
+
+.mp-title h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.mp-actions {
+  display: flex;
+  gap: var(--space-2);
+}
+
+.mp-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mp-action-btn:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
+  color: var(--text-primary);
+}
+
+.mp-action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mp-action-btn--generate {
+  border-color: var(--accent-primary-border);
+  color: var(--accent-primary);
+}
+
+.mp-action-btn--generate:hover:not(:disabled) {
+  background: var(--accent-primary-bg);
+  border-color: var(--accent-primary);
+}
+
+.mp-action-btn--shopping {
+  border-color: var(--accent-purple-border);
+  color: var(--accent-purple);
+}
+
+.mp-action-btn--shopping:hover:not(:disabled) {
+  background: var(--accent-purple-bg);
+  border-color: var(--accent-purple);
+}
+
+/* ── Week Navigation ─────────────────────────────────────────────── */
+
+.mp-week-nav {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.mp-week-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mp-week-arrow:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.mp-week-label {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  min-width: 200px;
+  text-align: center;
+}
+
+.mp-week-today {
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--accent-primary-border);
+  background: var(--accent-primary-bg);
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mp-week-today:hover {
+  background: var(--accent-primary-bg-hover);
+}
+
+/* ── Mobile Day Tabs ─────────────────────────────────────────────── */
+
+.mp-mobile-day-tabs {
+  display: none;
+}
+
+/* ── Grid ────────────────────────────────────────────────────────── */
+
+.mp-grid-wrapper {
+  min-height: 300px;
+}
+
+.mp-grid {
+  display: grid;
+  grid-template-columns: 90px repeat(7, 1fr);
+  gap: 1px;
+  background: var(--border-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+}
+
+.mp-grid-corner {
+  background: var(--bg-secondary);
+  padding: var(--space-2);
+}
+
+.mp-grid-day-header {
+  background: var(--bg-secondary);
+  padding: var(--space-2) var(--space-1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+}
+
+.mp-grid-day-header.today {
+  background: var(--accent-primary-bg);
+}
+
+.mp-day-name {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.mp-grid-day-header.today .mp-day-name {
+  color: var(--accent-primary);
+}
+
+.mp-day-date {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.mp-grid-row {
+  display: contents;
+}
+
+.mp-grid-slot-label {
+  background: var(--bg-secondary);
+  padding: var(--space-2) var(--space-2);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  writing-mode: horizontal-tb;
+  word-break: break-word;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.mp-grid-cell {
+  background: var(--bg-primary);
+  min-height: 90px;
+  padding: 5px;
+}
+
+/* ── Cells (shared between desktop grid and mobile) ──────────────── */
+
+.mp-cell {
+  height: 100%;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s ease;
+}
+
+.mp-cell--empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  cursor: pointer;
+  border: 1px dashed var(--border-primary);
+  border-radius: var(--radius-sm);
+  min-height: 70px;
+}
+
+.mp-cell--empty:hover {
+  background: var(--bg-card);
+  border-color: var(--border-hover);
+  color: var(--text-secondary);
+}
+
+.mp-cell--filled {
+  padding: var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  cursor: default;
+}
+
+.mp-cell--filled:hover {
+  border-color: var(--border-hover);
+}
+
+.mp-cell--adding {
+  padding: var(--space-2);
+  background: var(--bg-card);
+  border: 1px solid var(--accent-primary-border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mp-meal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.mp-meal-name {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  line-height: 1.25;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mp-meal-delete {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  opacity: 0;
+  transition: all 0.15s ease;
+}
+
+.mp-cell--filled:hover .mp-meal-delete {
+  opacity: 1;
+}
+
+.mp-meal-delete:hover {
+  background: var(--accent-danger-bg);
+  color: var(--accent-danger);
+}
+
+.mp-meal-desc {
+  font-size: 0.68rem;
+  color: var(--text-muted);
+  line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.mp-meal-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+}
+
+.mp-meal-time {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 0.65rem;
+  color: var(--text-muted);
+}
+
+.mp-meal-status {
+  font-size: 0.6rem;
+  font-weight: 600;
+  padding: 1px 6px;
+  border-radius: var(--radius-full);
+}
+
+.mp-meal-status.ready {
+  background: rgba(106, 175, 123, 0.12);
+  color: #6AAF7B;
+}
+
+.mp-meal-status.partial {
+  background: var(--accent-warning-bg);
+  color: var(--accent-warning);
+}
+
+.mp-meal-status.missing {
+  background: var(--accent-danger-bg);
+  color: var(--accent-danger);
+}
+
+/* ── Add meal inline form ────────────────────────────────────────── */
+
+.mp-add-input {
+  width: 100%;
+  padding: 5px 8px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
+  color: var(--text-primary);
+  font-size: 0.78rem;
+  outline: none;
+  transition: border-color 0.15s ease;
+}
+
+.mp-add-input:focus {
+  border-color: var(--accent-primary-border);
+}
+
+.mp-add-input::placeholder {
+  color: var(--text-muted);
+}
+
+.mp-add-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.mp-add-confirm,
+.mp-add-cancel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.mp-add-confirm {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
+.mp-add-confirm:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.mp-add-confirm:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.mp-add-cancel {
+  background: rgba(200, 191, 178, 0.08);
+  color: var(--text-muted);
+}
+
+.mp-add-cancel:hover {
+  background: rgba(200, 191, 178, 0.15);
+  color: var(--text-secondary);
+}
+
+/* ── Missing Ingredients ─────────────────────────────────────────── */
+
+.mp-missing {
+  background: var(--bg-card);
+  border: 1px solid var(--accent-warning-bg);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+.mp-missing-header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  color: var(--accent-warning);
+  font-weight: 600;
+  font-size: 0.85rem;
+  margin-bottom: var(--space-3);
+}
+
+.mp-missing-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.mp-missing-item {
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-2);
+  font-size: 0.8rem;
+  padding: var(--space-1) 0;
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.mp-missing-item:last-child {
+  border-bottom: none;
+}
+
+.mp-missing-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.mp-missing-for {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+}
+
+/* ── Loading ─────────────────────────────────────────────────────── */
+
+.mp-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+}
+
+/* ── Spinner ─────────────────────────────────────────────────────── */
+
+.mp-spin {
+  animation: mpSpin 1s linear infinite;
+}
+
+@keyframes mpSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* ── Mobile view ─────────────────────────────────────────────────── */
+
+.mp-mobile-view {
+  display: none;
+}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+
+@media (max-width: 1000px) {
+  .mp-grid {
+    grid-template-columns: 80px repeat(7, 1fr);
+  }
+
+  .mp-grid-slot-label {
+    font-size: 0.6rem;
+    padding: var(--space-1) var(--space-1);
+  }
+
+  .mp-meal-name {
+    font-size: 0.7rem;
+  }
+
+  .mp-meal-desc {
+    display: none;
+  }
+
+  .mp-grid-cell {
+    min-height: 76px;
+    padding: 3px;
+  }
+}
+
+@media (max-width: 800px) {
+  .mp-grid {
+    display: none;
+  }
+
+  .mp-mobile-view {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .mp-mobile-day-tabs {
+    display: flex;
+    gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 4px;
+  }
+
+  .mp-day-tab {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: 6px 10px;
+    border: 1px solid var(--border-primary);
+    border-radius: var(--radius-md);
+    background: var(--bg-card);
+    color: var(--text-muted);
+    cursor: pointer;
+    flex-shrink: 0;
+    min-width: 46px;
+    transition: all 0.15s ease;
+  }
+
+  .mp-day-tab.active {
+    border-color: var(--accent-primary-border);
+    background: var(--accent-primary-bg);
+    color: var(--accent-primary);
+  }
+
+  .mp-day-tab.today:not(.active) {
+    border-color: var(--border-hover);
+  }
+
+  .mp-day-tab-name {
+    font-size: 0.65rem;
+    font-weight: 600;
+    text-transform: uppercase;
+  }
+
+  .mp-day-tab-date {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-primary);
+  }
+
+  .mp-day-tab.active .mp-day-tab-date {
+    color: var(--accent-primary);
+  }
+
+  .mp-mobile-slot {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .mp-mobile-slot-label {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+  }
+
+  .mp-cell--empty {
+    min-height: 56px;
+  }
+
+  .mp-title-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .mp-action-btn span {
+    display: none;
+  }
+
+  .mp-actions {
+    align-self: stretch;
+  }
+
+  .mp-action-btn {
+    flex: 1;
+    justify-content: center;
+    padding: 8px;
+  }
+
+  .mp-action-btn span {
+    display: inline;
+  }
+}
+
+@media (max-width: 480px) {
+  .meal-planner {
+    padding: var(--space-3) var(--space-3) var(--space-6);
+  }
+
+  .mp-week-label {
+    font-size: 0.78rem;
+    min-width: unset;
+  }
+}
