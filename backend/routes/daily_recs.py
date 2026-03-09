@@ -22,6 +22,7 @@ from config import supabase, groq_client
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from cache import api_cache, make_cache_key
+from routes.pantry_sharing import verify_pantry_group_membership
 
 import logging
 logger = logging.getLogger(__name__)
@@ -119,11 +120,13 @@ async def get_daily_recs(
     tz: str | None = Query(None),
     refresh: bool = Query(False),
     preference: str | None = Query(None),
+    group_id: int | None = Query(None),
 ):
     """
     Generate daily recommendations: meal ideas + pantry alerts.
     Cached for 30 minutes per user. Pass refresh=true to bypass cache.
     Optionally accepts a preference string to steer meal suggestions.
+    Optional group_id to use a shared pantry's ingredients.
     """
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
@@ -131,10 +134,20 @@ async def get_daily_recs(
     user_id = current_user["id"]
     pref = (preference or "").strip()
 
+    # Resolve pantry owner when a group is selected
+    pantry_user_id = user_id
+    if group_id is not None:
+        if not verify_pantry_group_membership(user_id, group_id):
+            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
+        if group_resp.data:
+            pantry_user_id = group_resp.data[0]["owner_id"]
+
     meal_type = detect_meal_type(tz)
-    # Cache key includes meal_type and preference so each combo gets its own slot
+    # Cache key includes meal_type, preference, and group_id so each combo gets its own slot
     pref_suffix = f"_{pref}" if pref else ""
-    cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}{pref_suffix}")
+    group_suffix = f"_g{group_id}" if group_id else ""
+    cache_key = make_cache_key(user_id, f"daily_recs_{meal_type}{pref_suffix}{group_suffix}")
 
     if refresh:
         api_cache.invalidate_prefix(cache_key)
@@ -143,8 +156,8 @@ async def get_daily_recs(
         if cached is not None:
             return cached
 
-    # Single query for all pantry items
-    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    # Single query for all pantry items (from selected group if applicable)
+    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
     pantry_items = pantry_response.data or []
 
     if not pantry_items:

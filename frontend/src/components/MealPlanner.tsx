@@ -5,7 +5,7 @@
  * add meals manually or generate a full week via AI. Shows missing ingredients
  * and lets users push them to the shopping list in one click.
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays,
@@ -20,6 +20,7 @@ import {
   Loader2,
   Check,
   AlertTriangle,
+  RefreshCw,
 } from 'lucide-react';
 import {
   useMealPlan,
@@ -27,6 +28,8 @@ import {
   useDeletePlannedMeal,
   useGenerateMealPlan,
   useAddMealPlanToShoppingList,
+  useReplaceMeal,
+  useSwapMeals,
 } from '../hooks';
 import MixingBowlLoader from './MixingBowlLoader';
 import type {
@@ -104,9 +107,12 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   const [recipeName, setRecipeName] = useState('');
   const [mobileDay, setMobileDay] = useState<DayOfWeek>(() => {
     const today = new Date().getDay();
-    // Sunday = 0 maps to index 6 (sunday), Mon=1 maps to 0 (monday) etc.
     return DAYS[today === 0 ? 6 : today - 1];
   });
+  const [replacingId, setReplacingId] = useState<number | null>(null);
+  const [dragSource, setDragSource] = useState<{ day: DayOfWeek; slot: MealSlot } | null>(null);
+  const [dragOver, setDragOver] = useState<{ day: DayOfWeek; slot: MealSlot } | null>(null);
+  const dragDataRef = useRef<{ day: DayOfWeek; slot: MealSlot } | null>(null);
 
   const monday = useMemo(() => {
     const m = getMonday(new Date());
@@ -115,13 +121,16 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   }, [weekOffset]);
 
   const weekStart = formatDate(monday);
+  const groupId = selectedPantryGroup === 'demo' ? undefined : (selectedPantryGroup ?? undefined) as number | undefined;
 
   // ── Data ──────────────────────────────────────────
-  const { data: plan, isLoading } = useMealPlan(weekStart);
+  const { data: plan, isLoading } = useMealPlan(weekStart, groupId);
   const createMeal = useCreatePlannedMeal();
   const deleteMeal = useDeletePlannedMeal();
   const generatePlan = useGenerateMealPlan();
   const addToShopping = useAddMealPlanToShoppingList();
+  const replaceMeal = useReplaceMeal();
+  const swapMeals = useSwapMeals();
 
   const meals = plan?.meals ?? [];
   const missingSummary: MissingIngredient[] = plan?.shopping_summary ?? [];
@@ -164,22 +173,78 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
 
   const handleGenerate = useCallback(async () => {
     try {
-      await generatePlan.mutateAsync({ week_start: weekStart });
+      await generatePlan.mutateAsync({ week_start: weekStart, group_id: groupId });
       showToast('Meal plan generated!', 'success');
     } catch {
       showToast('Failed to generate meal plan', 'error');
     }
-  }, [generatePlan, weekStart, showToast]);
+  }, [generatePlan, weekStart, groupId, showToast]);
 
   const handleAddToShoppingList = useCallback(async () => {
-    const groupId = selectedPantryGroup === 'demo' ? null : (selectedPantryGroup ?? null);
+    const shoppingGroupId = selectedPantryGroup === 'demo' ? null : (selectedPantryGroup ?? null);
     try {
-      const result = await addToShopping.mutateAsync({ week_start: weekStart, group_id: groupId });
+      const result = await addToShopping.mutateAsync({ week_start: weekStart, group_id: shoppingGroupId, pantry_group_id: groupId });
       showToast(`${result.added_count} item${result.added_count !== 1 ? 's' : ''} added to shopping list`, 'success');
     } catch {
       showToast('Failed to add to shopping list', 'error');
     }
-  }, [addToShopping, weekStart, selectedPantryGroup, showToast]);
+  }, [addToShopping, weekStart, selectedPantryGroup, groupId, showToast]);
+
+  const handleReplaceMeal = useCallback(async (mealId: number) => {
+    setReplacingId(mealId);
+    try {
+      await replaceMeal.mutateAsync({ meal_id: mealId, week_start: weekStart, group_id: groupId });
+      showToast('Meal replaced!', 'success');
+    } catch {
+      showToast('Failed to replace meal', 'error');
+    } finally {
+      setReplacingId(null);
+    }
+  }, [replaceMeal, weekStart, groupId, showToast]);
+
+  const handleDragStart = useCallback((day: DayOfWeek, slot: MealSlot) => {
+    setDragSource({ day, slot });
+    dragDataRef.current = { day, slot };
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, day: DayOfWeek, slot: MealSlot) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDragOver({ day, slot });
+  }, []);
+
+  const handleDragLeave = useCallback(() => {
+    setDragOver(null);
+  }, []);
+
+  const handleDrop = useCallback(async (e: React.DragEvent, targetDay: DayOfWeek, targetSlot: MealSlot) => {
+    e.preventDefault();
+    const source = dragDataRef.current;
+    setDragSource(null);
+    setDragOver(null);
+    dragDataRef.current = null;
+
+    if (!source || (source.day === targetDay && source.slot === targetSlot)) return;
+
+    try {
+      await swapMeals.mutateAsync({
+        source_day: source.day,
+        source_slot: source.slot,
+        target_day: targetDay,
+        target_slot: targetSlot,
+        week_start: weekStart,
+      });
+      showToast('Meals swapped!', 'success');
+    } catch {
+      showToast('Failed to swap meals', 'error');
+    }
+  }, [swapMeals, weekStart, showToast]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragSource(null);
+    setDragOver(null);
+    dragDataRef.current = null;
+  }, []);
 
   // ── Render helpers ────────────────────────────────
   const renderCell = (day: DayOfWeek, slot: MealSlot) => {
@@ -222,24 +287,43 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
       const hasIngredients = meal.ingredients && meal.ingredients.length > 0;
       const allInPantry = hasIngredients && meal.ingredients.every(i => i.in_pantry);
       const someInPantry = hasIngredients && meal.ingredients.some(i => i.in_pantry);
+      const isReplacing = replacingId === meal.id;
+      const isDraggedOver = dragOver?.day === day && dragOver?.slot === slot;
+      const isDragSource = dragSource?.day === day && dragSource?.slot === slot;
 
       return (
         <motion.div
-          className="mp-cell mp-cell--filled"
+          className={`mp-cell mp-cell--filled${isDraggedOver ? ' mp-drag-over' : ''}${isDragSource ? ' mp-dragging' : ''}`}
           key={`meal-${meal.id}`}
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
           layout
+          draggable
+          onDragStart={() => handleDragStart(day, slot)}
+          onDragOver={(e) => handleDragOver(e, day, slot)}
+          onDragLeave={handleDragLeave}
+          onDrop={(e) => handleDrop(e, day, slot)}
+          onDragEnd={handleDragEnd}
         >
           <div className="mp-meal-header">
             <span className="mp-meal-name">{meal.recipe_name}</span>
-            <button
-              className="mp-meal-delete"
-              onClick={(e) => { e.stopPropagation(); handleDeleteMeal(meal.id); }}
-              title="Remove"
-            >
-              <Trash2 size={12} />
-            </button>
+            <div className="mp-meal-actions">
+              <button
+                className="mp-meal-replace"
+                onClick={(e) => { e.stopPropagation(); handleReplaceMeal(meal.id); }}
+                disabled={isReplacing}
+                title="Replace with AI suggestion"
+              >
+                <RefreshCw size={11} className={isReplacing ? 'mp-spin' : ''} />
+              </button>
+              <button
+                className="mp-meal-delete"
+                onClick={(e) => { e.stopPropagation(); handleDeleteMeal(meal.id); }}
+                title="Remove"
+              >
+                <Trash2 size={11} />
+              </button>
+            </div>
           </div>
           {meal.description && (
             <span className="mp-meal-desc">{meal.description}</span>
@@ -261,10 +345,15 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
       );
     }
 
+    const isDraggedOverEmpty = dragOver?.day === day && dragOver?.slot === slot;
+
     return (
       <div
-        className="mp-cell mp-cell--empty"
+        className={`mp-cell mp-cell--empty${isDraggedOverEmpty ? ' mp-drag-over' : ''}`}
         onClick={() => { setAddForm({ day, slot }); setRecipeName(''); }}
+        onDragOver={(e) => handleDragOver(e, day, slot)}
+        onDragLeave={handleDragLeave}
+        onDrop={(e) => handleDrop(e, day, slot)}
         key={`empty-${day}-${slot}`}
       >
         <Plus size={16} />

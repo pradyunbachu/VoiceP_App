@@ -108,7 +108,7 @@ export const queryKeys = {
   // Daily Recs
   dailyRecs: {
     all: ['dailyRecs'] as const,
-    withPreference: (preference: string) => [...queryKeys.dailyRecs.all, preference] as const,
+    withPreference: (preference: string, groupId?: number) => [...queryKeys.dailyRecs.all, preference, groupId] as const,
   },
 
   // Streak
@@ -124,7 +124,7 @@ export const queryKeys = {
   // Meal Planner
   mealPlan: {
     all: ['mealPlan'] as const,
-    week: (weekStart: string) => [...queryKeys.mealPlan.all, 'week', weekStart] as const,
+    week: (weekStart: string, groupId?: number) => [...queryKeys.mealPlan.all, 'week', weekStart, groupId] as const,
   },
 
 } as const;

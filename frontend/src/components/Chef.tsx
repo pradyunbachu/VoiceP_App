@@ -250,7 +250,7 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
   const handleCookMeal = useCallback(
     (recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {
       cookMeal.mutate(
-        { recipe_name: recipeName, ingredients },
+        { recipe_name: recipeName, ingredients, group_id: apiGroupId as number | undefined },
         {
           onSuccess: (result: CookMealResponse) => {
             const msg =

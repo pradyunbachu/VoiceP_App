@@ -21,9 +21,10 @@ interface RecipeDetailResponse extends RecipeDetail {
 
 interface DailyRecsProps {
   showToast: ShowToast;
+  selectedPantryGroup?: number | null | 'demo';
 }
 
-const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
+const DailyRecs: React.FC<DailyRecsProps> = ({ showToast, selectedPantryGroup }) => {
   const [open, setOpen] = useState<boolean>(false);
   const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
   const [cachedRecipe, setCachedRecipe] = useState<RecipeDetailResponse | null>(null);
@@ -35,7 +36,8 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
   );
   // In-memory recipe cache keyed by meal name to avoid re-fetching
   const recipeCacheRef = useRef<Record<string, RecipeDetailResponse>>({});
-  const { data, isLoading, isError, isFetching, refreshRecs } = useDailyRecs(preference);
+  const groupId = selectedPantryGroup === 'demo' ? undefined : (selectedPantryGroup ?? undefined) as number | undefined;
+  const { data, isLoading, isError, isFetching, refreshRecs } = useDailyRecs(preference, groupId);
   const recipeDetail = useRecipeDetail();
   const cookMeal = useCookMeal();
   const { data: cookStats } = useCookStats();
@@ -120,7 +122,7 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast }) => {
 
   const handleCookMeal = (recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {
     cookMeal.mutate(
-      { recipe_name: recipeName, ingredients },
+      { recipe_name: recipeName, ingredients, group_id: groupId },
       {
         onSuccess: (result: CookMealResponse) => {
           const msg = result.expiring_items_saved > 0

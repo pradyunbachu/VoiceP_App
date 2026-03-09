@@ -13,6 +13,7 @@ import type { CookMealResponse, CookStats } from '../../types';
 interface CookMealVariables {
   recipe_name: string;
   ingredients: Array<{ item: string; amount: string }>;
+  group_id?: number;
 }
 
 export const useCookMeal = () => {
@@ -20,8 +21,11 @@ export const useCookMeal = () => {
   const queryClient = useQueryClient();
 
   return useMutation<CookMealResponse, Error, CookMealVariables>({
-    mutationFn: async ({ recipe_name, ingredients }: CookMealVariables): Promise<CookMealResponse> => {
+    mutationFn: async ({ recipe_name, ingredients, group_id }: CookMealVariables): Promise<CookMealResponse> => {
       const token = await getToken();
+      const body: Record<string, unknown> = { recipe_name, ingredients };
+      if (group_id) body.group_id = group_id;
+
       const response = await fetch(`${API_BASE_URL}/api/cook-meal`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -29,7 +33,7 @@ export const useCookMeal = () => {
           Authorization: `Bearer ${token}`,
         }),
         credentials: 'include',
-        body: JSON.stringify({ recipe_name, ingredients }),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {

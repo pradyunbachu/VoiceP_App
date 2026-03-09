@@ -71,6 +71,7 @@ export const useDeletePlannedMeal = () => {
 interface GenerateMealPlanData {
   week_start: string;
   preferences?: string;
+  group_id?: number;
 }
 
 export const useGenerateMealPlan = () => {
@@ -102,9 +103,82 @@ export const useGenerateMealPlan = () => {
   });
 };
 
+interface ReplaceMealData {
+  meal_id: number;
+  week_start: string;
+  group_id?: number;
+}
+
+export const useReplaceMeal = () => {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation<PlannedMeal, Error, ReplaceMealData>({
+    mutationFn: async (data) => {
+      const token = await getToken();
+      const response = await fetch(`${API_BASE_URL}/api/meal-plan/replace-meal`, {
+        method: 'POST',
+        headers: getCsrfHeaders({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        }),
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to replace meal');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.mealPlan.all });
+    },
+  });
+};
+
+interface SwapMealsData {
+  source_day: DayOfWeek;
+  source_slot: MealSlot;
+  target_day: DayOfWeek;
+  target_slot: MealSlot;
+  week_start: string;
+}
+
+export const useSwapMeals = () => {
+  const queryClient = useQueryClient();
+  const { getToken } = useAuth();
+
+  return useMutation<{ message: string }, Error, SwapMealsData>({
+    mutationFn: async (data) => {
+      const token = await getToken();
+      const response = await fetch(`${API_BASE_URL}/api/meal-plan/swap`, {
+        method: 'POST',
+        headers: getCsrfHeaders({
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        }),
+        credentials: 'include',
+        body: JSON.stringify(data),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.detail || 'Failed to swap meals');
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.mealPlan.all });
+    },
+  });
+};
+
 interface AddToShoppingListData {
   week_start: string;
   group_id?: number | null;
+  pantry_group_id?: number;
 }
 
 export const useAddMealPlanToShoppingList = () => {

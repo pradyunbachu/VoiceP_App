@@ -19,6 +19,7 @@ import json
 from config import supabase, groq_client
 from auth import get_current_user_dependency
 from rate_limit import limiter
+from routes.pantry_sharing import verify_pantry_group_membership
 
 import logging
 logger = logging.getLogger(__name__)
@@ -31,6 +32,23 @@ router = APIRouter()
 
 DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 MEAL_SLOTS = ["breakfast", "lunch", "dinner"]
+
+
+def _resolve_pantry_user_id(current_user_id: str, group_id: int | None) -> str:
+    """Return the user_id whose pantry should be used.
+
+    If group_id is provided, verify membership and return the group owner's id.
+    Otherwise return the current user's id.
+    """
+    if group_id is None:
+        return current_user_id
+    if not verify_pantry_group_membership(current_user_id, group_id):
+        from fastapi import HTTPException
+        raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+    group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
+    if group_resp.data:
+        return group_resp.data[0]["owner_id"]
+    return current_user_id
 
 
 def _get_monday(date_str: str | None = None) -> str:
@@ -114,11 +132,27 @@ class PlannedMealCreate(BaseModel):
 class GenerateMealPlanRequest(BaseModel):
     week_start: str = Field(..., max_length=10)
     preferences: Optional[str] = Field(default=None, max_length=500)
+    group_id: Optional[int] = None
+
+
+class ReplaceMealRequest(BaseModel):
+    meal_id: int
+    week_start: str = Field(..., max_length=10)
+    group_id: Optional[int] = None
+
+
+class SwapMealsRequest(BaseModel):
+    source_day: str = Field(..., pattern="^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$")
+    source_slot: str = Field(..., pattern="^(breakfast|lunch|dinner)$")
+    target_day: str = Field(..., pattern="^(monday|tuesday|wednesday|thursday|friday|saturday|sunday)$")
+    target_slot: str = Field(..., pattern="^(breakfast|lunch|dinner)$")
+    week_start: str = Field(..., max_length=10)
 
 
 class AddToShoppingListRequest(BaseModel):
     week_start: str = Field(..., max_length=10)
-    group_id: Optional[int] = None
+    group_id: Optional[int] = None  # shopping list group
+    pantry_group_id: Optional[int] = None  # pantry group for ingredient cross-reference
 
 
 # ============================================================================
@@ -131,6 +165,7 @@ async def get_meal_plan(
     request: Request,
     current_user: dict = Depends(get_current_user_dependency),
     week_start: str | None = Query(None),
+    group_id: int | None = Query(None),
 ):
     """Fetch all meals for a given week. Includes a shopping summary of missing ingredients."""
     if supabase is None:
@@ -138,6 +173,7 @@ async def get_meal_plan(
 
     user_id = current_user["id"]
     monday = _get_monday(week_start)
+    pantry_user_id = _resolve_pantry_user_id(user_id, group_id)
 
     # Fetch meals for this week
     resp = (
@@ -149,8 +185,8 @@ async def get_meal_plan(
     )
     meals = resp.data or []
 
-    # Fetch pantry items for shopping summary
-    pantry_resp = supabase.table("pantry_items").select("id, name, stock_status").eq("user_id", user_id).execute()
+    # Fetch pantry items for shopping summary (from the relevant pantry)
+    pantry_resp = supabase.table("pantry_items").select("id, name, stock_status").eq("user_id", pantry_user_id).execute()
     pantry_items = pantry_resp.data or []
 
     # Mark each ingredient as in_pantry or not
@@ -348,9 +384,10 @@ async def generate_meal_plan(
 
     user_id = current_user["id"]
     monday = _get_monday(body.week_start)
+    pantry_user_id = _resolve_pantry_user_id(user_id, body.group_id)
 
-    # Fetch pantry
-    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    # Fetch pantry (from selected group if applicable)
+    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
     pantry_items = pantry_resp.data or []
 
     if not pantry_items:
@@ -440,6 +477,212 @@ async def generate_meal_plan(
 
 
 # ============================================================================
+# POST /meal-plan/replace-meal — AI-replace a single meal
+# ============================================================================
+
+def _generate_single_meal(slot: str, day: str, ingredient_list: str, current_name: str, other_meals: list[str], preferences: str = ""):
+    """Call Groq to generate a replacement meal for one slot."""
+    if not groq_client:
+        return None
+
+    pref_block = ""
+    if preferences:
+        pref_block = f"\nUser dietary preferences: {preferences}\n"
+
+    other_block = ""
+    if other_meals:
+        other_block = f"\nOther meals already planned this week (DO NOT repeat these): {', '.join(other_meals)}\n"
+
+    prompt = f"""Generate ONE replacement meal for {day} {slot}.
+
+Available pantry ingredients: {ingredient_list}
+Current meal being replaced: {current_name} (suggest something DIFFERENT)
+{other_block}{pref_block}
+Return ONLY a single JSON object:
+{{"recipe_name": "Name", "description": "Brief description", "time_minutes": 15, "ingredients": [{{"item": "eggs", "amount": "3"}}]}}
+
+JSON only, no other text."""
+
+    try:
+        response = groq_client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "You are a meal planning assistant. Respond with valid JSON only."},
+                {"role": "user", "content": prompt},
+            ],
+            temperature=0.9,
+        )
+
+        content = response.choices[0].message.content.strip()
+        if content.startswith("```json"):
+            content = content[7:]
+        if content.startswith("```"):
+            content = content[3:]
+        if content.endswith("```"):
+            content = content[:-3]
+        content = content.strip()
+
+        meal = json.loads(content)
+        if isinstance(meal, list):
+            meal = meal[0] if meal else None
+        if not meal or not meal.get("recipe_name"):
+            return None
+        return meal
+    except Exception as e:
+        logger.error("Single meal generation error: %s", e)
+        return None
+
+
+@router.post("/meal-plan/replace-meal")
+@limiter.limit("10/minute")
+async def replace_meal(
+    body: ReplaceMealRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency),
+):
+    """AI-replace a single meal with a new suggestion."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+    if not groq_client:
+        raise HTTPException(status_code=500, detail="AI service not configured")
+
+    user_id = current_user["id"]
+    monday = _get_monday(body.week_start)
+    pantry_user_id = _resolve_pantry_user_id(user_id, body.group_id)
+
+    # Fetch the meal being replaced
+    meal_resp = (
+        supabase.table("meal_plan")
+        .select("*")
+        .eq("id", body.meal_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+    if not meal_resp.data:
+        raise HTTPException(status_code=404, detail="Meal not found")
+
+    old_meal = meal_resp.data[0]
+    day = old_meal["day"]
+    slot = old_meal["slot"]
+
+    # Fetch pantry for context (from selected group if applicable)
+    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
+    pantry_items = pantry_resp.data or []
+
+    available = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]
+    ingredient_list = ", ".join(i["name"] for i in available) or "none"
+
+    # Fetch other meals this week to avoid repeats
+    all_meals_resp = (
+        supabase.table("meal_plan")
+        .select("recipe_name")
+        .eq("user_id", user_id)
+        .eq("week_start", monday)
+        .execute()
+    )
+    other_meals = [m["recipe_name"] for m in (all_meals_resp.data or []) if m["recipe_name"] != old_meal["recipe_name"]]
+
+    # Generate replacement
+    new_meal = _generate_single_meal(
+        slot, day, ingredient_list, old_meal["recipe_name"], other_meals
+    )
+
+    if not new_meal:
+        raise HTTPException(status_code=500, detail="Failed to generate replacement meal")
+
+    # Update the existing row
+    update_data = {
+        "recipe_name": new_meal["recipe_name"],
+        "description": new_meal.get("description"),
+        "time_minutes": new_meal.get("time_minutes"),
+        "ingredients": new_meal.get("ingredients", []),
+    }
+    resp = (
+        supabase.table("meal_plan")
+        .update(update_data)
+        .eq("id", body.meal_id)
+        .eq("user_id", user_id)
+        .execute()
+    )
+
+    if not resp.data:
+        raise HTTPException(status_code=500, detail="Failed to update meal")
+
+    return resp.data[0]
+
+
+# ============================================================================
+# POST /meal-plan/swap — Swap two meals in the grid
+# ============================================================================
+
+@router.post("/meal-plan/swap")
+@limiter.limit("30/minute")
+async def swap_meals(
+    body: SwapMealsRequest,
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency),
+):
+    """Swap two meals in the weekly plan (or move a meal to an empty slot)."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    user_id = current_user["id"]
+    monday = _get_monday(body.week_start)
+
+    # Fetch source meal
+    source_resp = (
+        supabase.table("meal_plan")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("week_start", monday)
+        .eq("day", body.source_day)
+        .eq("slot", body.source_slot)
+        .execute()
+    )
+    source_meal = source_resp.data[0] if source_resp.data else None
+
+    # Fetch target meal
+    target_resp = (
+        supabase.table("meal_plan")
+        .select("*")
+        .eq("user_id", user_id)
+        .eq("week_start", monday)
+        .eq("day", body.target_day)
+        .eq("slot", body.target_slot)
+        .execute()
+    )
+    target_meal = target_resp.data[0] if target_resp.data else None
+
+    if not source_meal:
+        raise HTTPException(status_code=404, detail="Source meal not found")
+
+    content_fields = ["recipe_name", "description", "time_minutes", "ingredients"]
+
+    if target_meal:
+        # Swap content between the two rows (avoids unique constraint issues)
+        source_content = {f: source_meal.get(f) for f in content_fields}
+        target_content = {f: target_meal.get(f) for f in content_fields}
+
+        supabase.table("meal_plan").update(target_content).eq("id", source_meal["id"]).execute()
+        supabase.table("meal_plan").update(source_content).eq("id", target_meal["id"]).execute()
+    else:
+        # Move to empty slot — delete source, re-insert at target
+        supabase.table("meal_plan").delete().eq("id", source_meal["id"]).execute()
+        supabase.table("meal_plan").insert({
+            "user_id": user_id,
+            "week_start": monday,
+            "day": body.target_day,
+            "slot": body.target_slot,
+            "recipe_name": source_meal["recipe_name"],
+            "description": source_meal.get("description"),
+            "time_minutes": source_meal.get("time_minutes"),
+            "ingredients": source_meal.get("ingredients", []),
+        }).execute()
+
+    return {"message": "Meals swapped successfully"}
+
+
+# ============================================================================
 # POST /meal-plan/add-to-shopping-list — Push missing ingredients
 # ============================================================================
 
@@ -456,6 +699,7 @@ async def add_to_shopping_list(
 
     user_id = current_user["id"]
     monday = _get_monday(body.week_start)
+    pantry_user_id = _resolve_pantry_user_id(user_id, body.pantry_group_id)
 
     # Fetch meals
     meals_resp = (
@@ -467,8 +711,8 @@ async def add_to_shopping_list(
     )
     meals = meals_resp.data or []
 
-    # Fetch pantry
-    pantry_resp = supabase.table("pantry_items").select("id, name, stock_status").eq("user_id", user_id).execute()
+    # Fetch pantry (from selected group if applicable)
+    pantry_resp = supabase.table("pantry_items").select("id, name, stock_status").eq("user_id", pantry_user_id).execute()
     pantry_items = pantry_resp.data or []
 
     missing = _compute_shopping_summary(meals, pantry_items)

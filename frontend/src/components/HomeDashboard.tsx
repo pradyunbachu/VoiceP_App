@@ -70,7 +70,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
   const { data: apiAllPantryData, isLoading: pantryLoading } = usePantryItems({ group_id: pantryGroupId as number | undefined });
   const lowStockData = isDemoPantry ? DEMO_PANTRY_ITEMS.filter(i => i.stock_status === "low") : apiLowStockData;
   const allPantryData = isDemoPantry ? DEMO_PANTRY_ITEMS : apiAllPantryData;
-  const { data: shoppingItems, isLoading: shoppingLoading } = useShoppingList();
+  const { data: shoppingItems, isLoading: shoppingLoading } = useShoppingList({ group_id: pantryGroupId });
   const { data: cookStats, isLoading: cookStatsLoading } = useCookStats();
   // streak hook removed — replaced by activity tracker
   const now = new Date();

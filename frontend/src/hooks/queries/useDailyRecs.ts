@@ -13,12 +13,12 @@ import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
 import type { DailyRecs } from '../../types';
 
-export const useDailyRecs = (preference: string = '') => {
+export const useDailyRecs = (preference: string = '', groupId?: number) => {
   const { session } = useAuth();
   const refreshRef = useRef(false);
 
   const query = useQuery<DailyRecs>({
-    queryKey: queryKeys.dailyRecs.withPreference(preference),
+    queryKey: queryKeys.dailyRecs.withPreference(preference, groupId),
     queryFn: async (): Promise<DailyRecs> => {
       const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
       const shouldRefresh = refreshRef.current;
@@ -27,6 +27,7 @@ export const useDailyRecs = (preference: string = '') => {
       const params = new URLSearchParams({ tz });
       if (shouldRefresh) params.set('refresh', 'true');
       if (preference) params.set('preference', preference);
+      if (groupId) params.set('group_id', String(groupId));
 
       const response = await authFetch(`${API_BASE_URL}/api/daily-recs?${params}`);
 

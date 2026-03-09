@@ -95,6 +95,8 @@ export {
   useDeletePlannedMeal,
   useGenerateMealPlan,
   useAddMealPlanToShoppingList,
+  useReplaceMeal,
+  useSwapMeals,
 } from './mutations/useMealPlanMutations';
 
 // Audio recording

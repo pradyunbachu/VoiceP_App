@@ -400,7 +400,7 @@ function AppContent() {
           </AnimatePresence>
         </main>
       </ErrorBoundary>
-      {isAuthenticated && <DailyRecs showToast={showToast} />}
+      {isAuthenticated && <DailyRecs showToast={showToast} selectedPantryGroup={selectedPantryGroup} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
       <AnimatePresence>
         {showClearAllConfirm && (

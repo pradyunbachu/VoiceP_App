@@ -11,8 +11,9 @@ GET  /cook-stats  — Weekly food waste prevention summary: meals cooked,
 # ============================================================================
 # COOK MEAL ROUTES - Recipe Cooking Tracker + Food Waste Prevention
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime, timedelta
 import re
 
@@ -20,6 +21,7 @@ from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from cache import api_cache, make_cache_key
+from routes.pantry_sharing import verify_pantry_group_membership
 
 import logging
 logger = logging.getLogger(__name__)
@@ -121,6 +123,7 @@ def _match_ingredient_to_pantry(ingredient_name: str, pantry_items: list, matche
 class CookMealRequest(BaseModel):
     recipe_name: str
     ingredients: list[dict]  # [{item: str, amount: str}]
+    group_id: Optional[int] = None
 
 
 @router.post("/cook-meal")
@@ -136,8 +139,17 @@ async def cook_meal(
 
     user_id = current_user["id"]
 
-    # Fetch pantry
-    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    # Resolve pantry owner when a group is selected
+    pantry_user_id = user_id
+    if body.group_id is not None:
+        if not verify_pantry_group_membership(user_id, body.group_id):
+            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", body.group_id).execute()
+        if group_resp.data:
+            pantry_user_id = group_resp.data[0]["owner_id"]
+
+    # Fetch pantry (from selected group if applicable)
+    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
     pantry_items = pantry_resp.data or []
 
     if not pantry_items:
@@ -221,6 +233,8 @@ async def cook_meal(
     api_cache.invalidate_prefix(make_cache_key(user_id, "daily_recs"))
     api_cache.invalidate_prefix(make_cache_key(user_id, "cook_stats"))
     api_cache.invalidate_prefix(make_cache_key(user_id, "pantry"))
+    if pantry_user_id != user_id:
+        api_cache.invalidate_prefix(make_cache_key(pantry_user_id, "pantry"))
 
     return {
         "success": True,

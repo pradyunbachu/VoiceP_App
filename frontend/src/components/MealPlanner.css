@@ -286,6 +286,14 @@
   gap: 4px;
 }
 
+.mp-meal-actions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s ease;
+}
+
 .mp-meal-name {
   font-size: 0.74rem;
   font-weight: 600;
@@ -298,6 +306,7 @@
   -webkit-box-orient: vertical;
 }
 
+.mp-meal-replace,
 .mp-meal-delete {
   display: flex;
   align-items: center;
@@ -310,17 +319,47 @@
   color: var(--text-muted);
   border-radius: var(--radius-sm);
   cursor: pointer;
-  opacity: 0;
   transition: all 0.15s ease;
 }
 
-.mp-cell--filled:hover .mp-meal-delete {
+.mp-cell--filled:hover .mp-meal-actions {
   opacity: 1;
+}
+
+.mp-meal-replace:hover {
+  background: var(--accent-primary-bg);
+  color: var(--accent-primary);
+}
+
+.mp-meal-replace:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .mp-meal-delete:hover {
   background: var(--accent-danger-bg);
   color: var(--accent-danger);
+}
+
+/* ── Drag and drop ────────────────────────────────────────────────── */
+
+.mp-cell--filled {
+  cursor: grab;
+}
+
+.mp-cell--filled:active {
+  cursor: grabbing;
+}
+
+.mp-dragging {
+  opacity: 0.4;
+  border-style: dashed !important;
+}
+
+.mp-drag-over {
+  border-color: var(--accent-primary) !important;
+  background: var(--accent-primary-bg) !important;
+  box-shadow: inset 0 0 0 1px var(--accent-primary);
 }
 
 .mp-meal-desc {
@@ -612,6 +651,10 @@
 
   .mp-cell--empty {
     min-height: 56px;
+  }
+
+  .mp-meal-actions {
+    opacity: 1;
   }
 
   .mp-title-row {
