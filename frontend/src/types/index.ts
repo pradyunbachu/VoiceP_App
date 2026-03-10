@@ -409,6 +409,7 @@ export interface ReceiptScanResult {
   store: string;
   amount: number;
   items: string;
+  pantry_items?: string;
   date: string;
   category?: string;
 }

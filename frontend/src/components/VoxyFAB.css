@@ -56,15 +56,17 @@
 
 @media (max-width: 768px) {
   .voxy-fab {
-    top: 60px;
+    top: auto;
+    bottom: 100px; /* above the bottom nav */
     left: 12px;
-    width: 36px;
-    height: 36px;
+    width: 40px;
+    height: 40px;
   }
 
   .theme-toggle-fixed {
-    bottom: 16px;
-    left: 16px;
+    bottom: 100px; /* above the bottom nav */
+    right: 12px;
+    left: auto;
     width: 36px;
     height: 36px;
   }

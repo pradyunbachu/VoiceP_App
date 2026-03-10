@@ -26,6 +26,7 @@ import DailyRecs from "./components/DailyRecs";
 import TutorialOverlay from "./components/TutorialOverlay";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
+import MobileBottomNav from "./components/MobileBottomNav";
 import UpdatePassword from "./components/UpdatePassword";
 import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -400,6 +401,7 @@ function AppContent() {
           </AnimatePresence>
         </main>
       </ErrorBoundary>
+      {isAuthenticated && <MobileBottomNav currentView={currentView} onViewChange={setCurrentView} />}
       {isAuthenticated && <DailyRecs showToast={showToast} selectedPantryGroup={selectedPantryGroup} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
       <AnimatePresence>

@@ -187,3 +187,25 @@
 .toast-container > * {
   pointer-events: auto;
 }
+
+/* Countdown progress bar for undo toasts */
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  background: currentColor;
+  opacity: 0.3;
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
+  animation: toastCountdown linear forwards;
+  width: 100%;
+}
+
+@keyframes toastCountdown {
+  from {
+    width: 100%;
+  }
+  to {
+    width: 0%;
+  }
+}

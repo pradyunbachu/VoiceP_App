@@ -1,0 +1,55 @@
+/* ==================== SWIPEABLE ROW ==================== */
+.swipeable-row {
+  position: relative;
+  overflow: hidden;
+}
+
+.swipeable-row-content {
+  position: relative;
+  z-index: 1;
+  background: var(--bg-card);
+  will-change: transform;
+}
+
+.swipeable-row-actions {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  z-index: 0;
+}
+
+.swipeable-action-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  border: none;
+  cursor: pointer;
+  height: 100%;
+  transition: opacity 0.15s;
+}
+
+.swipeable-action-btn:active {
+  opacity: 0.8;
+}
+
+.swipeable-action-label {
+  font-size: 0.65rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+/* Only enable swipe behavior on touch devices */
+@media (hover: hover) and (pointer: fine) {
+  .swipeable-row-actions {
+    display: none;
+  }
+
+  .swipeable-row-content {
+    transform: none !important;
+  }
+}

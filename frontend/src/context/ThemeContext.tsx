@@ -28,7 +28,13 @@ export const ThemeProvider = ({ children }: { children: ReactNode }) => {
   }, [theme]);
 
   const toggleTheme = () => {
+    // Enable synchronized transition on all elements, then swap theme
+    document.documentElement.setAttribute("data-theme-transitioning", "");
     setTheme(prev => prev === "dark" ? "light" : "dark");
+    // Remove after transition completes so it doesn't affect normal interactions
+    setTimeout(() => {
+      document.documentElement.removeAttribute("data-theme-transitioning");
+    }, 250);
   };
 
   return (

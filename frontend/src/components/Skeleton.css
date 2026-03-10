@@ -1,0 +1,171 @@
+/* ==================== SKELETON LOADING ==================== */
+@keyframes shimmer {
+  0% {
+    background-position: -400px 0;
+  }
+  100% {
+    background-position: 400px 0;
+  }
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 25%,
+    var(--bg-card-hover, rgba(255, 255, 255, 0.06)) 50%,
+    var(--bg-card) 75%
+  );
+  background-size: 800px 100%;
+  animation: shimmer 1.5s infinite linear;
+  border-radius: var(--radius-md);
+}
+
+.skeleton-text {
+  height: 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 8px;
+}
+
+.skeleton-text:last-child {
+  margin-bottom: 0;
+}
+
+.skeleton-title {
+  height: 20px;
+  width: 60%;
+  border-radius: var(--radius-sm);
+  margin-bottom: 12px;
+}
+
+.skeleton-circle {
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Pantry stat card skeleton */
+.skeleton-stat-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+}
+
+/* Pantry card skeleton */
+.skeleton-pantry-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-left: 3px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+}
+
+.skeleton-pantry-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-pantry-card-body {
+  margin-bottom: var(--space-3);
+}
+
+.skeleton-pantry-card-footer {
+  display: flex;
+  gap: var(--space-4);
+}
+
+.skeleton-status-row {
+  display: flex;
+  gap: var(--space-2);
+  margin-top: var(--space-3);
+}
+
+/* Shopping list item skeleton */
+.skeleton-shopping-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.875rem 1.25rem;
+  border-bottom: 1px solid var(--border-primary);
+}
+
+.skeleton-shopping-item:last-child {
+  border-bottom: none;
+}
+
+/* Shelf item skeleton */
+.skeleton-shelf-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+  padding: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  width: 140px;
+  height: 120px;
+}
+
+/* Grid layout for pantry skeletons */
+.skeleton-pantry-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--space-4);
+}
+
+.skeleton-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: var(--space-3);
+  margin-bottom: var(--space-6);
+}
+
+/* Shelf skeleton */
+.skeleton-shelf {
+  margin-bottom: var(--space-6);
+}
+
+.skeleton-shelf-surface {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  padding: var(--space-4) var(--space-5) var(--space-5);
+  min-height: 85px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  align-items: flex-end;
+}
+
+/* Expense skeleton */
+.skeleton-expense-row {
+  display: flex;
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-4) var(--space-5);
+  border-bottom: 1px solid var(--border-secondary);
+}
+
+.skeleton-expense-row:last-child {
+  border-bottom: none;
+}
+
+@media (max-width: 768px) {
+  .skeleton-pantry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .skeleton-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .skeleton-shelf-item {
+    width: 110px;
+    height: 125px;
+  }
+}

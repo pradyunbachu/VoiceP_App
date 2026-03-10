@@ -261,55 +261,21 @@
 
 @media (max-width: 768px) {
   .navigation {
-    padding: var(--space-3) var(--space-4);
-  }
-
-  .nav-logo span {
-    display: none;
+    padding: var(--space-2) var(--space-4);
   }
 
   .nav-left {
     gap: var(--space-3);
   }
 
+  /* Show logo text on mobile since tabs moved to bottom nav */
+  .nav-logo {
+    font-size: 1.15rem;
+  }
+
+  /* Hide top nav tabs on mobile — replaced by bottom nav */
   .nav-tabs {
-    gap: 0;
-  }
-
-  .nav-tab {
-    flex-direction: column;
-    padding: var(--space-2) var(--space-3);
-    gap: var(--space-1);
-    font-size: 0.7rem;
-  }
-
-  .nav-label-full {
     display: none;
-  }
-
-  .nav-label-short {
-    display: block;
-  }
-
-  .dropdown-arrow {
-    display: none;
-  }
-
-  .nav-dropdown-menu {
-    position: absolute;
-    top: calc(100% + var(--space-2));
-    bottom: auto;
-    left: auto;
-    right: 0;
-    min-width: 160px;
-    border-radius: var(--radius-lg);
-    padding: var(--space-2);
-    animation: dropdownFadeIn 0.15s ease-out;
-  }
-
-  .nav-dropdown-item {
-    padding: var(--space-3) var(--space-4);
-    font-size: 0.9rem;
   }
 
   .nav-username {

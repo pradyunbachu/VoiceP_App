@@ -94,6 +94,20 @@ else:
 # ============================================================================
 # DEEPGRAM CONFIGURATION (for voice transcription)
 # ============================================================================
+# ============================================================================
+# VAPID KEYS (for Web Push notifications)
+# ============================================================================
+VAPID_PUBLIC_KEY = os.getenv("VAPID_PUBLIC_KEY", "")
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_CLAIMS_EMAIL = os.getenv("VAPID_CLAIMS_EMAIL", "mailto:admin@voxal.app")
+
+if not VAPID_PUBLIC_KEY or not VAPID_PRIVATE_KEY:
+    logger.warning("VAPID keys not set. Push notifications will be disabled.")
+    logger.warning("Generate keys with: python -c \"from pywebpush import webpush; from py_vapid import Vapid; v=Vapid(); v.generate_keys(); print('Public:', v.public_key); print('Private:', v.private_key)\"")
+
+# ============================================================================
+# DEEPGRAM CONFIGURATION (for voice transcription)
+# ============================================================================
 deepgram_api_key = os.getenv("DEEPGRAM_API_KEY", "")
 if not deepgram_api_key or deepgram_api_key == "your_deepgram_api_key_here":
     logger.warning("DEEPGRAM_API_KEY not set. Please set your API key in .env file")

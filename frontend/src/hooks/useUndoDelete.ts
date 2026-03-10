@@ -94,14 +94,16 @@ export function useUndoDelete(showToast: ShowToast) {
         }
       }
 
+      const UNDO_DURATION = 10000;
+
       const timer = setTimeout(() => {
         pendingRef.current.delete(id);
         onDelete();
-      }, 5000);
+      }, UNDO_DURATION);
 
       pendingRef.current.set(id, { timer, onDelete, snapshots });
 
-      showToast(message, "info", 5000, {
+      showToast(message, "info", UNDO_DURATION, {
         label: "Undo",
         onClick: () => {
           const entry = pendingRef.current.get(id);

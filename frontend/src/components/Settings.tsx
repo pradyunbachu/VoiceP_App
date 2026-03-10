@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
+import { usePushNotifications } from "../hooks";
 import type { ShowToast } from "../types";
 import "./Settings.css";
 
@@ -32,6 +33,7 @@ const CURRENCIES = [
 const Settings: FC<Props> = ({ showToast }) => {
   const { user, updateUserProfile } = useAuth();
   const { theme, toggleTheme } = useTheme();
+  const push = usePushNotifications();
 
   // Profile
   const [firstName, setFirstName] = useState("");
@@ -307,6 +309,58 @@ const Settings: FC<Props> = ({ showToast }) => {
             </span>
           </button>
         </div>
+
+        {push.isSupported && (
+          <>
+            <div className="settings-toggle-row">
+              <div className="settings-toggle-info">
+                <span className="settings-toggle-label">"What's for dinner?" alerts</span>
+                <span className="settings-toggle-desc">
+                  Daily push notification at ~4-5pm with a dinner idea based on your pantry
+                </span>
+              </div>
+              <button
+                className={`settings-toggle ${push.isSubscribed ? "on" : ""}`}
+                onClick={async () => {
+                  if (push.isSubscribed) {
+                    await push.unsubscribe();
+                    showToast("Dinner notifications disabled", "info");
+                  } else {
+                    const ok = await push.subscribe();
+                    if (ok) {
+                      showToast("Dinner notifications enabled!", "success");
+                    } else if (push.permission === "denied") {
+                      showToast("Notifications blocked. Enable them in your browser settings.", "error");
+                    } else {
+                      showToast("Failed to enable notifications", "error");
+                    }
+                  }
+                }}
+                disabled={push.isLoading}
+                role="switch"
+                aria-checked={push.isSubscribed}
+              >
+                <span className="settings-toggle-track">
+                  <span className="settings-toggle-thumb" />
+                </span>
+              </button>
+            </div>
+
+            {push.isSubscribed && (
+              <button
+                className="settings-action-btn"
+                onClick={async () => {
+                  const ok = await push.sendTest();
+                  if (ok) showToast("Test notification sent!", "success");
+                  else showToast("Failed to send test notification", "error");
+                }}
+                style={{ marginLeft: "auto", display: "block", marginTop: "var(--space-1)" }}
+              >
+                Send test notification
+              </button>
+            )}
+          </>
+        )}
 
         <div className="settings-field" style={{ marginTop: "var(--space-4)" }}>
           <label htmlFor="settings-expiry-days">Expiration alert window</label>

@@ -63,6 +63,13 @@ const Toast: FC<Props> = ({ message, type = "info", onClose, duration = 5000, ac
       >
         <X size={16} />
       </button>
+      {/* Countdown progress bar for timed toasts with actions (e.g. Undo) */}
+      {action && duration > 0 && (
+        <div
+          className="toast-progress"
+          style={{ animationDuration: `${duration}ms` }}
+        />
+      )}
     </div>
   );
 };

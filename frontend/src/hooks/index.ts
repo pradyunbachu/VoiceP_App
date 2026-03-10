@@ -114,6 +114,9 @@ export { useUndoDelete } from './useUndoDelete';
 // Container columns (grid virtualization)
 export { useContainerColumns } from './useContainerColumns';
 
+// Push notifications
+export { usePushNotifications } from './usePushNotifications';
+
 // Voice processor
 export { default as useVoiceProcessor } from './useVoiceProcessor';
 

@@ -36,6 +36,13 @@
   }
 }
 
+/* Add bottom padding on mobile for bottom nav bar */
+@media (max-width: 768px) {
+  .app-main {
+    padding-bottom: 90px;
+  }
+}
+
 .loading-state {
   text-align: center;
   color: var(--text-muted);

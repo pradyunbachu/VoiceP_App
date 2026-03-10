@@ -31,6 +31,7 @@ OUTPUT: A single JSON object (no markdown, no explanation, just valid JSON) with
 {
   "store": "Store name (from receipt header)",
   "items": "Comma-separated item names (product names only, no prices or quantities)",
+  "pantry_items": "Comma-separated individual food/grocery items for kitchen inventory",
   "amount": total_amount_as_number,
   "date": "YYYY-MM-DD (from receipt, or null if not visible)",
   "category": "Category from: Electronics, Groceries, Clothing, Transportation, Dining, Entertainment, Health, Home, Utilities, Other"
@@ -38,12 +39,18 @@ OUTPUT: A single JSON object (no markdown, no explanation, just valid JSON) with
 
 RULES:
 - Store name is usually at top in larger text or stylized font
-- IMPORTANT: Consolidate line items into logical products or menu items. Do NOT list every individual component, modifier, topping, or add-on separately. For example:
+- IMPORTANT: "items" should consolidate line items into logical products or menu items. Do NOT list every individual component separately. For example:
   - Subway receipt with "Italian Herbs & Cheese, Turkey, Lettuce, Tomato, Mayo" → "Turkey Sub"
   - Starbucks receipt with "Iced, Oat Milk, Vanilla, Latte" → "Iced Vanilla Oat Milk Latte"
   - Chipotle receipt with "Burrito, Chicken, Rice, Beans, Salsa, Guac" → "Chicken Burrito"
-  - Pizza receipt with "Large, Pepperoni, Extra Cheese, Mushrooms" → "Large Pepperoni Pizza"
   - If there are separate standalone items (drinks, sides, desserts), list those as their own items
+- IMPORTANT: "pantry_items" should list individual food items that would go into a kitchen pantry/fridge:
+  - For grocery stores: list each product as-is (e.g., "Milk, Eggs, Chicken Breast, Spinach, Rice")
+  - For restaurants/dining: break menu items into their main ingredients (e.g., "Chicken Burrito" → "Chicken, Rice, Beans, Tortilla")
+  - Skip non-food items (bags, utensils, napkins, cleaning supplies, etc.)
+  - Skip beverages that wouldn't be stored (fountain drinks, coffee orders)
+  - Include quantities if visible (e.g., "2 Chicken Breasts, 1 Gallon Milk")
+  - If not a food purchase, set pantry_items to empty string ""
 - Use the TOTAL amount (not subtotal, not individual item prices)
 - If multiple totals, use the final/grand total
 - Extract date if visible (various formats)
@@ -89,7 +96,7 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
                 }
             ],
             temperature=0.1,
-            max_tokens=500,
+            max_tokens=800,
             timeout=30.0  # 30 second timeout
         )
 
@@ -160,9 +167,12 @@ def validate_receipt_data(data: dict) -> Optional[dict]:
             if not matched:
                 category = "Other"
 
+        pantry_items = str(data.get("pantry_items", "")).strip()
+
         return {
             "store": store,
             "items": items,
+            "pantry_items": pantry_items,
             "amount": round(amount, 2),
             "date": date,
             "category": category

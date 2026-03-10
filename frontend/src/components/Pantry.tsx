@@ -5,7 +5,7 @@
  * CRUD operations for pantry items, bulk actions, filtering/sorting, CSV export,
  * and an auto-recategorize feature that deduplicates items and backfills dates.
  */
-import { useState, useMemo, useEffect, useRef, useCallback } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback, type KeyboardEvent } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import type { ShowToast, PantryItem, StockStatus } from "../types/index";
 import type { DragEndEvent } from "@dnd-kit/core";
@@ -51,7 +51,7 @@ import {
 import { exportPantryCsv } from "../lib/csvExport";
 import { detectCategory } from "../lib/categoryDetection";
 import { isExpired, isExpiringSoon } from "../lib/pantryUtils";
-import MixingBowlLoader from "./MixingBowlLoader";
+import { SkeletonStats, SkeletonPantryGrid, SkeletonShelfView } from "./Skeleton";
 import PantryFilters from "./PantryFilters";
 import PantryBulkActions from "./PantryBulkActions";
 import PantryGroupSelector from "./PantryGroupSelector";
@@ -110,6 +110,8 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
     notes: ""
   });
   const [editForm, setEditForm] = useState<EditFormData>({} as EditFormData);
+  const [quickAddText, setQuickAddText] = useState<string>("");
+  const quickAddRef = useRef<HTMLInputElement | null>(null);
 
   // Filter and sort state
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -358,6 +360,44 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
     } catch (error: unknown) {
       console.error("Error creating item:", error);
       if (showToast) showToast((error as Error).message || "Error adding item to pantry", "error");
+    }
+  };
+
+  // Quick-add: parse "name" or "qty name" from the inline input and create item
+  const handleQuickAdd = async () => {
+    const trimmed = quickAddText.trim();
+    if (!trimmed) return;
+
+    let name = trimmed;
+    let quantity = 1;
+    const match = trimmed.match(/^(\d+\.?\d*)\s+(.+)$/);
+    if (match) {
+      quantity = parseFloat(match[1]);
+      name = match[2];
+    }
+
+    try {
+      await createMutation.mutateAsync({
+        name,
+        quantity,
+        unit: "",
+        category: detectCategory(name),
+        expiration_date: "",
+        purchase_date: new Date().toISOString().split("T")[0],
+        stock_status: "full" as StockStatus,
+        notes: "",
+      });
+      setQuickAddText("");
+      quickAddRef.current?.focus();
+    } catch (error: unknown) {
+      if (showToast) showToast((error as Error).message || "Error adding item", "error");
+    }
+  };
+
+  const handleQuickAddKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleQuickAdd();
     }
   };
 
@@ -828,10 +868,37 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
         isDeleting={bulkDeleteMutation.isPending}
       />}
 
+      {/* Quick-Add Inline Row */}
+      {!isDemoMode && !showAddForm && (
+        <div className="pantry-quick-add">
+          <Plus size={18} className="quick-add-icon" />
+          <input
+            ref={quickAddRef}
+            type="text"
+            className="quick-add-input"
+            value={quickAddText}
+            onChange={(e) => setQuickAddText(e.target.value)}
+            onKeyDown={handleQuickAddKeyDown}
+            placeholder="Quick add — type item name and press Enter"
+            disabled={createMutation.isPending}
+          />
+          {quickAddText.trim() && (
+            <button
+              className="quick-add-btn"
+              onClick={handleQuickAdd}
+              disabled={createMutation.isPending}
+            >
+              {createMutation.isPending ? "Adding..." : "Add"}
+            </button>
+          )}
+        </div>
+      )}
+
       {/* Items Display */}
       {loading ? (
-        <div className="loading-state">
-          <MixingBowlLoader size="lg" label="Loading pantry..." />
+        <div className="loading-state" style={{ padding: 0, textAlign: "left" }}>
+          {!isDemoMode && <SkeletonStats count={4} />}
+          {viewMode === "shelf" ? <SkeletonShelfView shelves={3} /> : <SkeletonPantryGrid count={6} />}
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state">

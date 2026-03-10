@@ -500,6 +500,75 @@
   background: var(--bg-card-hover);
 }
 
+/* Quick-Add Inline Row */
+.pantry-quick-add {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-4);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
+  margin-bottom: var(--space-4);
+  transition: border-color 0.15s ease;
+}
+
+.pantry-quick-add:focus-within {
+  border-color: var(--accent-primary);
+}
+
+.quick-add-icon {
+  color: var(--text-tertiary);
+  flex-shrink: 0;
+  transition: color 0.15s;
+}
+
+.pantry-quick-add:focus-within .quick-add-icon {
+  color: var(--accent-primary);
+}
+
+.quick-add-input {
+  flex: 1;
+  border: none;
+  background: transparent;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.quick-add-input::placeholder {
+  color: var(--text-tertiary);
+}
+
+.quick-add-btn {
+  padding: var(--space-2) var(--space-4);
+  background: var(--accent-primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.quick-add-btn:hover:not(:disabled) {
+  background: var(--accent-primary-hover);
+}
+
+.quick-add-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 768px) {
+  .quick-add-input {
+    font-size: 16px; /* prevent zoom on iOS */
+  }
+}
+
 /* Items Grid */
 .pantry-items {
   display: grid;

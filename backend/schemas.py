@@ -219,6 +219,7 @@ class ReceiptScanRequest(BaseModel):
 class ReceiptScanResponse(BaseModel):
     store: str
     items: str
+    pantry_items: Optional[str] = None
     amount: float
     date: Optional[str] = None
     category: str

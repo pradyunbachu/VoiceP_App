@@ -31,7 +31,8 @@ import {
 } from "../hooks";
 import { useOnlineStatus } from "../hooks/queries/useShoppingList";
 import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
-import MixingBowlLoader from "./MixingBowlLoader";
+import { SkeletonShoppingList } from "./Skeleton";
+import SwipeableRow from "./SwipeableRow";
 import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
 import type { ShowToast, ShoppingListItem, PantryItem, PantryMatch, GroceryItem, StockStatus } from "../types";
 import "./ShoppingList.css";
@@ -427,7 +428,7 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
         <div className="list-content">
           {loading ? (
             <div className="list-loading">
-              <MixingBowlLoader size="md" label="Loading list..." />
+              <SkeletonShoppingList count={5} />
             </div>
           ) : shoppingItems.length === 0 ? (
             <div className="list-empty">
@@ -442,44 +443,64 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
                 const stockInfo = pantryMatch ? getStockStatusInfo(pantryMatch.stock_status) : null;
 
                 return (
-                  <li key={item.id} className="shopping-item">
-                    <Circle size={18} className="item-bullet" />
-                    <div className="item-content">
-                      <span className="item-text">{formatItemDisplay(item)}</span>
-                      {/* Show pantry stock info when a semantic match exists */}
-                      {pantryMatch && (
-                        <div className={`pantry-stock-info ${stockInfo?.className || ''}`}>
-                          <Package size={12} />
-                          <span className="stock-qty">
-                            {pantryMatch.quantity}{pantryMatch.unit ? ` ${pantryMatch.unit}` : ''} in pantry
-                          </span>
-                          {stockInfo && (
-                            <span className={`stock-badge ${stockInfo.className}`}>
-                              {stockInfo.icon}
-                              {stockInfo.label}
-                            </span>
+                  <li key={item.id}>
+                    <SwipeableRow
+                      actions={[
+                        {
+                          icon: <Package size={18} />,
+                          label: "Pantry",
+                          color: "white",
+                          bg: "var(--accent-primary, #C4A265)",
+                          onClick: () => handleAddToPantry(item),
+                        },
+                        {
+                          icon: <Trash2 size={18} />,
+                          label: "Delete",
+                          color: "white",
+                          bg: "var(--accent-danger, #E06B6B)",
+                          onClick: () => handleDelete(item.id),
+                        },
+                      ]}
+                    >
+                      <div className="shopping-item">
+                        <Circle size={18} className="item-bullet" />
+                        <div className="item-content">
+                          <span className="item-text">{formatItemDisplay(item)}</span>
+                          {pantryMatch && (
+                            <div className={`pantry-stock-info ${stockInfo?.className || ''}`}>
+                              <Package size={12} />
+                              <span className="stock-qty">
+                                {pantryMatch.quantity}{pantryMatch.unit ? ` ${pantryMatch.unit}` : ''} in pantry
+                              </span>
+                              {stockInfo && (
+                                <span className={`stock-badge ${stockInfo.className}`}>
+                                  {stockInfo.icon}
+                                  {stockInfo.label}
+                                </span>
+                              )}
+                            </div>
                           )}
                         </div>
-                      )}
-                    </div>
-                    <div className="item-actions">
-                      <button
-                        className="item-add-to-pantry"
-                        onClick={() => handleAddToPantry(item)}
-                        disabled={addToPantryMutation.isPending || !isOnline}
-                        title="Bought — add to pantry"
-                      >
-                        <Package size={16} />
-                      </button>
-                      <button
-                        className="item-delete"
-                        onClick={() => handleDelete(item.id)}
-                        disabled={deleteMutation.isPending || !isOnline}
-                        title="Remove item"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    </div>
+                        <div className="item-actions">
+                          <button
+                            className="item-add-to-pantry"
+                            onClick={() => handleAddToPantry(item)}
+                            disabled={addToPantryMutation.isPending || !isOnline}
+                            title="Bought — add to pantry"
+                          >
+                            <Package size={16} />
+                          </button>
+                          <button
+                            className="item-delete"
+                            onClick={() => handleDelete(item.id)}
+                            disabled={deleteMutation.isPending || !isOnline}
+                            title="Remove item"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </div>
+                    </SwipeableRow>
                   </li>
                 );
               })}

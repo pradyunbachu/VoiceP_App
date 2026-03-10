@@ -28,6 +28,7 @@ interface Props {
 interface ReceiptResult {
   store: string;
   items: string;
+  pantry_items?: string;
   amount: number;
   date: string;
   category?: string;
@@ -191,7 +192,14 @@ const VoiceRecorder: React.FC<Props> = ({ showToast, onShowTutorial }) => {
             const category = (result.category || "").toLowerCase();
             const foodCategories = ["groceries", "grocery", "dining", "restaurant", "food"];
             if (foodCategories.some(cat => category.includes(cat))) {
-              processor.setPendingPantryExpense({ ...result, id: result.expense_id } as unknown as Expense);
+              // Use pantry_items (individual items) for the pantry modal if available
+              const pantryExpense = {
+                ...result,
+                id: result.expense_id,
+                items: result.pantry_items || result.items,
+              } as unknown as Expense;
+              processor.setPendingPantryExpense(pantryExpense);
+              setShowPantryModal(true);
             }
             setShowReceiptScanner(false);
           }}

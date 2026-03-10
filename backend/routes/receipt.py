@@ -81,6 +81,7 @@ async def scan_receipt(
         return ReceiptScanResponse(
             store=saved_expense["store"],
             items=saved_expense["items"],
+            pantry_items=parsed_data.get("pantry_items", ""),
             amount=saved_expense["amount"],
             date=saved_expense["date"],
             category=saved_expense["category"],
