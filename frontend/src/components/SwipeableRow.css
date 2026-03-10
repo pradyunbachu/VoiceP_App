@@ -6,8 +6,10 @@
 
 .swipeable-row-content {
   position: relative;
-  z-index: 1;
-  background: var(--bg-card);
+  z-index: 2;
+  /* MUST be opaque so actions don't bleed through during swipe.
+     --bg-primary is #0A0A0A (dark) / #FAF8F5 (light) — always opaque. */
+  background: var(--bg-primary);
   will-change: transform;
 }
 
@@ -17,38 +19,32 @@
   right: 0;
   bottom: 0;
   display: flex;
-  z-index: 0;
+  z-index: 1;
 }
 
 .swipeable-action-btn {
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
   border: none;
   cursor: pointer;
   height: 100%;
-  transition: opacity 0.15s;
+  padding: 0;
 }
 
 .swipeable-action-btn:active {
-  opacity: 0.8;
+  opacity: 0.7;
 }
 
-.swipeable-action-label {
-  font-size: 0.65rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-}
-
-/* Only enable swipe behavior on touch devices */
-@media (hover: hover) and (pointer: fine) {
-  .swipeable-row-actions {
+/* Touch devices: hide the desktop hover buttons when swipe is available */
+@media (hover: none) and (pointer: coarse) {
+  .swipeable-row .item-actions {
     display: none;
   }
+}
 
+/* Desktop: no swipe behavior */
+@media (hover: hover) and (pointer: fine) {
   .swipeable-row-content {
     transform: none !important;
   }

@@ -1,14 +1,17 @@
 /**
  * SwipeableRow.tsx - Touch swipe-to-action for mobile list items.
  *
- * Wraps any list item and reveals action buttons when swiped left.
- * Supports a primary action (delete) and an optional secondary action (edit/pantry).
- * Falls back to normal layout on non-touch / desktop.
+ * Wraps any list item and reveals compact action buttons when swiped left.
+ * Only active on touch devices — desktop shows normal hover actions.
+ * Uses a global ref so only one row can be open at a time.
+ *
+ * Actions are always mounted behind an opaque content layer (--bg-primary)
+ * so there's no flash/bleed on mount/unmount.
  */
-import { useState, useRef, useCallback, type FC, type ReactNode } from "react";
+import { useState, useRef, useCallback, useEffect, type FC, type ReactNode } from "react";
 import "./SwipeableRow.css";
 
-interface SwipeAction {
+export interface SwipeAction {
   icon: ReactNode;
   label: string;
   color: string;
@@ -19,74 +22,99 @@ interface SwipeAction {
 interface Props {
   children: ReactNode;
   actions: SwipeAction[];
-  /** Width of each revealed action button (default 72px) */
-  actionWidth?: number;
 }
 
-const SWIPE_THRESHOLD = 40;
+const SWIPE_THRESHOLD = 30;
+const ACTION_WIDTH = 56;
 
-const SwipeableRow: FC<Props> = ({ children, actions, actionWidth = 72 }) => {
+let globalOpenCloseFn: (() => void) | null = null;
+
+const SwipeableRow: FC<Props> = ({ children, actions }) => {
   const [offsetX, setOffsetX] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
+  const [animating, setAnimating] = useState(false);
+  const isOpen = useRef(false);
   const startX = useRef(0);
   const startY = useRef(0);
-  const currentX = useRef(0);
-  const swiping = useRef(false);
-  const rowRef = useRef<HTMLDivElement>(null);
+  const directionLocked = useRef<"h" | "v" | null>(null);
+  const touchActive = useRef(false);
 
-  const maxSwipe = actions.length * actionWidth;
+  const maxSwipe = actions.length * ACTION_WIDTH;
+
+  const close = useCallback(() => {
+    setAnimating(true);
+    setOffsetX(0);
+    isOpen.current = false;
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (globalOpenCloseFn === close) globalOpenCloseFn = null;
+    };
+  }, [close]);
 
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     startX.current = e.touches[0].clientX;
     startY.current = e.touches[0].clientY;
-    currentX.current = isOpen ? -maxSwipe : 0;
-    swiping.current = false;
-  }, [isOpen, maxSwipe]);
+    directionLocked.current = null;
+    touchActive.current = true;
+    setAnimating(false);
+
+    // Close any other open row
+    if (globalOpenCloseFn && globalOpenCloseFn !== close) {
+      globalOpenCloseFn();
+      globalOpenCloseFn = null;
+    }
+  }, [close]);
 
   const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (!touchActive.current) return;
+
     const dx = e.touches[0].clientX - startX.current;
     const dy = e.touches[0].clientY - startY.current;
 
-    // If vertical scroll is dominant, bail out
-    if (!swiping.current && Math.abs(dy) > Math.abs(dx)) return;
-    swiping.current = true;
+    if (!directionLocked.current) {
+      if (Math.abs(dx) < 8 && Math.abs(dy) < 8) return;
+      directionLocked.current = Math.abs(dx) > Math.abs(dy) ? "h" : "v";
+    }
 
-    const raw = currentX.current + dx;
-    // Clamp: can't swipe right past 0, can't swipe left past maxSwipe
-    const clamped = Math.max(-maxSwipe, Math.min(0, raw));
-    setOffsetX(clamped);
+    if (directionLocked.current === "v") return;
+
+    const base = isOpen.current ? -maxSwipe : 0;
+    const raw = base + dx;
+    setOffsetX(Math.max(-maxSwipe, Math.min(0, raw)));
   }, [maxSwipe]);
 
   const handleTouchEnd = useCallback(() => {
-    if (!swiping.current) return;
+    touchActive.current = false;
 
+    if (directionLocked.current !== "h") return;
+
+    setAnimating(true);
     if (offsetX < -SWIPE_THRESHOLD) {
       setOffsetX(-maxSwipe);
-      setIsOpen(true);
+      isOpen.current = true;
+      globalOpenCloseFn = close;
     } else {
       setOffsetX(0);
-      setIsOpen(false);
+      isOpen.current = false;
+      if (globalOpenCloseFn === close) globalOpenCloseFn = null;
     }
-  }, [offsetX, maxSwipe]);
-
-  const close = useCallback(() => {
-    setOffsetX(0);
-    setIsOpen(false);
-  }, []);
+  }, [offsetX, maxSwipe, close]);
 
   const handleActionClick = useCallback((action: SwipeAction) => {
     close();
-    // Small delay to let the row animate closed before the action fires
-    setTimeout(() => action.onClick(), 150);
+    if (globalOpenCloseFn === close) globalOpenCloseFn = null;
+    setTimeout(() => action.onClick(), 250);
   }, [close]);
 
   return (
-    <div className="swipeable-row" ref={rowRef}>
+    <div className="swipeable-row">
+      {/* Content: opaque bg-primary covers actions at rest */}
       <div
         className="swipeable-row-content"
         style={{
           transform: `translateX(${offsetX}px)`,
-          transition: swiping.current ? "none" : "transform 0.25s ease-out",
+          transition: animating ? "transform 0.2s ease-out" : "none",
         }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
@@ -94,21 +122,17 @@ const SwipeableRow: FC<Props> = ({ children, actions, actionWidth = 72 }) => {
       >
         {children}
       </div>
+      {/* Actions: always mounted behind content, revealed by slide */}
       <div className="swipeable-row-actions" style={{ width: maxSwipe }}>
         {actions.map((action, i) => (
           <button
             key={i}
             className="swipeable-action-btn"
-            style={{
-              background: action.bg,
-              color: action.color,
-              width: actionWidth,
-            }}
+            style={{ background: action.bg, color: action.color, width: ACTION_WIDTH }}
             onClick={() => handleActionClick(action)}
             aria-label={action.label}
           >
             {action.icon}
-            <span className="swipeable-action-label">{action.label}</span>
           </button>
         ))}
       </div>
