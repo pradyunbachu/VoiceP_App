@@ -72,6 +72,25 @@
   border-color: var(--accent-primary-border);
 }
 
+.chef-stock-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  margin-bottom: var(--space-3);
+  user-select: none;
+}
+
+.chef-stock-toggle input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--accent-primary);
+  cursor: pointer;
+  margin: 0;
+}
+
 .chef-pantry-list {
   display: flex;
   flex-direction: column;
@@ -156,37 +175,30 @@
   gap: var(--space-4);
 }
 
-/* Bowl — circle */
+/* ── Bowl — Cartoon mixing bowl ── */
+
 .chef-bowl {
-  width: 520px;
-  height: 520px;
-  margin: 0 auto;
-  border-radius: 50%;
-  border: 2px dashed rgba(200, 191, 178, 0.2);
-  background: rgba(200, 191, 178, 0.03);
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  padding: var(--space-6);
-  transition: border-color 0.2s ease, background 0.2s ease;
-}
-
-.chef-bowl.drag-over {
-  border-color: var(--accent-primary);
-  background: rgba(200, 170, 110, 0.06);
+  margin: 0 auto;
+  width: 100%;
+  max-width: 560px;
+  height: 400px;
+  overflow: hidden;
 }
 
 .chef-bowl-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   margin-bottom: var(--space-3);
 }
 
 .chef-bowl-title {
   color: var(--text-secondary);
-  font-size: 0.85rem;
+  font-size: 0.9rem;
   font-weight: 600;
   display: flex;
   align-items: center;
@@ -202,34 +214,191 @@
   border-radius: var(--radius-full);
 }
 
-.chef-bowl-chips {
+/* Bowl scene wraps the visual shape behind the chips */
+.chef-bowl-scene {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 560px;
+  height: 100%;
+  pointer-events: none;
+  z-index: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Rim — thick rounded bar across the top */
+.chef-bowl-rim {
+  position: relative;
+  z-index: 2;
+  width: 100%;
+  height: 14px;
+  background: var(--accent-primary);
+  border-radius: 7px 7px 0 0;
+  box-shadow: 0 -1px 0 0 var(--accent-primary-light);
+}
+
+/* Sheen on the rim */
+.chef-bowl-rim::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 20%;
+  right: 20%;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  border-radius: 2px;
+}
+
+/* Body — U-shape tapering to rounded base */
+.chef-bowl-body {
+  position: relative;
+  width: 100%;
+  flex: 1;
+  border: 2.5px solid var(--accent-primary);
+  border-top: none;
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  background: linear-gradient(
+    180deg,
+    rgba(200, 170, 110, 0.03) 0%,
+    rgba(200, 170, 110, 0.07) 50%,
+    rgba(200, 170, 110, 0.1) 100%
+  );
+  overflow: hidden;
+}
+
+/* Inner depth shading */
+.chef-bowl-body::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: linear-gradient(
+    180deg,
+    rgba(0, 0, 0, 0.02) 0%,
+    transparent 25%,
+    transparent 75%,
+    rgba(0, 0, 0, 0.04) 100%
+  );
+  pointer-events: none;
+}
+
+/* Liquid fill that rises */
+.chef-bowl-fill {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(200, 170, 110, 0.1) 0%,
+    rgba(200, 170, 110, 0.2) 100%
+  );
+  border-radius: 0 0 50% 50% / 0 0 100% 100%;
+  transition: height 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
+}
+
+/* Surface shimmer on the liquid */
+.chef-bowl-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -10%;
+  width: 120%;
+  height: 4px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(200, 170, 110, 0.25) 30%,
+    rgba(200, 170, 110, 0.4) 50%,
+    rgba(200, 170, 110, 0.25) 70%,
+    transparent 100%
+  );
+  border-radius: 50%;
+  animation: bowlShimmer 3s ease-in-out infinite;
+}
+
+@keyframes bowlShimmer {
+  0%   { transform: translateX(-20%); }
+  50%  { transform: translateX(20%); }
+  100% { transform: translateX(-20%); }
+}
+
+/* Shadow under the bowl */
+.chef-bowl-shadow {
+  width: 50%;
+  height: 10px;
+  margin: 2px auto 0;
+  background: radial-gradient(ellipse, rgba(0, 0, 0, 0.1) 0%, transparent 70%);
+  border-radius: 50%;
+}
+
+/* Drag-over glow */
+.chef-bowl.drag-over .chef-bowl-rim {
+  background: var(--accent-primary-light);
+  box-shadow: 0 0 16px rgba(200, 170, 110, 0.4);
+}
+
+.chef-bowl.drag-over .chef-bowl-body {
+  border-color: var(--accent-primary-light);
+  box-shadow: inset 0 0 20px rgba(200, 170, 110, 0.1);
+}
+
+/* Ingredient chips — positioned inside the bowl */
+.chef-bowl-ingredients {
+  position: relative;
+  z-index: 1;
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-2);
+  justify-content: center;
+  align-content: flex-start;
+  gap: 6px;
+  width: 380px;
+  margin-top: 28px;           /* clear the rim (14px) + buffer */
+  height: 240px;              /* stay in the wide part of the bowl */
+  flex-shrink: 0;
+  padding: 10px 40px 20px;
+  overflow-y: auto;
+  scrollbar-width: none;
+  /* fade items out at bottom before they reach the curve */
+  mask-image: linear-gradient(to bottom, black 0%, black 80%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, black 0%, black 80%, transparent 100%);
+}
+
+.chef-bowl-ingredients::-webkit-scrollbar {
+  display: none;
 }
 
 .chef-bowl-chip {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  gap: 5px;
+  padding: 4px 10px;
   background: var(--accent-primary-bg);
   border: 1px solid var(--accent-primary-border);
   border-radius: var(--radius-full);
   color: var(--accent-primary-light);
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  animation: chipIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
+  animation: ingredientDrop 0.35s cubic-bezier(0.34, 1.3, 0.64, 1);
+  cursor: default;
+  white-space: nowrap;
 }
 
-@keyframes chipIn {
-  from {
+@keyframes ingredientDrop {
+  0% {
     opacity: 0;
-    transform: scale(0.85);
+    transform: translateY(-20px) scale(0.8);
   }
-  to {
+  70% {
     opacity: 1;
-    transform: scale(1);
+    transform: translateY(3px) scale(1.03);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }
 
@@ -237,8 +406,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
-  height: 16px;
+  width: 15px;
+  height: 15px;
   padding: 0;
   background: rgba(200, 191, 178, 0.15);
   border: none;
@@ -250,7 +419,7 @@
 }
 
 .chef-bowl-chip button:hover {
-  background: rgba(200, 191, 178, 0.3);
+  background: rgba(200, 191, 178, 0.35);
 }
 
 .chef-bowl-empty {
@@ -258,6 +427,8 @@
   font-size: 0.8rem;
   text-align: center;
   padding: var(--space-4) 0;
+  align-self: center;
+  width: 100%;
 }
 
 /* Bowl Actions */
@@ -626,8 +797,18 @@
   }
 
   .chef-bowl {
+    height: 340px;
+    max-width: 100%;
+  }
+
+  .chef-bowl-scene {
+    width: 100%;
+  }
+
+  .chef-bowl-ingredients {
     width: 260px;
-    height: 260px;
+    height: 180px;
+    padding: 10px 24px 10px;
   }
 
   .chef-recipe-panel {

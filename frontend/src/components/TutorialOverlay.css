@@ -19,7 +19,7 @@
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.75);
   z-index: 10002;
   pointer-events: none;
-  transition: top 0.3s ease, left 0.3s ease, width 0.3s ease, height 0.3s ease;
+  transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 
 /* Card */
@@ -32,7 +32,7 @@
   padding: var(--space-6);
   max-width: 340px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-  animation: tutorialFadeIn 0.25s ease-out;
+  animation: tutorialFadeIn 0.15s ease-out;
 }
 
 .tutorial-card.centered {
@@ -45,7 +45,7 @@
 @keyframes tutorialFadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -55,7 +55,7 @@
 
 /* Override animation for centered card to preserve centering transform */
 .tutorial-card.centered {
-  animation: tutorialFadeInCentered 0.25s ease-out;
+  animation: tutorialFadeInCentered 0.15s ease-out;
 }
 
 @keyframes tutorialFadeInCentered {

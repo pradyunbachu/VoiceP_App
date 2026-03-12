@@ -18,7 +18,7 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
-import { Search, X, Loader, UtensilsCrossed, Clock, Sparkles, Trash2 } from 'lucide-react';
+import { X, Loader, UtensilsCrossed, Clock, Sparkles, Trash2 } from 'lucide-react';
 import { usePantryItems, useChefSuggestions, useRecipeDetail, useCookMeal } from '../hooks';
 import { DEMO_PANTRY_ITEMS } from '../constants/demoPantry';
 import RecipeDetailPanel from './RecipeDetailModal';
@@ -57,12 +57,27 @@ function DraggablePantryItem({ item, inBowl, onAdd }: DraggablePantryItemProps) 
   );
 }
 
-function DroppableBowl({ children, isOver }: { children: React.ReactNode; isOver: boolean }) {
+function DroppableBowl({ children, isOver, itemCount }: { children: React.ReactNode; isOver: boolean; itemCount: number }) {
   const { setNodeRef } = useDroppable({ id: 'bowl' });
+
+  // Fill level: 0% at 0 items, maxes out around 8+ items
+  const fillPercent = Math.min(itemCount / 8, 1) * 70;
 
   return (
     <div ref={setNodeRef} className={`chef-bowl${isOver ? ' drag-over' : ''}`}>
       {children}
+      <div className="chef-bowl-scene">
+        <div className="chef-bowl-rim" />
+        <div className="chef-bowl-body">
+          {fillPercent > 0 && (
+            <div
+              className="chef-bowl-fill"
+              style={{ height: `${fillPercent}%` }}
+            />
+          )}
+        </div>
+        <div className="chef-bowl-shadow" />
+      </div>
     </div>
   );
 }
@@ -82,11 +97,13 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
   // State
   const [bowlItems, setBowlItems] = useState<PantryItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [hideOutOfStock, setHideOutOfStock] = useState(false);
   const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
   const [cachedRecipe, setCachedRecipe] = useState<RecipeDetailResponse | null>(null);
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
   const [isOverBowl, setIsOverBowl] = useState(false);
   const recipeCacheRef = useRef<Record<string, RecipeDetailResponse>>({});
+  const ingredientsRef = useRef<HTMLDivElement>(null);
 
   const isDemoMode = selectedGroupId === "demo";
   const apiGroupId = isDemoMode ? undefined : (selectedGroupId ?? undefined);
@@ -129,10 +146,16 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
 
   // Filtered pantry list
   const filteredItems = useMemo(() => {
-    if (!searchQuery.trim()) return pantryItems;
-    const q = searchQuery.toLowerCase();
-    return pantryItems.filter((item) => item.name.toLowerCase().includes(q));
-  }, [pantryItems, searchQuery]);
+    let items = pantryItems;
+    if (hideOutOfStock) {
+      items = items.filter((item) => (item.quantity ?? 0) > 0 && item.stock_status !== 'out_of_stock');
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter((item) => item.name.toLowerCase().includes(q));
+    }
+    return items;
+  }, [pantryItems, searchQuery, hideOutOfStock]);
 
   // Group by category
   const groupedItems = useMemo(() => {
@@ -146,6 +169,13 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
   }, [filteredItems]);
 
   const bowlIds = useMemo(() => new Set(bowlItems.map((i) => i.id)), [bowlItems]);
+
+  // Auto-scroll ingredients to bottom when items are added
+  useEffect(() => {
+    if (ingredientsRef.current && bowlItems.length > 0) {
+      ingredientsRef.current.scrollTo({ top: ingredientsRef.current.scrollHeight, behavior: 'smooth' });
+    }
+  }, [bowlItems.length]);
 
   // Ingredient names for the bowl
   const bowlIngredientNames = useMemo(
@@ -304,6 +334,15 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
               onChange={(e) => setSearchQuery(e.target.value)}
             />
 
+            <label className="chef-stock-toggle">
+              <input
+                type="checkbox"
+                checked={hideOutOfStock}
+                onChange={(e) => setHideOutOfStock(e.target.checked)}
+              />
+              <span>In stock only</span>
+            </label>
+
             {pantryLoading ? (
               <div className="chef-pantry-empty">
                 <Loader size={18} className="chef-spinner" />
@@ -337,33 +376,32 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
 
           {/* Right: Bowl + Results */}
           <div className="chef-main-panel">
-            <DroppableBowl isOver={isOverBowl}>
-              <div className="chef-bowl-header">
-                <span className="chef-bowl-title">
-                  <Search size={14} />
-                  Bowl
-                  {bowlItems.length > 0 && (
-                    <span className="chef-bowl-count">{bowlItems.length}</span>
-                  )}
-                </span>
-              </div>
+            <div className="chef-bowl-header">
+              <span className="chef-bowl-title">
+                Bowl
+                {bowlItems.length > 0 && (
+                  <span className="chef-bowl-count">{bowlItems.length}</span>
+                )}
+              </span>
+            </div>
 
-              {bowlItems.length === 0 ? (
-                <div className="chef-bowl-empty">
-                  Drag or click ingredients to add them here
-                </div>
-              ) : (
-                <div className="chef-bowl-chips">
-                  {bowlItems.map((item) => (
+            <DroppableBowl isOver={isOverBowl} itemCount={bowlItems.length}>
+              <div className="chef-bowl-ingredients" ref={ingredientsRef}>
+                {bowlItems.length === 0 ? (
+                  <div className="chef-bowl-empty">
+                    Drag or tap ingredients to toss them in
+                  </div>
+                ) : (
+                  bowlItems.map((item) => (
                     <span key={item.id} className="chef-bowl-chip">
                       {item.name}
                       <button onClick={() => removeFromBowl(item.id)} aria-label={`Remove ${item.name}`}>
                         <X size={10} />
                       </button>
                     </span>
-                  ))}
-                </div>
-              )}
+                  ))
+                )}
+              </div>
             </DroppableBowl>
 
             {bowlItems.length > 0 && (

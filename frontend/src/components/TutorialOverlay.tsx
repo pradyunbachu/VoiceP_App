@@ -135,9 +135,20 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
       setSpotlightRect(null);
       return;
     }
-    el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
-    // Measure after scroll animation settles
-    setTimeout(measureSpotlight, 350);
+    // Check if element is already visible — skip scroll delay if so
+    const rect = el.getBoundingClientRect();
+    const inView =
+      rect.top >= 0 &&
+      rect.bottom <= window.innerHeight &&
+      rect.left >= 0 &&
+      rect.right <= window.innerWidth;
+
+    if (inView) {
+      measureSpotlight();
+    } else {
+      el.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
+      setTimeout(measureSpotlight, 300);
+    }
   }, [step.target, measureSpotlight]);
 
   useEffect(() => {
