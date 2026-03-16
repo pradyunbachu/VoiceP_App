@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect } from "react";
+import { useMemo, useState } from "react";
 import type { FC } from "react";
 import { motion } from "framer-motion";
 import {
@@ -12,8 +12,10 @@ import {
   Wallet,
   Mic,
   ListPlus,
-  Sparkles,
   HelpCircle,
+  Flame,
+  UtensilsCrossed,
+  CalendarCheck,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -164,11 +166,11 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
   }, [expiringItems]);
 
   // ── Monthly activity tracker ───────────────────────────────
-  const DAY_ABBRS = ["S", "M", "T", "W", "T", "F", "S"];
-  const activityDays = useMemo(() => {
+  const activityCalendar = useMemo(() => {
     const year = now.getFullYear();
     const month = now.getMonth();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const firstDayOfWeek = new Date(year, month, 1).getDay();
 
     const cookDates = new Set<number>();
     if (cookStats?.recent_meals) {
@@ -190,37 +192,75 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
       }
     }
 
-    const days: Array<{
-      day: number;
-      dayOfWeek: number;
+    // Build calendar grid cells
+    const cells: Array<{
+      day: number | null;
       cooked: boolean;
       expense: boolean;
       isToday: boolean;
+      isPast: boolean;
+      activity: number; // 0=none, 1=one type, 2=both
     }> = [];
 
+    for (let i = 0; i < firstDayOfWeek; i++) {
+      cells.push({ day: null, cooked: false, expense: false, isToday: false, isPast: false, activity: 0 });
+    }
+
     for (let d = 1; d <= daysInMonth; d++) {
-      const date = new Date(year, month, d);
-      days.push({
+      const cooked = cookDates.has(d);
+      const expense = expenseDates.has(d);
+      cells.push({
         day: d,
-        dayOfWeek: date.getDay(),
-        cooked: cookDates.has(d),
-        expense: expenseDates.has(d),
+        cooked,
+        expense,
         isToday: d === now.getDate(),
+        isPast: d < now.getDate(),
+        activity: (cooked ? 1 : 0) + (expense ? 1 : 0),
       });
     }
 
-    return days;
+    while (cells.length % 7 !== 0) {
+      cells.push({ day: null, cooked: false, expense: false, isToday: false, isPast: false, activity: 0 });
+    }
+
+    // Streak: consecutive days with any activity ending at today
+    let currentStreak = 0;
+    for (let d = now.getDate(); d >= 1; d--) {
+      if (cookDates.has(d) || expenseDates.has(d)) {
+        currentStreak++;
+      } else {
+        break;
+      }
+    }
+
+    return {
+      cells,
+      mealsCooked: cookDates.size,
+      shoppingDays: expenseDates.size,
+      activeDays: new Set([...cookDates, ...expenseDates]).size,
+      currentStreak,
+      daysInMonth,
+    };
   }, [now.getFullYear(), now.getMonth(), now.getDate(), cookStats, expenseData]);
 
-  const activityScrollRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = activityScrollRef.current;
-    if (!el) return;
-    const todayEl = el.querySelector(".activity-day--today");
-    if (todayEl) {
-      todayEl.scrollIntoView({ inline: "center", block: "nearest" });
-    }
-  }, [activityDays]);
+  const [activityView, setActivityView] = useState<"week" | "month">("week");
+
+  // Current week cells (Sun–Sat containing today)
+  const weekCells = useMemo(() => {
+    const todayDate = now.getDate();
+    const todayDow = now.getDay(); // 0=Sun
+    const startDay = todayDate - todayDow;
+
+    return Array.from({ length: 7 }, (_, i) => {
+      const d = startDay + i;
+      if (d < 1 || d > activityCalendar.daysInMonth) {
+        return { day: null, cooked: false, expense: false, isToday: false, isPast: false, activity: 0 };
+      }
+      // Find matching cell from the full calendar
+      const match = activityCalendar.cells.find((c) => c.day === d);
+      return match ?? { day: d, cooked: false, expense: false, isToday: false, isPast: false, activity: 0 };
+    });
+  }, [activityCalendar, now.getDate(), now.getDay()]);
 
   const isLoading =
     expensesLoading || statsLoading || lowStockLoading || pantryLoading || shoppingLoading || cookStatsLoading;
@@ -246,7 +286,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
       initial="hidden"
       animate="show"
     >
-      {/* ── Greeting + Streak ──────────────────────────────── */}
+      {/* ── Greeting ──────────────────────────────────────── */}
       <motion.div className="home-greeting" variants={fadeUp}>
         <div className="home-greeting-row">
           <div>
@@ -254,12 +294,11 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
               {getGreeting()}, {firstName}
             </h1>
             <p className="home-date">{now.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
-            <p>Here's what's happening in your kitchen</p>
           </div>
           <div className="home-greeting-actions">
             {onShowTutorial && (
               <button className="home-tutorial-btn" onClick={onShowTutorial} title="Replay tutorial">
-                <HelpCircle size={16} />
+                <HelpCircle size={15} />
               </button>
             )}
           </div>
@@ -269,76 +308,119 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
       {/* ── Quick Actions ──────────────────────────────────── */}
       <motion.div className="home-quick-actions" data-tutorial="quick-actions" variants={fadeUp}>
         <button className="home-quick-btn" onClick={() => onNavigate("pantry")}>
-          <Package size={18} />
+          <Package size={16} />
           <span>Pantry</span>
         </button>
         <button className="home-quick-btn" onClick={() => onNavigate("shopping-list")}>
-          <ListPlus size={18} />
+          <ListPlus size={16} />
           <span>Add to list</span>
         </button>
         <button className="home-quick-btn" onClick={() => onNavigate("chef")}>
-          <ChefHat size={18} />
+          <ChefHat size={16} />
           <span>Cook</span>
         </button>
         <button className="home-quick-btn" onClick={() => onOpenVoxy?.()}>
-          <Mic size={18} />
-          <span>Voice input</span>
+          <Mic size={16} />
+          <span>Voice</span>
         </button>
       </motion.div>
 
-      {/* ── Monthly Activity Tracker ─────────────────────────── */}
+      {/* ── Activity ──────────────────────────────────────────── */}
       <motion.div className="home-activity-tracker" variants={fadeUp}>
         <div className="home-activity-header">
-          <span className="home-activity-month">
-            {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
-          </span>
-          <div className="home-activity-legend">
-            <span className="home-activity-legend-item">
-              <span className="home-activity-dot home-activity-dot--cook" />
-              Cooked
+          <div className="home-activity-left">
+            <span className="home-activity-month">
+              {now.toLocaleDateString("en-US", { month: "long", year: "numeric" })}
             </span>
-            <span className="home-activity-legend-item">
-              <span className="home-activity-dot home-activity-dot--expense" />
-              Expense
-            </span>
+            {activityCalendar.currentStreak > 0 && (
+              <span className="home-activity-streak">
+                <Flame size={12} />
+                {activityCalendar.currentStreak}
+              </span>
+            )}
+          </div>
+          <div className="home-activity-toggle">
+            <button
+              className={`home-activity-toggle-btn${activityView === "week" ? " active" : ""}`}
+              onClick={() => setActivityView("week")}
+            >
+              Week
+            </button>
+            <button
+              className={`home-activity-toggle-btn${activityView === "month" ? " active" : ""}`}
+              onClick={() => setActivityView("month")}
+            >
+              Month
+            </button>
           </div>
         </div>
-        <div className="home-activity-scroll" ref={activityScrollRef}>
-          <div className="home-activity-grid">
-            {/* Day letter row */}
-            <div className="home-activity-row home-activity-row--labels">
-              {activityDays.map((d) => (
-                <span key={`lbl-${d.day}`} className={`home-activity-cell home-activity-label${d.isToday ? " activity-day--today" : ""}`}>
-                  {DAY_ABBRS[d.dayOfWeek]}
-                </span>
-              ))}
-            </div>
-            {/* Day number row */}
-            <div className="home-activity-row home-activity-row--numbers">
-              {activityDays.map((d) => (
-                <span key={`num-${d.day}`} className={`home-activity-cell home-activity-number${d.isToday ? " today" : ""}`}>
-                  {d.day}
-                </span>
-              ))}
-            </div>
-            {/* Cook row */}
-            <div className="home-activity-row">
-              {activityDays.map((d) => (
-                <span
-                  key={`cook-${d.day}`}
-                  className={`home-activity-cell home-activity-square${d.cooked ? " home-activity-square--cook" : " home-activity-square--empty"}`}
-                />
-              ))}
-            </div>
-            {/* Expense row */}
-            <div className="home-activity-row">
-              {activityDays.map((d) => (
-                <span
-                  key={`exp-${d.day}`}
-                  className={`home-activity-cell home-activity-square${d.expense ? " home-activity-square--expense" : " home-activity-square--empty"}`}
-                />
-              ))}
-            </div>
+
+        {/* Week view */}
+        {activityView === "week" && (
+          <div className="home-activity-week">
+            {["S", "M", "T", "W", "T", "F", "S"].map((label, i) => {
+              const cell = weekCells[i];
+              return (
+                <div key={i} className="home-week-col">
+                  <span className="home-week-label">{label}</span>
+                  <span
+                    className={[
+                      "home-week-day",
+                      cell.day === null && "home-week-day--empty",
+                      cell.isToday && "home-week-day--today",
+                      cell.day !== null && cell.activity === 0 && cell.isPast && "home-week-day--inactive",
+                      cell.activity === 1 && "home-week-day--low",
+                      cell.activity === 2 && "home-week-day--high",
+                    ].filter(Boolean).join(" ")}
+                  >
+                    {cell.day ?? ""}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Month view */}
+        {activityView === "month" && (
+          <div className="home-activity-cal">
+            {["S", "M", "T", "W", "T", "F", "S"].map((label, i) => (
+              <span key={`hdr-${i}`} className="home-cal-header">{label}</span>
+            ))}
+            {activityCalendar.cells.map((cell, i) => (
+              <span
+                key={i}
+                className={[
+                  "home-cal-day",
+                  cell.day === null && "home-cal-day--empty",
+                  cell.isToday && "home-cal-day--today",
+                  cell.day !== null && cell.activity === 0 && cell.isPast && "home-cal-day--inactive",
+                  cell.activity === 1 && "home-cal-day--low",
+                  cell.activity === 2 && "home-cal-day--high",
+                ].filter(Boolean).join(" ")}
+              >
+                {cell.day ?? ""}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* Summary stats */}
+        <div className="home-activity-stats">
+          <div className="home-activity-stat">
+            <UtensilsCrossed size={14} />
+            <span className="home-activity-stat-val">{activityCalendar.mealsCooked}</span>
+            <span className="home-activity-stat-lbl">meals</span>
+          </div>
+          <div className="home-activity-stat">
+            <ShoppingCart size={14} />
+            <span className="home-activity-stat-val">{activityCalendar.shoppingDays}</span>
+            <span className="home-activity-stat-lbl">shop days</span>
+          </div>
+          <div className="home-activity-stat">
+            <CalendarCheck size={14} />
+            <span className="home-activity-stat-val">{activityCalendar.activeDays}</span>
+            <span className="home-activity-stat-lbl">active days</span>
           </div>
         </div>
       </motion.div>
@@ -346,7 +428,6 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
       {/* ── Recipe Nudge (only if urgent items) ────────────── */}
       {recipeNudge && (
         <motion.button className="home-nudge" onClick={() => onNavigate("chef")} variants={fadeUp}>
-          <Sparkles size={16} />
           <span>{recipeNudge.label}</span>
           <ChevronRight size={14} className="home-card-arrow" />
         </motion.button>
@@ -358,11 +439,11 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         <button className="home-card home-card--pantry" onClick={() => onNavigate("pantry")} data-tutorial="pantry-card">
           <div className="home-card-header">
             <div className="home-card-icon home-card-icon--pantry">
-              <Package size={20} />
+              <Package size={16} />
             </div>
             <div className="home-card-title">
               <h3>Pantry Alerts</h3>
-              <ChevronRight size={16} className="home-card-arrow" />
+              <ChevronRight size={14} className="home-card-arrow" />
             </div>
           </div>
           <div className="home-card-body">
@@ -414,7 +495,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         <button className="home-card home-card--shopping" onClick={() => onNavigate("shopping-list")} data-tutorial="shopping-card">
           <div className="home-card-header">
             <div className="home-card-icon home-card-icon--shopping">
-              <ShoppingCart size={20} />
+              <ShoppingCart size={16} />
             </div>
             <div className="home-card-title">
               <h3>
@@ -425,7 +506,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
                   </span>
                 )}
               </h3>
-              <ChevronRight size={16} className="home-card-arrow" />
+              <ChevronRight size={14} className="home-card-arrow" />
             </div>
           </div>
           <div className="home-card-body">
@@ -455,7 +536,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
       <motion.div className="home-card home-card--meals" variants={fadeUp}>
         <div className="home-card-header">
           <div className="home-card-icon home-card-icon--meals">
-            <ChefHat size={20} />
+            <ChefHat size={16} />
           </div>
           <div className="home-card-title">
             <h3>
@@ -503,11 +584,11 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         <button className="home-card home-card--expenses" onClick={() => onNavigate("expenses")} data-tutorial="expenses-card">
           <div className="home-card-header">
             <div className="home-card-icon home-card-icon--expenses">
-              <DollarSign size={20} />
+              <DollarSign size={16} />
             </div>
             <div className="home-card-title">
               <h3>This Week's Spending</h3>
-              <ChevronRight size={16} className="home-card-arrow" />
+              <ChevronRight size={14} className="home-card-arrow" />
             </div>
           </div>
           <div className="home-card-body">
@@ -545,11 +626,11 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         <button className="home-card home-card--budget" onClick={() => onNavigate("budgets")} data-tutorial="budget-card">
           <div className="home-card-header">
             <div className="home-card-icon home-card-icon--budget">
-              <Wallet size={20} />
+              <Wallet size={16} />
             </div>
             <div className="home-card-title">
               <h3>Budget</h3>
-              <ChevronRight size={16} className="home-card-arrow" />
+              <ChevronRight size={14} className="home-card-arrow" />
             </div>
           </div>
           <div className="home-card-body">

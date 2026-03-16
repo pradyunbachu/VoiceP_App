@@ -15,7 +15,6 @@ import {
   ShoppingBag,
   Calendar,
   RefreshCw,
-  Sparkles,
   AlertTriangle,
   CheckCircle,
   Info,
@@ -140,7 +139,6 @@ const SpendingInsights: React.FC<Props> = ({ showToast }) => {
           <h2>Spending Insights</h2>
         </div>
         <div className="empty-state">
-          <Sparkles size={48} />
           <h3>No data available</h3>
           <p>Start tracking your expenses to see AI-powered insights.</p>
         </div>
@@ -245,7 +243,6 @@ const SpendingInsights: React.FC<Props> = ({ showToast }) => {
       {ai_insights && (
         <div className="ai-insights-panel">
           <div className="ai-header">
-            <Sparkles size={20} />
             <h3>AI Insights</h3>
           </div>
 
@@ -307,7 +304,6 @@ const SpendingInsights: React.FC<Props> = ({ showToast }) => {
       {!ai_insights && (
         <div className="ai-insights-panel no-ai">
           <div className="ai-header">
-            <Sparkles size={20} />
             <h3>AI Insights</h3>
           </div>
           <p className="no-ai-message">

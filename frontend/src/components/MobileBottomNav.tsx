@@ -18,7 +18,6 @@ import {
   BarChart3,
   List,
   Wallet,
-  Sparkles,
   ArrowLeftRight,
   Settings,
   X,
@@ -140,7 +139,7 @@ const MobileBottomNav: FC<Props> = ({ currentView, onViewChange }) => {
                 className={`mobile-more-item ${currentView === "insights" ? "active" : ""}`}
                 onClick={() => handleNav("insights")}
               >
-                <Sparkles size={22} />
+                <BarChart3 size={22} />
                 <span>Insights</span>
               </button>
               <button

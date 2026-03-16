@@ -9,7 +9,7 @@
 import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, Sparkles, ArrowLeftRight, ChefHat, Home, Settings, CalendarDays } from "lucide-react";
+import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, ArrowLeftRight, ChefHat, Home, Settings, CalendarDays } from "lucide-react";
 import type { AppView, AppUser } from "../types";
 import "./Navigation.css";
 
@@ -145,7 +145,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
                   className={`nav-dropdown-item ${currentView === "insights" ? "active" : ""}`}
                   onClick={() => handleFinanceItemClick("insights")}
                 >
-                  <Sparkles size={16} />
+                  <BarChart3 size={16} />
                   <span>Insights</span>
                 </button>
                 <button

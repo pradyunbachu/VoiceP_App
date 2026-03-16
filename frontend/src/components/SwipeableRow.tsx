@@ -40,14 +40,27 @@ const SwipeableRow: FC<Props> = ({ children, actions }) => {
 
   const maxSwipe = actions.length * ACTION_WIDTH;
 
+  const rowRef = useRef<HTMLDivElement>(null);
+
   const close = useCallback(() => {
     setAnimating(true);
     setOffsetX(0);
     isOpen.current = false;
+    if (globalOpenCloseFn === close) globalOpenCloseFn = null;
   }, []);
 
+  // Close when tapping/clicking outside the row
   useEffect(() => {
+    const handleOutsideInteraction = (e: MouseEvent | TouchEvent) => {
+      if (isOpen.current && rowRef.current && !rowRef.current.contains(e.target as Node)) {
+        close();
+      }
+    };
+    document.addEventListener("touchstart", handleOutsideInteraction, true);
+    document.addEventListener("mousedown", handleOutsideInteraction, true);
     return () => {
+      document.removeEventListener("touchstart", handleOutsideInteraction, true);
+      document.removeEventListener("mousedown", handleOutsideInteraction, true);
       if (globalOpenCloseFn === close) globalOpenCloseFn = null;
     };
   }, [close]);
@@ -101,6 +114,15 @@ const SwipeableRow: FC<Props> = ({ children, actions }) => {
     }
   }, [offsetX, maxSwipe, close]);
 
+  // Prevent mouse drag from selecting text or causing weird behavior on desktop
+  const handleMouseDown = useCallback((e: React.MouseEvent) => {
+    // If a row is open, close it on any click
+    if (isOpen.current) {
+      e.preventDefault();
+      close();
+    }
+  }, [close]);
+
   const handleActionClick = useCallback((action: SwipeAction) => {
     close();
     if (globalOpenCloseFn === close) globalOpenCloseFn = null;
@@ -108,7 +130,7 @@ const SwipeableRow: FC<Props> = ({ children, actions }) => {
   }, [close]);
 
   return (
-    <div className="swipeable-row">
+    <div className="swipeable-row" ref={rowRef}>
       {/* Content: opaque bg-primary covers actions at rest */}
       <div
         className="swipeable-row-content"
@@ -119,6 +141,7 @@ const SwipeableRow: FC<Props> = ({ children, actions }) => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onMouseDown={handleMouseDown}
       >
         {children}
       </div>

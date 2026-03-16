@@ -18,7 +18,7 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
-import { X, Loader, UtensilsCrossed, Clock, Sparkles, Trash2 } from 'lucide-react';
+import { X, Loader, UtensilsCrossed, Clock, Trash2 } from 'lucide-react';
 import { usePantryItems, useChefSuggestions, useRecipeDetail, useCookMeal } from '../hooks';
 import { DEMO_PANTRY_ITEMS } from '../constants/demoPantry';
 import RecipeDetailPanel from './RecipeDetailModal';
@@ -415,10 +415,8 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
                   onClick={handleGenerate}
                   disabled={chefSuggestions.isPending}
                 >
-                  {chefSuggestions.isPending ? (
+                  {chefSuggestions.isPending && (
                     <Loader size={16} className="chef-spinner" />
-                  ) : (
-                    <Sparkles size={16} />
                   )}
                   {chefSuggestions.isPending ? 'Generating...' : 'Generate Recipes'}
                 </button>

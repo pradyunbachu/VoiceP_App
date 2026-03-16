@@ -48,4 +48,7 @@
   .swipeable-row-content {
     transform: none !important;
   }
+  .swipeable-row-actions {
+    display: none;
+  }
 }

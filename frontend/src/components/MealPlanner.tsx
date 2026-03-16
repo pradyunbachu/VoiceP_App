@@ -11,7 +11,6 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
-  Sparkles,
   ShoppingCart,
   Plus,
   X,
@@ -393,7 +392,7 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
               disabled={generatePlan.isPending}
               title="AI-generate meals for the week"
             >
-              {generatePlan.isPending ? <Loader2 size={16} className="mp-spin" /> : <Sparkles size={16} />}
+              {generatePlan.isPending ? <Loader2 size={16} className="mp-spin" /> : null}
               <span>Generate</span>
             </button>
             {missingSummary.length > 0 && (
