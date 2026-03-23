@@ -195,6 +195,15 @@ async def update_expense(
     if expense_update.date is not None:
         update_data["date"] = expense_update.date
 
+    if expense_update.recurring is not None:
+        update_data["is_recurring"] = 1 if expense_update.recurring else 0
+
+    if expense_update.repeat_interval is not None:
+        update_data["recurring_interval"] = expense_update.repeat_interval
+
+    if expense_update.repeat_unit is not None:
+        update_data["recurring_unit"] = expense_update.repeat_unit
+
     if not update_data:
         raise HTTPException(status_code=400, detail="No fields to update")
 

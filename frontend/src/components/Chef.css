@@ -36,9 +36,9 @@
 /* ── Left Panel: Pantry Items ── */
 
 .chef-pantry-panel {
-  background: rgba(200, 191, 178, 0.04);
-  border: 1px solid rgba(200, 191, 178, 0.08);
-  border-radius: var(--radius-lg, 12px);
+  background: transparent;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
   padding: var(--space-4);
   max-height: calc(100vh - 200px);
   overflow-y: auto;
@@ -54,8 +54,8 @@
 .chef-search {
   width: 100%;
   padding: 8px 12px;
-  background: rgba(200, 191, 178, 0.06);
-  border: 1px solid rgba(200, 191, 178, 0.12);
+  background: transparent;
+  border: 1px solid var(--border-secondary);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 0.85rem;

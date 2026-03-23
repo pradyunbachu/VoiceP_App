@@ -162,13 +162,19 @@ Return ONLY a JSON array of 3 meals. Each meal:
   "name": "Meal Name",
   "ingredients_used": ["ingredient1", "ingredient2"],
   "ingredients_needed": ["any extra ingredient not in pantry"],
-  "instructions": ["Step 1 description", "Step 2 description", "Step 3 description"],
+  "instructions": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5", "Step 6"],
   "time_minutes": 30,
   "uses_expiring": true/false
 }}
 
-Instructions should be an array of clear, concise steps (4-6 steps each). Each step should be one action.
-Prioritize meals that use expiring ingredients. Keep it practical and simple."""
+Instructions should be an array of 5-8 detailed steps. Each step must include:
+- Specific quantities and measurements (e.g., "2 tablespoons", "1 cup diced")
+- Cooking temperatures and times (e.g., "over medium-high heat for 3-4 minutes")
+- Visual or sensory cues so the cook knows when to move on (e.g., "until golden brown", "until the onions are translucent", "until the internal temperature reaches 165°F")
+- Prep details like how to cut, chop, or season (e.g., "dice the onion into 1/4-inch pieces", "season generously with salt and pepper on both sides")
+Example good step: "Heat 2 tablespoons of olive oil in a large skillet over medium-high heat until the oil shimmers, about 1 minute."
+Example bad step: "Cook the chicken."
+Prioritize meals that use expiring ingredients. Keep it practical."""
 
     try:
         response = groq_client.chat.completions.create(
@@ -329,12 +335,13 @@ Return ONLY a JSON array of 7 objects, one per day:
 [
   {{
     "day": "Monday",
-    "breakfast": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"]}},
-    "lunch": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"]}},
-    "dinner": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"]}}
+    "breakfast": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"], "instructions": ["Step 1", "Step 2", "Step 3"]}},
+    "lunch": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"], "instructions": ["Step 1", "Step 2", "Step 3"]}},
+    "dinner": {{"name": "Meal Name", "key_ingredients": ["item1", "item2"], "instructions": ["Step 1", "Step 2", "Step 3"]}}
   }}
 ]
 
+Each meal's instructions should be an array of 4-6 detailed steps. Each step must include specific quantities, cooking temperatures and times, and visual or sensory cues (e.g., "until golden brown", "until fragrant, about 30 seconds"). Include prep details like how to cut or season.
 Keep meals practical, varied, and use up expiring items early in the week."""
 
     try:
@@ -415,10 +422,12 @@ Return ONLY a JSON array of 3 meals:
     "estimated_cost": 5.00,
     "ingredients_on_hand": ["item1", "item2"],
     "ingredients_to_buy": ["item3"],
-    "buy_cost_estimate": 3.00
+    "buy_cost_estimate": 3.00,
+    "instructions": ["Step 1", "Step 2", "Step 3", "Step 4", "Step 5"]
   }}
 ]
 
+Each meal's instructions should be an array of 5-8 detailed steps. Each step must include specific quantities, cooking temperatures and times, and visual or sensory cues (e.g., "until the edges are crispy", "simmer for 15 minutes until the sauce thickens"). Include prep details like how to cut or season.
 Consider that pantry items are already available (no cost). Only estimate cost for items that need to be purchased. Keep it practical and budget-friendly."""
 
     try:

@@ -19,7 +19,7 @@
 
 /* Section */
 .settings-section {
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-lg);
   padding: var(--space-6);

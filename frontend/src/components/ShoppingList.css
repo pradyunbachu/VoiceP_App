@@ -53,11 +53,10 @@
 
 /* ==================== MODERN LIST CARD ==================== */
 .list-card {
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: 16px;
+  background: transparent;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 /* ==================== ADD ITEM INPUT ==================== */
@@ -67,9 +66,9 @@
   align-items: center;
   gap: 0.75rem;
   padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border-primary);
-  background: var(--bg-secondary);
-  border-radius: 16px 16px 0 0;
+  border-bottom: 1px solid var(--border-secondary);
+  background: transparent;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
 }
 
 .add-item-icon {
@@ -151,7 +150,7 @@
   align-items: center;
   gap: 0.75rem;
   padding: 0.875rem 1.25rem;
-  border-bottom: 1px solid var(--border-primary);
+  border-bottom: 1px solid var(--border-secondary);
   transition: background 0.15s;
 }
 
@@ -205,14 +204,11 @@
   display: inline-flex;
   align-items: center;
   gap: 0.25rem;
-  padding: 0.125rem 0.5rem;
-  border-radius: 12px;
   font-size: 0.7rem;
   font-weight: 500;
 }
 
 .stock-badge.stock-full {
-  background: rgba(59, 130, 246, 0.1);
   color: var(--accent-primary);
 }
 
@@ -221,7 +217,6 @@
 }
 
 .stock-badge.stock-low {
-  background: rgba(245, 158, 11, 0.1);
   color: var(--accent-warning);
 }
 
@@ -230,7 +225,6 @@
 }
 
 .stock-badge.stock-out {
-  background: rgba(239, 68, 68, 0.1);
   color: var(--accent-danger);
 }
 
@@ -287,8 +281,7 @@
   display: flex;
   justify-content: flex-end;
   padding: 0.75rem 1.25rem;
-  border-top: 1px solid var(--border-primary);
-  background: var(--bg-secondary);
+  border-top: 1px solid var(--border-secondary);
 }
 
 .item-count {
@@ -324,9 +317,9 @@
   align-items: center;
   gap: 0.4rem;
   padding: 0.4rem 0.75rem;
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
-  border-radius: 20px;
+  background: transparent;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-full);
   font-size: 0.85rem;
   color: var(--text-primary);
   cursor: pointer;
@@ -397,11 +390,10 @@
   list-style: none;
   margin: 0;
   padding: 0.25rem 0;
-  background: var(--bg-card);
+  background: var(--bg-primary);
   border: 1px solid var(--border-primary);
   border-top: none;
-  border-radius: 0 0 12px 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-radius: 0 0 var(--radius-md) var(--radius-md);
   max-height: 280px;
   overflow-y: auto;
 }

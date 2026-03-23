@@ -28,9 +28,17 @@ export interface ExpenseFilters {
   exportAll?: boolean;
 }
 
+export interface RecurringSuggestion {
+  interval: number;
+  unit: string;
+  label: string;
+}
+
 export interface ExpenseExtractionResult {
   expenses?: Expense[];
   count?: number;
+  confidence?: number;
+  recurring_suggestion?: RecurringSuggestion | null;
   message?: string;
   id?: number;
   store?: string;

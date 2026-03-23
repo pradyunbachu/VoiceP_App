@@ -96,7 +96,7 @@
   align-items: flex-start;
   gap: var(--space-4);
   padding: var(--space-5);
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-lg);
   transition: all 0.15s ease;
@@ -170,7 +170,7 @@
 }
 
 .ai-insights-panel.no-ai {
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border-secondary);
 }
 
@@ -362,7 +362,7 @@
 
 /* Breakdown Sections */
 .breakdown-section {
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-lg);
   padding: var(--space-5);

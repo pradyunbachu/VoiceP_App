@@ -63,7 +63,7 @@
 }
 
 .export-pantry-button:hover:not(:disabled) {
-  background: var(--bg-card);
+  background: transparent;
   border-color: var(--border-hover);
   color: var(--text-primary);
 }
@@ -89,7 +89,7 @@
 }
 
 .recategorize-button:hover {
-  background: var(--bg-card);
+  background: transparent;
   border-color: var(--border-hover);
   color: var(--text-primary);
 }
@@ -115,28 +115,23 @@
   display: flex;
   align-items: center;
   gap: var(--space-3);
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border-secondary);
   border-radius: var(--radius-lg);
   padding: var(--space-4);
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease;
 }
 
 .stat-card:hover {
-  border-color: var(--border-primary);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
+  border-color: var(--border-hover);
 }
 
 .stat-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 42px;
-  height: 42px;
-  border-radius: var(--radius-md);
-  color: white;
   flex-shrink: 0;
+  opacity: 0.6;
 }
 
 .stat-content {
@@ -211,8 +206,8 @@
 
 /* Form Styles */
 .pantry-form {
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
+  background: transparent;
+  border: 1px solid var(--border-secondary);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
   margin-bottom: var(--space-6);
@@ -506,8 +501,8 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: var(--bg-card);
-  border: 1px solid var(--border-primary);
+  background: transparent;
+  border: 1px solid var(--border-secondary);
   border-radius: var(--radius-lg);
   margin-bottom: var(--space-4);
   transition: border-color 0.15s ease;
@@ -577,12 +572,12 @@
 }
 
 .pantry-card {
-  background: var(--bg-card);
+  background: transparent;
   border: 1px solid var(--border-secondary);
-  border-left: 3px solid var(--accent-primary);
+  border-left: 2px solid var(--accent-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  transition: all 0.2s ease;
+  transition: border-color 0.15s ease;
   position: relative;
   animation: fadeSlideIn 0.3s ease both;
 }
@@ -596,12 +591,9 @@
 }
 
 .pantry-card:hover {
-  border-top-color: var(--border-primary);
-  border-right-color: var(--border-primary);
-  border-bottom-color: var(--border-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-lg);
-  background: var(--bg-card-hover);
+  border-top-color: var(--border-hover);
+  border-right-color: var(--border-hover);
+  border-bottom-color: var(--border-hover);
 }
 
 .pantry-card.selected {
@@ -738,11 +730,8 @@
   display: inline-flex;
   align-items: center;
   gap: var(--space-1);
-  padding: var(--space-1) var(--space-3);
-  background: var(--bg-input);
-  border-radius: var(--radius-full);
-  font-size: 0.75rem;
-  color: var(--text-tertiary);
+  font-size: 0.72rem;
+  color: var(--text-muted);
   margin-bottom: var(--space-3);
 }
 
@@ -768,12 +757,6 @@
 
 .status-button:hover {
   border-color: var(--border-hover);
-  background: var(--bg-card-hover);
-  transform: scale(1.03);
-}
-
-.status-button:active {
-  box-shadow: 0 0 0 2px rgba(196, 162, 101, 0.15);
 }
 
 .status-button.active {
@@ -948,10 +931,6 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-primary-bg-hover), var(--accent-purple-bg));
   margin-bottom: var(--space-5);
 }
 
@@ -985,8 +964,6 @@
 
 .empty-state-cta:hover {
   background: var(--accent-primary-hover);
-  transform: translateY(-1px);
-  box-shadow: var(--shadow-md);
 }
 
 .loading-spinner {
@@ -1057,7 +1034,7 @@
 
 /* ==================== SHELF VIEW ==================== */
 .pantry-shelves {
-  background: var(--bg-card);
+  background: transparent;
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid var(--border-secondary);
@@ -1066,7 +1043,6 @@
   min-height: 400px;
   position: relative;
   overflow: hidden;
-  box-shadow: var(--shadow-md);
 }
 
 /* Individual Shelf */
@@ -1165,7 +1141,6 @@
 }
 
 .shelf-item:hover {
-  transform: translateY(-4px);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.12);
 }
 

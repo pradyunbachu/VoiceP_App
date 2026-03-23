@@ -42,6 +42,9 @@ class ExpenseUpdate(BaseModel):
     category: Optional[str] = Field(default=None, max_length=100)
     amount: Optional[float] = None
     date: Optional[str] = Field(default=None, max_length=30)
+    recurring: Optional[bool] = None
+    repeat_interval: Optional[int] = None
+    repeat_unit: Optional[str] = Field(default=None, max_length=20)
 
 class BulkDeleteRequest(BaseModel):
     expense_ids: List[int]

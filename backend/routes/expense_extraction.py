@@ -38,6 +38,119 @@ logger = logging.getLogger(__name__)
 from routes.pantry import _normalize_item_name
 
 
+def _compute_confidence(expenses: list[dict]) -> float:
+    """Score 0.0-1.0 based on how completely the LLM filled each field."""
+    if not expenses:
+        return 0.0
+    scores = []
+    for exp in expenses:
+        s = 0.0
+        store = exp.get("store", "")
+        if store and store.lower() not in ("unknown store", "unknown", "store", ""):
+            s += 0.30
+        if exp.get("amount") and float(exp["amount"]) > 0:
+            s += 0.30
+        items = exp.get("items", "")
+        if items and items.lower() not in ("items", "receipt items", ""):
+            s += 0.15
+        cat = exp.get("category", "")
+        if cat and cat != "Other":
+            s += 0.10
+        date = exp.get("date", "")
+        if date and re.match(r"\d{4}-\d{2}-\d{2}", str(date)):
+            s += 0.15
+        scores.append(s)
+    return round(sum(scores) / len(scores), 2)
+
+
+def _detect_recurring_pattern(user_id: str, expense: dict) -> dict | None:
+    """Check if this expense matches a recurring pattern in the user's history."""
+    if supabase is None:
+        return None
+    try:
+        store = expense.get("store", "")
+        amount = float(expense.get("amount", 0))
+        if not store or amount <= 0:
+            return None
+        # Find past expenses at the same store with similar amounts (within 20%)
+        response = (
+            supabase.table("expenses")
+            .select("date, amount")
+            .eq("user_id", user_id)
+            .ilike("store", store)
+            .order("date", desc=True)
+            .limit(10)
+            .execute()
+        )
+        past = response.data if response.data else []
+        if len(past) < 2:
+            return None
+        # Filter to similar amounts
+        similar = [p for p in past if abs(float(p["amount"]) - amount) / max(amount, 0.01) < 0.20]
+        if len(similar) < 2:
+            return None
+        # Check for regular interval
+        from datetime import datetime as _dt
+        dates = sorted(
+            [_dt.strptime(p["date"], "%Y-%m-%d").date() for p in similar],
+            reverse=True,
+        )
+        gaps = [(dates[i] - dates[i + 1]).days for i in range(len(dates) - 1)]
+        if not gaps:
+            return None
+        avg_gap = sum(gaps) / len(gaps)
+        # Check consistency: all gaps within 40% of average
+        if any(abs(g - avg_gap) / max(avg_gap, 1) > 0.40 for g in gaps):
+            return None
+        # Map gap to human-readable interval
+        if 5 <= avg_gap <= 9:
+            return {"interval": 1, "unit": "weeks", "label": "weekly"}
+        if 12 <= avg_gap <= 18:
+            return {"interval": 2, "unit": "weeks", "label": "every 2 weeks"}
+        if 25 <= avg_gap <= 35:
+            return {"interval": 1, "unit": "months", "label": "monthly"}
+        return None
+    except Exception as e:
+        logger.debug("Recurring pattern check failed: %s", e)
+        return None
+
+
+def _get_user_store_context(user_id: str) -> str:
+    """Return the user's top stores per category for smart default context."""
+    if supabase is None:
+        return ""
+    try:
+        response = (
+            supabase.table("expenses")
+            .select("store, category")
+            .eq("user_id", user_id)
+            .order("created_at", desc=True)
+            .limit(100)
+            .execute()
+        )
+        rows = response.data if response.data else []
+        if not rows:
+            return ""
+        # Count store frequency per category
+        from collections import Counter
+        cat_stores: dict[str, Counter] = {}
+        for r in rows:
+            cat = r.get("category") or "Other"
+            store = r.get("store") or ""
+            if store:
+                cat_stores.setdefault(cat, Counter())[store] += 1
+        lines = []
+        for cat, counter in cat_stores.items():
+            top = counter.most_common(2)
+            stores_str = ", ".join(f"{s} ({n}x)" for s, n in top)
+            lines.append(f"  {cat}: {stores_str}")
+        if not lines:
+            return ""
+        return "USER'S FREQUENT STORES (use as default when store is unclear):\n" + "\n".join(lines)
+    except Exception:
+        return ""
+
+
 def _normalize_items_string(items_str: str) -> str:
     """Normalize each comma-separated item in the expense items string.
 
@@ -131,13 +244,21 @@ async def extract_expense(
     if not transcript or len(transcript.strip()) == 0:
         raise HTTPException(status_code=400, detail="Empty transcript received")
 
+    user_id = current_user["id"]
+
     # Try Groq first (faster, free tier available)
     if groq_client:
         today_str = datetime.now().strftime("%Y-%m-%d")
         yesterday_str = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
         tomorrow_str = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
 
+        # Smart defaults: inject user's store history so the LLM can fill in
+        # the store when the transcript doesn't mention one explicitly.
+        store_context = _get_user_store_context(user_id)
+
         system_prompt = f"""You extract expense data from voice transcripts into JSON.
+
+{store_context}
 
 OUTPUT FORMAT: Always return a JSON array, even for single expenses.
 
@@ -335,12 +456,22 @@ Return JSON array only, no other text."""
                 })
 
             logger.info("Groq extraction successful: %d expense(s) saved", len(saved_expenses))
-            api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
-            api_cache.invalidate_prefix(f"insights:{current_user['id']}")
-            api_cache.invalidate_prefix(f"streak:{current_user['id']}")
+            api_cache.invalidate_prefix(f"analytics:{user_id}")
+            api_cache.invalidate_prefix(f"insights:{user_id}")
+            api_cache.invalidate_prefix(f"streak:{user_id}")
+
+            confidence = _compute_confidence(saved_expenses)
+
+            # Check for recurring pattern on the first saved expense
+            recurring_suggestion = None
+            if saved_expenses and not saved_expenses[0].get("is_recurring"):
+                recurring_suggestion = _detect_recurring_pattern(user_id, saved_expenses[0])
+
             return {
                 "expenses": saved_expenses,
                 "count": len(saved_expenses),
+                "confidence": confidence,
+                "recurring_suggestion": recurring_suggestion,
                 "message": f"{len(saved_expenses)} expense(s) saved successfully (using Groq)"
             }
 
@@ -426,12 +557,20 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
                             "recurring_unit": recurring_unit
                         })
 
-                    api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
-                    api_cache.invalidate_prefix(f"insights:{current_user['id']}")
-                    api_cache.invalidate_prefix(f"streak:{current_user['id']}")
+                    api_cache.invalidate_prefix(f"analytics:{user_id}")
+                    api_cache.invalidate_prefix(f"insights:{user_id}")
+                    api_cache.invalidate_prefix(f"streak:{user_id}")
+
+                    confidence = _compute_confidence(saved_expenses)
+                    recurring_suggestion = None
+                    if saved_expenses and not saved_expenses[0].get("is_recurring"):
+                        recurring_suggestion = _detect_recurring_pattern(user_id, saved_expenses[0])
+
                     return {
                         "expenses": saved_expenses,
                         "count": len(saved_expenses),
+                        "confidence": confidence,
+                        "recurring_suggestion": recurring_suggestion,
                         "message": f"{len(saved_expenses)} expense(s) saved successfully (using Groq - retry)"
                     }
             except Exception as retry_error:
@@ -487,12 +626,19 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
             "recurring_unit": recurring_unit
         })
 
-    api_cache.invalidate_prefix(f"analytics:{current_user['id']}")
-    api_cache.invalidate_prefix(f"insights:{current_user['id']}")
-    api_cache.invalidate_prefix(f"streak:{current_user['id']}")
+    api_cache.invalidate_prefix(f"analytics:{user_id}")
+    api_cache.invalidate_prefix(f"insights:{user_id}")
+    api_cache.invalidate_prefix(f"streak:{user_id}")
+
+    confidence = _compute_confidence(saved_expenses)
+    recurring_suggestion = None
+    if saved_expenses and not saved_expenses[0].get("is_recurring"):
+        recurring_suggestion = _detect_recurring_pattern(user_id, saved_expenses[0])
 
     return {
         "expenses": saved_expenses,
         "count": len(saved_expenses),
+        "confidence": confidence,
+        "recurring_suggestion": recurring_suggestion,
         "message": f"{len(saved_expenses)} expense(s) saved successfully (using simple extraction - Groq unavailable)"
     }

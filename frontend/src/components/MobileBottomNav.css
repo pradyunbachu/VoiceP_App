@@ -105,10 +105,10 @@
     justify-content: center;
     width: 32px;
     height: 32px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-primary);
+    background: transparent;
+    border: none;
     border-radius: var(--radius-md);
-    color: var(--text-tertiary);
+    color: var(--text-muted);
     cursor: pointer;
   }
 
@@ -124,20 +124,19 @@
     align-items: center;
     gap: var(--space-2);
     padding: var(--space-4) var(--space-2);
-    background: var(--bg-card);
+    background: transparent;
     border: 1px solid var(--border-secondary);
     border-radius: var(--radius-lg);
     color: var(--text-secondary);
     font-size: 0.7rem;
     font-weight: 500;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: color 0.15s;
     -webkit-tap-highlight-color: transparent;
   }
 
   .mobile-more-item:active {
-    transform: scale(0.95);
-    background: var(--bg-card-hover);
+    color: var(--text-primary);
   }
 
   .mobile-more-item.active {

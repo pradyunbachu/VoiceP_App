@@ -19,7 +19,6 @@
   gap: 6px;
   padding: 0 10px;
   transition: background 0.2s ease;
-  animation: togglePulse 2s ease-in-out 3;
 }
 
 .daily-recs-toggle-label {
@@ -83,8 +82,7 @@
   height: calc(100% - 56px);
   z-index: 900;
   background: var(--bg-primary, #161210);
-  border-left: 1px solid var(--accent-primary-border);
-  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.4);
+  border-left: 1px solid var(--border-secondary);
   overflow-y: auto;
   padding: var(--space-5);
   transform: translateX(100%);

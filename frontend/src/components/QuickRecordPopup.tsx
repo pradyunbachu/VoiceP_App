@@ -14,14 +14,18 @@ import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, 
 import AddToPantryModal from "./AddToPantryModal";
 import ReceiptScanner from "./ReceiptScanner";
 import { useAuth } from "../context/AuthContext";
-import { useCreateExpense, useCreateExpenseSimple, useChat } from "../hooks";
+import { useCreateExpense, useCreateExpenseSimple, useChat, useUpdateExpense } from "../hooks";
 import { API_BASE_URL } from "../config/api";
-import type { ShowToast, Expense, ChatResponse, ReceiptScanResult } from "../types";
+import type { ShowToast, Expense, ChatResponse, ReceiptScanResult, RecurringSuggestion } from "../types";
 import "./QuickRecordPopup.css";
+
+const QUICK_CONFIRM_THRESHOLD = 0.85;
 
 interface ExtractedExpenseData {
   expenses: Expense[];
   count: number;
+  confidence?: number;
+  recurring_suggestion?: RecurringSuggestion | null;
   message?: string;
 }
 
@@ -66,6 +70,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
   const chatMutation = useChat();
+  const updateExpenseMutation = useUpdateExpense();
 
   const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
@@ -308,18 +313,69 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
     let expenses: Expense[];
     if (expenseData.expenses) {
       expenses = expenseData.expenses;
-      setExtractedExpense(expenseData);
     } else {
       expenses = [expenseData as unknown as Expense];
-      setExtractedExpense({
-        expenses,
-        count: 1,
-        message: expenseData.message,
-      });
     }
-    checkForPantryItems(expenseData);
 
     const totalAmount = expenses.reduce((sum, exp) => sum + (exp.amount || 0), 0);
+    const confidence = expenseData.confidence ?? 0;
+    const recurringSuggestion = expenseData.recurring_suggestion;
+
+    // Quick-confirm: if confidence is high, auto-dismiss and just show a toast
+    if (confidence >= QUICK_CONFIRM_THRESHOLD) {
+      // Build toast message: "$12.50 at Starbucks"
+      const store = expenses[0]?.store;
+      const amountStr = totalAmount ? `$${totalAmount.toFixed(2)}` : "";
+      const toastMsg = store && store.toLowerCase() !== "unknown store"
+        ? `${amountStr} at ${store}`
+        : `${amountStr} logged`;
+
+      // If recurring pattern detected, add action button to toast
+      if (recurringSuggestion && expenses[0]?.id) {
+        const expenseId = expenses[0].id;
+        const label = `Make ${recurringSuggestion.label}?`;
+        showToast(toastMsg, "celebration", 6000, {
+          label,
+          onClick: () => {
+            updateExpenseMutation.mutate({
+              id: expenseId,
+              data: {
+                recurring: true,
+                repeat_interval: recurringSuggestion.interval,
+                repeat_unit: recurringSuggestion.unit,
+              } as Partial<Omit<Expense, "id">>,
+            });
+            showToast(`Marked as ${recurringSuggestion.label}`, "success", 3000);
+          },
+        });
+      } else {
+        showToast(toastMsg, "celebration", 4000);
+      }
+
+      // Check for pantry prompt before dismissing
+      const groceryExpense = expenses.find((exp) => {
+        const cat = (exp.category || "").toLowerCase();
+        return cat.includes("groceries") || cat.includes("grocery");
+      });
+      if (groceryExpense) {
+        setPendingPantryExpense(groceryExpense);
+        setShowPantryModal(true);
+      } else {
+        handleDismiss();
+      }
+      return;
+    }
+
+    // Low confidence: show full confirmation UI as before
+    setExtractedExpense({
+      expenses,
+      count: expenseData.count ?? expenses.length,
+      confidence,
+      recurring_suggestion: recurringSuggestion,
+      message: expenseData.message,
+    });
+    checkForPantryItems(expenseData);
+
     const amountStr = totalAmount ? `$${totalAmount.toFixed(2)} logged` : "Expense logged";
     showToast(amountStr, "celebration", 4000);
   };
