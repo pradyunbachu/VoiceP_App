@@ -99,6 +99,9 @@ export {
   useSwapMeals,
 } from './mutations/useMealPlanMutations';
 
+// Saved recipes
+export { useSavedRecipes, useSaveRecipe, useDeleteSavedRecipe } from './mutations/useSavedRecipes';
+
 // Audio recording
 export { default as useAudioRecorder } from './useAudioRecorder';
 

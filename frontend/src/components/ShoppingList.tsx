@@ -166,7 +166,10 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
       }
     } catch (error) {
       console.error("Error creating item:", error);
-      if (showToast) showToast("Error adding item", "error");
+      if (showToast) showToast("Error adding item", "error", 6000, {
+        label: "Retry",
+        onClick: () => handleAddItem(text),
+      });
     }
   };
 

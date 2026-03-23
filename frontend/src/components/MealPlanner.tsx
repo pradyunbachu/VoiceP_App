@@ -5,7 +5,7 @@
  * add meals manually or generate a full week via AI. Shows missing ingredients
  * and lets users push them to the shopping list in one click.
  */
-import { useState, useMemo, useCallback, useRef } from 'react';
+import { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   CalendarDays,
@@ -29,7 +29,11 @@ import {
   useAddMealPlanToShoppingList,
   useReplaceMeal,
   useSwapMeals,
+  useUndoDelete,
+  useRecipeDetail,
+  useCookMeal,
 } from '../hooks';
+import RecipeDetailPanel from './RecipeDetailModal';
 import MixingBowlLoader from './MixingBowlLoader';
 import type {
   ShowToast,
@@ -37,6 +41,8 @@ import type {
   DayOfWeek,
   MealSlot,
   MissingIngredient,
+  RecipeDetail,
+  CookMealResponse,
 } from '../types';
 import './MealPlanner.css';
 
@@ -109,6 +115,9 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
     return DAYS[today === 0 ? 6 : today - 1];
   });
   const [replacingId, setReplacingId] = useState<number | null>(null);
+  const [selectedMeal, setSelectedMeal] = useState<PlannedMeal | null>(null);
+  const [cachedRecipe, setCachedRecipe] = useState<RecipeDetail | null>(null);
+  const recipeCacheRef = useRef<Record<string, RecipeDetail>>({});
   const [dragSource, setDragSource] = useState<{ day: DayOfWeek; slot: MealSlot } | null>(null);
   const [dragOver, setDragOver] = useState<{ day: DayOfWeek; slot: MealSlot } | null>(null);
   const dragDataRef = useRef<{ day: DayOfWeek; slot: MealSlot } | null>(null);
@@ -126,10 +135,13 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   const { data: plan, isLoading } = useMealPlan(weekStart, groupId);
   const createMeal = useCreatePlannedMeal();
   const deleteMeal = useDeletePlannedMeal();
+  const { scheduleDelete } = useUndoDelete(showToast);
   const generatePlan = useGenerateMealPlan();
   const addToShopping = useAddMealPlanToShoppingList();
   const replaceMeal = useReplaceMeal();
   const swapMeals = useSwapMeals();
+  const recipeDetail = useRecipeDetail();
+  const cookMeal = useCookMeal();
 
   const meals = plan?.meals ?? [];
   const missingSummary: MissingIngredient[] = plan?.shopping_summary ?? [];
@@ -161,21 +173,26 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
     }
   }, [addForm, recipeName, weekStart, createMeal, showToast]);
 
-  const handleDeleteMeal = useCallback(async (id: number) => {
-    try {
-      await deleteMeal.mutateAsync(id);
-      showToast('Meal removed', 'info');
-    } catch {
-      showToast('Failed to remove meal', 'error');
-    }
-  }, [deleteMeal, showToast]);
+  const handleDeleteMeal = useCallback((id: number) => {
+    const meal = plan?.meals?.find((m) => m.id === id);
+    scheduleDelete({
+      id,
+      queryKeyPrefix: ['mealPlan'],
+      filterFn: (item: { id: number }) => item.id !== id,
+      onDelete: () => deleteMeal.mutate(id),
+      message: `Removed ${meal?.recipe_name || 'meal'}`,
+    });
+  }, [plan, deleteMeal, scheduleDelete]);
 
   const handleGenerate = useCallback(async () => {
     try {
       await generatePlan.mutateAsync({ week_start: weekStart, group_id: groupId });
       showToast('Meal plan generated!', 'success');
     } catch {
-      showToast('Failed to generate meal plan', 'error');
+      showToast('Failed to generate meal plan', 'error', 6000, {
+        label: 'Retry',
+        onClick: () => handleGenerate(),
+      });
     }
   }, [generatePlan, weekStart, groupId, showToast]);
 
@@ -185,7 +202,10 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
       const result = await addToShopping.mutateAsync({ week_start: weekStart, group_id: shoppingGroupId, pantry_group_id: groupId });
       showToast(`${result.added_count} item${result.added_count !== 1 ? 's' : ''} added to shopping list`, 'success');
     } catch {
-      showToast('Failed to add to shopping list', 'error');
+      showToast('Failed to add to shopping list', 'error', 6000, {
+        label: 'Retry',
+        onClick: () => handleAddToShoppingList(),
+      });
     }
   }, [addToShopping, weekStart, selectedPantryGroup, groupId, showToast]);
 
@@ -195,7 +215,10 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
       await replaceMeal.mutateAsync({ meal_id: mealId, week_start: weekStart, group_id: groupId });
       showToast('Meal replaced!', 'success');
     } catch {
-      showToast('Failed to replace meal', 'error');
+      showToast('Failed to replace meal', 'error', 6000, {
+        label: 'Retry',
+        onClick: () => handleReplaceMeal(mealId),
+      });
     } finally {
       setReplacingId(null);
     }
@@ -244,6 +267,82 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
     setDragOver(null);
     dragDataRef.current = null;
   }, []);
+
+  // ── Recipe detail panel ────────────────────────────
+  const handleMealClick = useCallback((meal: PlannedMeal) => {
+    setSelectedMeal(meal);
+
+    const cached = recipeCacheRef.current[meal.recipe_name];
+    if (cached) {
+      setCachedRecipe(cached);
+      recipeDetail.reset();
+      return;
+    }
+
+    setCachedRecipe(null);
+    recipeDetail.reset();
+
+    const availableIngredients = meal.ingredients
+      ?.filter(i => i.in_pantry)
+      .map(i => i.item)
+      .join(', ') || '';
+
+    recipeDetail.mutate(
+      {
+        meal_name: meal.recipe_name,
+        meal_description: meal.description || '',
+        available_ingredients: availableIngredients,
+      },
+      {
+        onSuccess: (result: RecipeDetail) => {
+          recipeCacheRef.current[meal.recipe_name] = result;
+        },
+      }
+    );
+  }, [recipeDetail]);
+
+  const closeRecipePanel = useCallback(() => {
+    setSelectedMeal(null);
+    setCachedRecipe(null);
+    recipeDetail.reset();
+  }, [recipeDetail]);
+
+  const handleCookMeal = useCallback(
+    (recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {
+      cookMeal.mutate(
+        { recipe_name: recipeName, ingredients, group_id: groupId },
+        {
+          onSuccess: (result: CookMealResponse) => {
+            const msg =
+              result.expiring_items_saved > 0
+                ? `You used ${result.expiring_items_saved} expiring item${result.expiring_items_saved > 1 ? 's' : ''} — $${result.estimated_savings} saved from the trash!`
+                : `Recipe logged! ${result.deducted_count} pantry item${result.deducted_count !== 1 ? 's' : ''} updated.`;
+            showToast(msg, 'celebration', 5000);
+            setTimeout(closeRecipePanel, 300);
+          },
+          onError: () => {
+            showToast("Couldn't log your meal.", 'error');
+          },
+        }
+      );
+    },
+    [cookMeal, groupId, showToast, closeRecipePanel]
+  );
+
+  const selectedAvailableIngredients = useMemo(() => {
+    if (!selectedMeal?.ingredients) return [];
+    return selectedMeal.ingredients.filter(i => i.in_pantry).map(i => i.item);
+  }, [selectedMeal]);
+
+  // Close recipe panel on Escape
+  useEffect(() => {
+    if (!selectedMeal) return;
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') closeRecipePanel();
+    };
+    document.addEventListener('keydown', handleKey);
+    return () => document.removeEventListener('keydown', handleKey);
+  }, [selectedMeal, closeRecipePanel]);
 
   // ── Render helpers ────────────────────────────────
   const renderCell = (day: DayOfWeek, slot: MealSlot) => {
@@ -298,6 +397,7 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
           animate={{ opacity: 1, y: 0 }}
           layout
           draggable
+          onClick={() => handleMealClick(meal)}
           onDragStart={() => handleDragStart(day, slot)}
           onDragOver={(e) => handleDragOver(e, day, slot)}
           onDragLeave={handleDragLeave}
@@ -509,6 +609,23 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Recipe detail slide-out panel */}
+      <div className={`mp-recipe-panel ${selectedMeal ? 'open' : ''}`}>
+        {selectedMeal && (
+          <RecipeDetailPanel
+            recipe={cachedRecipe || (recipeDetail.data as RecipeDetail | undefined)}
+            isLoading={!cachedRecipe && recipeDetail.isPending}
+            error={!cachedRecipe && recipeDetail.isError}
+            onClose={closeRecipePanel}
+            onCookMeal={handleCookMeal}
+            isCooking={cookMeal.isPending}
+            availableIngredients={selectedAvailableIngredients}
+            showToast={showToast}
+          />
+        )}
+      </div>
+      {selectedMeal && <div className="mp-recipe-backdrop" onClick={closeRecipePanel} />}
     </motion.div>
   );
 };

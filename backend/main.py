@@ -35,7 +35,7 @@ logging.getLogger("hpack").setLevel(logging.WARNING)
 logging.getLogger("groq").setLevel(logging.WARNING)
 logger = logging.getLogger(__name__)
 from services.recurring import process_due_recurring_expenses
-from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, pantry_sharing, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs, streak, cook_meal, chef, meal_plan, notifications
+from routes import transcription, expenses, expense_extraction, analytics, budgets, recurring, pantry, pantry_sharing, chat, shopping_list, shopping_list_sharing, insights, receipt, daily_recs, streak, cook_meal, chef, meal_plan, notifications, saved_recipes
 from middleware.csrf import CSRFMiddleware, get_csrf_token
 
 # ============================================================================
@@ -132,6 +132,7 @@ app.include_router(cook_meal.router, prefix="/api", tags=["Cook Meal"])
 app.include_router(chef.router, prefix="/api", tags=["Chef"])
 app.include_router(meal_plan.router, prefix="/api", tags=["Meal Plan"])
 app.include_router(notifications.router, prefix="/api", tags=["Notifications"])
+app.include_router(saved_recipes.router, prefix="/api", tags=["Saved Recipes"])
 
 # ============================================================================
 # ROOT ENDPOINT

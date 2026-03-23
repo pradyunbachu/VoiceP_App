@@ -339,10 +339,10 @@
   color: var(--accent-danger);
 }
 
-/* ── Drag and drop ────────────────────────────────────────────────── */
+/* ── Drag and drop + clickable ────────────────────────────────────── */
 
 .mp-cell--filled {
-  cursor: grab;
+  cursor: pointer;
 }
 
 .mp-cell--filled:active {
@@ -395,7 +395,7 @@
 
 .mp-meal-status.ready {
   background: rgba(106, 175, 123, 0.12);
-  color: #6AAF7B;
+  color: var(--color-success);
 }
 
 .mp-meal-status.partial {
@@ -687,5 +687,47 @@
   .mp-week-label {
     font-size: 0.78rem;
     min-width: unset;
+  }
+}
+
+/* ── Recipe Detail Slide-out Panel ─────────────────────────────────── */
+
+.mp-recipe-panel {
+  position: fixed;
+  top: 56px;
+  right: 0;
+  width: 400px;
+  height: calc(100% - 56px);
+  z-index: 901;
+  background: var(--bg-primary);
+  border-left: 1px solid var(--border-primary);
+  box-shadow: -8px 0 32px rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  overflow-y: auto;
+}
+
+.mp-recipe-panel.open {
+  transform: translateX(0);
+}
+
+.mp-recipe-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 899;
+  background: rgba(0, 0, 0, 0.35);
+  animation: mpBackdropIn 0.2s ease-out;
+}
+
+@keyframes mpBackdropIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (max-width: 700px) {
+  .mp-recipe-panel {
+    width: 100%;
   }
 }

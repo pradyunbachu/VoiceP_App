@@ -24,8 +24,8 @@ const ExpenseResult: React.FC<Props> = ({ extractedExpense, pendingPantryExpense
     <div className="expense-result">
       <h3>{(extractedExpense.count || 0) > 1 ? `${extractedExpense.count} Expenses Saved` : 'Expense Saved'}</h3>
       {extractedExpense.expenses.map((expense, index) => (
-        <div key={expense.id || index} className="expense-details" style={{marginBottom: (extractedExpense.count || 0) > 1 ? '15px' : '0', paddingBottom: (extractedExpense.count || 0) > 1 ? '15px' : '0', borderBottom: index < (extractedExpense.count || 0) - 1 ? '1px solid #eee' : 'none'}}>
-          {(extractedExpense.count || 0) > 1 && <h4 style={{marginTop: '0', color: '#666'}}>Item {index + 1}</h4>}
+        <div key={expense.id || index} className="expense-details" style={{marginBottom: (extractedExpense.count || 0) > 1 ? '15px' : '0', paddingBottom: (extractedExpense.count || 0) > 1 ? '15px' : '0', borderBottom: index < (extractedExpense.count || 0) - 1 ? '1px solid var(--border-secondary)' : 'none'}}>
+          {(extractedExpense.count || 0) > 1 && <h4 style={{marginTop: '0', color: 'var(--text-muted)'}}>Item {index + 1}</h4>}
           <p>
             <strong>Store:</strong> {expense.store}
           </p>

@@ -9,7 +9,7 @@
 import { useState } from "react";
 import { DollarSign, Plus, Trash2, Edit2, Check, X, Download } from "lucide-react";
 import { CATEGORIES } from "../constants/categories";
-import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget } from "../hooks";
+import { useBudgets, useCreateBudget, useUpdateBudget, useDeleteBudget, useUndoDelete } from "../hooks";
 import { exportBudgetsCsv } from "../lib/csvExport";
 import MixingBowlLoader from "./MixingBowlLoader";
 import ConfirmDialog from "./ConfirmDialog";
@@ -62,6 +62,7 @@ const BudgetManagement: React.FC<Props> = ({ showToast }) => {
   const createMutation = useCreateBudget();
   const updateMutation = useUpdateBudget();
   const deleteMutation = useDeleteBudget();
+  const { scheduleDelete } = useUndoDelete(showToast);
 
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,7 +92,10 @@ const BudgetManagement: React.FC<Props> = ({ showToast }) => {
     } catch (error: unknown) {
       console.error("Error creating budget:", error);
       if (showToast) {
-        showToast((error as Error).message || "Failed to create budget", "error");
+        showToast((error as Error).message || "Failed to create budget", "error", 6000, {
+          label: "Retry",
+          onClick: () => handleCreate(e),
+        });
       }
     }
   };
@@ -127,22 +131,25 @@ const BudgetManagement: React.FC<Props> = ({ showToast }) => {
     } catch (error: unknown) {
       console.error("Error updating budget:", error);
       if (showToast) {
-        showToast((error as Error).message || "Failed to update budget", "error");
+        showToast((error as Error).message || "Failed to update budget", "error", 6000, {
+          label: "Retry",
+          onClick: () => handleUpdate(id),
+        });
       }
     }
   };
 
   const [confirmDeleteId, setConfirmDeleteId] = useState<number | null>(null);
 
-  const handleDelete = async (id: number) => {
-    try {
-      await deleteMutation.mutateAsync(id);
-    } catch (error: unknown) {
-      console.error("Error deleting budget:", error);
-      if (showToast) {
-        showToast("Failed to delete budget", "error");
-      }
-    }
+  const handleDelete = (id: number) => {
+    const budget = budgets.find((b: Budget) => b.id === id);
+    scheduleDelete({
+      id,
+      queryKeyPrefix: ['budgets'],
+      filterFn: (item: Budget) => item.id !== id,
+      onDelete: () => deleteMutation.mutate(id),
+      message: `Deleted ${budget?.category || 'budget'}`,
+    });
     setConfirmDeleteId(null);
   };
 
@@ -345,9 +352,13 @@ const BudgetManagement: React.FC<Props> = ({ showToast }) => {
 
       {budgets.length === 0 ? (
         <div className="empty-state">
-          <DollarSign size={48} />
+          <DollarSign size={40} strokeWidth={1.5} />
           <h3>No budgets yet</h3>
-          <p>Create a budget to start tracking your spending</p>
+          <p>Set a monthly budget to keep your spending on track</p>
+          <button className="add-budget-button" onClick={() => setShowAddForm(true)}>
+            <Plus size={18} />
+            Create your first budget
+          </button>
         </div>
       ) : (
         <div className="budget-list">

@@ -172,7 +172,8 @@ const AnalyticsDashboard: React.FC<Props> = ({ analytics, onClearAll, showToast 
             </ResponsiveContainer>
           ) : (
             <div className="empty-chart">
-              <p>No expense data yet. Record your first expense to see the chart!</p>
+              <TrendingUp size={32} strokeWidth={1.5} />
+              <p>Record expenses to see your spending trends</p>
             </div>
           )}
         </div>

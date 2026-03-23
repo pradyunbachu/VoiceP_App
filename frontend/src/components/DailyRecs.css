@@ -202,6 +202,30 @@
   line-height: 1.5;
 }
 
+.daily-recs-empty svg {
+  opacity: 0.5;
+}
+
+.daily-recs-retry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  background: transparent;
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease;
+}
+
+.daily-recs-retry:hover {
+  color: var(--text-primary);
+  border-color: var(--border-hover);
+}
+
 .daily-recs-spinner {
   animation: spin 1.2s linear infinite;
   color: var(--accent-primary);

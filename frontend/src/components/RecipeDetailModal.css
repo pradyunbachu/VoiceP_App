@@ -53,6 +53,40 @@
   background: rgba(255, 255, 255, 0.06);
 }
 
+.recipe-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.recipe-save-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+
+.recipe-save-btn:hover {
+  color: var(--accent-danger);
+  background: var(--accent-danger-bg);
+}
+
+.recipe-save-btn.saved {
+  color: var(--accent-danger);
+}
+
+.recipe-save-btn:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
 .recipe-close-btn {
   display: flex;
   align-items: center;

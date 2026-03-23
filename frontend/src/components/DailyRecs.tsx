@@ -132,7 +132,10 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast, selectedPantryGroup })
           setTimeout(closeRecipePanel, 300);
         },
         onError: () => {
-          showToast("Couldn't log your meal.", 'error');
+          showToast("Couldn't log your meal.", 'error', 6000, {
+            label: "Retry",
+            onClick: () => handleCookMeal(recipeName, ingredients),
+          });
         },
       }
     );
@@ -152,7 +155,12 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast, selectedPantryGroup })
     if (isError || !data) {
       return (
         <div className="daily-recs-empty">
-          <span>Couldn't load recommendations right now.</span>
+          <AlertTriangle size={24} strokeWidth={1.5} />
+          <span>Couldn't load recommendations right now</span>
+          <button className="daily-recs-retry" onClick={() => refreshRecs()}>
+            <RefreshCw size={14} />
+            Try again
+          </button>
         </div>
       );
     }
@@ -160,7 +168,8 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast, selectedPantryGroup })
     if (!pantry_count) {
       return (
         <div className="daily-recs-empty">
-          <span>Add items to your pantry to get personalized meal ideas!</span>
+          <UtensilsCrossed size={24} strokeWidth={1.5} />
+          <span>Add items to your pantry to get personalized meal ideas</span>
         </div>
       );
     }
@@ -168,7 +177,8 @@ const DailyRecs: React.FC<DailyRecsProps> = ({ showToast, selectedPantryGroup })
     if (!hasContent) {
       return (
         <div className="daily-recs-empty">
-          <span>No recommendations right now. Check back later!</span>
+          <Clock size={24} strokeWidth={1.5} />
+          <span>No recommendations right now — check back later</span>
         </div>
       );
     }

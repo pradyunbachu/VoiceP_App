@@ -5,6 +5,15 @@
   z-index: 10001;
 }
 
+/* Interactive mode: let clicks through to the app */
+.tutorial-overlay.interactive {
+  pointer-events: none;
+}
+
+.tutorial-overlay.interactive .tutorial-interaction-hint {
+  pointer-events: auto;
+}
+
 /* Solid backdrop for welcome/centered steps (no spotlight) */
 .tutorial-backdrop {
   position: fixed;
@@ -22,6 +31,10 @@
   transition: top 0.15s ease, left 0.15s ease, width 0.15s ease, height 0.15s ease;
 }
 
+.tutorial-overlay.interactive .tutorial-spotlight {
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.35);
+}
+
 /* Card */
 .tutorial-card {
   position: relative;
@@ -30,7 +43,7 @@
   border: 1px solid var(--border-primary);
   border-radius: var(--radius-xl);
   padding: var(--space-6);
-  max-width: 340px;
+  max-width: 360px;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
   animation: tutorialFadeIn 0.15s ease-out;
 }
@@ -67,6 +80,19 @@
     opacity: 1;
     transform: translate(-50%, -50%);
   }
+}
+
+/* Step icon */
+.tutorial-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-md);
+  background: rgba(59, 130, 246, 0.12);
+  color: var(--accent-primary);
+  margin-bottom: var(--space-3);
 }
 
 /* Close button */
@@ -147,6 +173,10 @@
   width: 16px;
 }
 
+.tutorial-dot.completed {
+  background: var(--accent-success, #22c55e);
+}
+
 /* Nav buttons */
 .tutorial-nav-buttons {
   display: flex;
@@ -165,6 +195,7 @@
   border: none;
   cursor: pointer;
   transition: all 0.15s ease;
+  font-family: 'Bricolage Grotesque', sans-serif;
 }
 
 .tutorial-btn-primary {
@@ -187,6 +218,42 @@
   border-color: var(--border-hover);
 }
 
+/* Floating interaction hint bar */
+.tutorial-interaction-hint {
+  position: fixed;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10004;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-xl);
+  padding: var(--space-3) var(--space-5);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  animation: tutorialHintSlideUp 0.2s ease-out;
+  white-space: nowrap;
+}
+
+.tutorial-interaction-hint span {
+  font-size: 0.8125rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+@keyframes tutorialHintSlideUp {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
 /* Responsive: smaller screens get a narrower card */
 @media (max-width: 420px) {
   .tutorial-card {
@@ -196,5 +263,26 @@
 
   .tutorial-card.centered {
     width: calc(100vw - 32px);
+  }
+
+  .tutorial-interaction-hint {
+    left: 16px;
+    right: 16px;
+    transform: none;
+    flex-wrap: wrap;
+    justify-content: center;
+    white-space: normal;
+    text-align: center;
+  }
+
+  @keyframes tutorialHintSlideUp {
+    from {
+      opacity: 0;
+      transform: translateY(12px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
   }
 }

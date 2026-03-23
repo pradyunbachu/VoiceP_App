@@ -127,4 +127,9 @@ export const queryKeys = {
     week: (weekStart: string, groupId?: number) => [...queryKeys.mealPlan.all, 'week', weekStart, groupId] as const,
   },
 
+  // Saved Recipes
+  savedRecipes: {
+    all: ['savedRecipes'] as const,
+  },
+
 } as const;

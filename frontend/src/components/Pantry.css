@@ -1187,10 +1187,10 @@
   justify-content: center;
   gap: 3px;
   padding: 4px 0;
-  border: 1px solid rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-secondary);
   border-radius: var(--radius-full);
-  background: rgba(255, 255, 255, 0.7);
-  color: #888;
+  background: var(--bg-tertiary);
+  color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
   line-height: 1;
@@ -1229,12 +1229,6 @@
   color: var(--accent-danger);
 }
 
-/* Dark mode shelf status buttons */
-[data-theme="dark"] .shelf-status-btn {
-  background: var(--bg-card-hover);
-  border-color: var(--border-secondary);
-  color: var(--text-secondary);
-}
 
 [data-theme="dark"] .shelf-status-btn.full.active {
   background: var(--accent-primary-bg);
@@ -1256,7 +1250,7 @@
 .shelf-item-name {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #333;
+  color: var(--text-primary);
   text-align: center;
   word-break: break-word;
   line-height: 1.3;
@@ -1271,19 +1265,15 @@
 
 .shelf-item-qty {
   font-size: 0.7rem;
-  color: #666;
+  color: var(--text-muted);
   min-width: 20px;
   text-align: center;
 }
 
 .shelf-item-purchase {
   font-size: 0.6rem;
-  color: #999;
-  margin-top: 1px;
-}
-
-[data-theme="dark"] .shelf-item-purchase {
   color: var(--text-muted);
+  margin-top: 1px;
 }
 
 .shelf-item-badge {
@@ -1299,8 +1289,8 @@
 }
 
 .shelf-item-badge.expiring {
-  background: rgba(251, 191, 36, 0.9);
-  color: #000;
+  background: var(--accent-warning);
+  color: var(--bg-primary);
 }
 
 .shelf-item-badge.expired {

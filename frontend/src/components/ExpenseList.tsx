@@ -8,7 +8,7 @@
  */
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download, Loader } from "lucide-react";
+import { Trash2, Store, Calendar, DollarSign, Tag, Edit2, X, Check, ArrowUpDown, CheckSquare, Square, Search, Plus, Download, Loader, Receipt, Mic } from "lucide-react";
 import { useInfiniteExpenses, useUpdateExpense, useDeleteExpense, useBulkDeleteExpenses, usePantryItems, useUndoDelete } from "../hooks";
 import { exportExpensesCsv } from "../lib/csvExport";
 import { useAuth } from "../context/AuthContext";
@@ -281,9 +281,11 @@ const ExpenseList: React.FC<Props> = ({ showToast }) => {
     return (
       <div className="expense-list">
         <h2>Recent Expenses</h2>
-        <p className="empty-state">
-          No expenses yet. Record your first purchase!
-        </p>
+        <div className="empty-state">
+          <Receipt size={40} strokeWidth={1.5} />
+          <h3>No expenses yet</h3>
+          <p>Record a purchase by voice or scan a receipt to get started</p>
+        </div>
       </div>
     );
   }
@@ -584,8 +586,13 @@ const ExpenseList: React.FC<Props> = ({ showToast }) => {
       {/* Empty state for search/filter with no results */}
       {expenses.length === 0 && (debouncedSearch || categoryFilter) && (
         <div className="empty-state">
-          <p>No expenses match your search. Try different keywords or clear filters.</p>
-          <button className="clear-filters-button" onClick={clearFilters}>Clear Filters</button>
+          <Search size={32} strokeWidth={1.5} />
+          <h3>No results found</h3>
+          <p>Try different keywords or clear your filters</p>
+          <button className="clear-filters-button" onClick={clearFilters}>
+            <X size={14} />
+            Clear Filters
+          </button>
         </div>
       )}
 

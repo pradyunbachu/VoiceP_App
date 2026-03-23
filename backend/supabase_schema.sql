@@ -387,3 +387,37 @@ CREATE POLICY "Users can delete their own cooked meals"
     ON cooked_meals FOR DELETE
     USING (auth.uid() = user_id);
 
+-- ============================================================================
+-- Saved Recipes Table (User Favorites)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS saved_recipes (
+    id BIGSERIAL PRIMARY KEY,
+    user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+    name TEXT NOT NULL,
+    description TEXT,
+    servings INTEGER,
+    prep_minutes INTEGER,
+    cook_minutes INTEGER,
+    ingredients JSONB DEFAULT '[]',
+    instructions JSONB DEFAULT '[]',
+    nutrition JSONB,
+    saved_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(user_id, name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_saved_recipes_user_id ON saved_recipes(user_id);
+
+ALTER TABLE saved_recipes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view their own saved recipes"
+    ON saved_recipes FOR SELECT
+    USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can insert their own saved recipes"
+    ON saved_recipes FOR INSERT
+    WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own saved recipes"
+    ON saved_recipes FOR DELETE
+    USING (auth.uid() = user_id);
+

@@ -402,7 +402,7 @@ function AppContent() {
         </main>
       </ErrorBoundary>
       {isAuthenticated && <MobileBottomNav currentView={currentView} onViewChange={setCurrentView} />}
-      {isAuthenticated && <DailyRecs showToast={showToast} selectedPantryGroup={selectedPantryGroup} />}
+      {isAuthenticated && currentView !== "home" && <DailyRecs showToast={showToast} selectedPantryGroup={selectedPantryGroup} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
       <AnimatePresence>
         {showClearAllConfirm && (

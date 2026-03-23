@@ -11,6 +11,7 @@ import {
   DndContext,
   DragOverlay,
   PointerSensor,
+  TouchSensor,
   KeyboardSensor,
   useSensor,
   useSensors,
@@ -18,7 +19,7 @@ import {
   useDroppable,
 } from '@dnd-kit/core';
 import type { DragStartEvent, DragEndEvent } from '@dnd-kit/core';
-import { X, Loader, UtensilsCrossed, Clock, Trash2 } from 'lucide-react';
+import { X, Loader, UtensilsCrossed, Clock, Trash2, Package, Search } from 'lucide-react';
 import { usePantryItems, useChefSuggestions, useRecipeDetail, useCookMeal } from '../hooks';
 import { DEMO_PANTRY_ITEMS } from '../constants/demoPantry';
 import RecipeDetailPanel from './RecipeDetailModal';
@@ -119,10 +120,11 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
 
   const pantryLoading = isDemoMode ? false : pantryLoadingRaw;
 
-  // Sensors for dnd-kit
-  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 5 } });
+  // Sensors for dnd-kit — touch needs a delay so scrolling isn't hijacked
+  const pointerSensor = useSensor(PointerSensor, { activationConstraint: { distance: 8 } });
+  const touchSensor = useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 8 } });
   const keyboardSensor = useSensor(KeyboardSensor);
-  const sensors = useSensors(pointerSensor, keyboardSensor);
+  const sensors = useSensors(pointerSensor, touchSensor, keyboardSensor);
 
   // Pantry items (non-paginated array)
   const pantryItems = useMemo(() => {
@@ -349,11 +351,13 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
               </div>
             ) : pantryItems.length === 0 ? (
               <div className="chef-pantry-empty">
-                Add items to your pantry to start cooking!
+                <Package size={24} strokeWidth={1.5} />
+                <span>Add items to your pantry to start cooking</span>
               </div>
             ) : filteredItems.length === 0 ? (
               <div className="chef-pantry-empty">
-                No items match "{searchQuery}"
+                <Search size={18} strokeWidth={1.5} />
+                <span>No items match "{searchQuery}"</span>
               </div>
             ) : (
               <div className="chef-pantry-list">
@@ -389,7 +393,8 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
               <div className="chef-bowl-ingredients" ref={ingredientsRef}>
                 {bowlItems.length === 0 ? (
                   <div className="chef-bowl-empty">
-                    Drag or tap ingredients to toss them in
+                    <UtensilsCrossed size={24} strokeWidth={1.5} />
+                    <span>Tap ingredients to add them here</span>
                   </div>
                 ) : (
                   bowlItems.map((item) => (

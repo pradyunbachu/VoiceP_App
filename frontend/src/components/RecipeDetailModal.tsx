@@ -7,8 +7,8 @@
  * and error states while the AI generates the recipe.
  */
 import { useState } from 'react';
-import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat, ShoppingCart, Check, Play } from 'lucide-react';
-import { useCreateShoppingListItem } from '../hooks';
+import { X, Clock, Users, Loader, ChevronLeft, Flame, ChefHat, ShoppingCart, Check, Play, Heart } from 'lucide-react';
+import { useCreateShoppingListItem, useSaveRecipe, useSavedRecipes, useDeleteSavedRecipe } from '../hooks';
 import CookingMode from './CookingMode';
 import type { ShowToast } from '../types';
 import './RecipeDetailModal.css';
@@ -53,8 +53,37 @@ interface Props {
 
 const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose, onCookMeal, isCooking, availableIngredients, showToast }) => {
   const createShoppingItem = useCreateShoppingListItem();
+  const saveRecipe = useSaveRecipe();
+  const deleteSavedRecipe = useDeleteSavedRecipe();
+  const { data: savedData } = useSavedRecipes();
   const [addedToList, setAddedToList] = useState(false);
   const [cookingModeOpen, setCookingModeOpen] = useState(false);
+
+  // Check if current recipe is already saved
+  const savedEntry = savedData?.recipes?.find(
+    (r) => r.name === recipe?.name
+  );
+  const isSaved = !!savedEntry;
+
+  const handleToggleSave = () => {
+    if (!recipe) return;
+    if (isSaved && savedEntry) {
+      deleteSavedRecipe.mutate(savedEntry.id, {
+        onSuccess: () => showToast?.('Recipe removed from saved', 'info', 3000),
+      });
+    } else {
+      saveRecipe.mutate({ ...recipe, instructions: recipe.instructions || [], ingredients: recipe.ingredients || [] } as import('../types').RecipeDetail, {
+        onSuccess: () => showToast?.('Recipe saved!', 'success', 3000),
+        onError: (err) => {
+          if (err.message === 'Already saved') {
+            showToast?.('Recipe already saved', 'info', 3000);
+          } else {
+            showToast?.('Failed to save recipe', 'error', 3000);
+          }
+        },
+      });
+    }
+  };
 
   const handleCookClick = () => {
     if (!recipe || !onCookMeal || isCooking) return;
@@ -121,9 +150,21 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose,
           <ChevronLeft size={16} />
           <span>Back</span>
         </button>
-        <button className="recipe-close-btn" onClick={onClose}>
-          <X size={18} />
-        </button>
+        <div className="recipe-header-actions">
+          {recipe && !isLoading && !error && (
+            <button
+              className={`recipe-save-btn${isSaved ? ' saved' : ''}`}
+              onClick={handleToggleSave}
+              disabled={saveRecipe.isPending || deleteSavedRecipe.isPending}
+              aria-label={isSaved ? 'Remove from saved' : 'Save recipe'}
+            >
+              <Heart size={18} fill={isSaved ? 'currentColor' : 'none'} />
+            </button>
+          )}
+          <button className="recipe-close-btn" onClick={onClose}>
+            <X size={18} />
+          </button>
+        </div>
       </div>
 
       <div className="recipe-panel-body">
