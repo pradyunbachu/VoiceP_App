@@ -7,7 +7,7 @@
  */
 import { useEffect } from "react";
 import type { FC } from "react";
-import { CheckCircle, XCircle, AlertCircle, Info, ShoppingCart, X } from "lucide-react";
+import { CheckCircle, XCircle, AlertCircle, Info, PartyPopper, X } from "lucide-react";
 import type { ToastAction } from "../types";
 import "./Toast.css";
 
@@ -35,7 +35,7 @@ const Toast: FC<Props> = ({ message, type = "info", onClose, duration = 5000, ac
     error: XCircle,
     warning: AlertCircle,
     info: Info,
-    celebration: ShoppingCart,
+    celebration: PartyPopper,
   };
 
   const Icon = icons[type] || Info;

@@ -199,6 +199,27 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
         </button>
       </motion.div>
 
+      {/* ── Getting Started (first-time user) ────────────────── */}
+      {weeklyExpenses.count === 0 && pantryTotal === 0 && !recsLoading && (
+        <motion.div className="hd-getting-started" variants={fadeUp}>
+          <h2 className="hd-section-title">Get Started</h2>
+          <div className="hd-card">
+            <button className="hd-row" onClick={onOpenVoxy}>
+              <span className="hd-row-text">Log your first expense by voice</span>
+              <span className="hd-pill">try it</span>
+            </button>
+            <button className="hd-row" onClick={() => onNavigate("pantry")}>
+              <span className="hd-row-text">Add items to your pantry</span>
+              <ChevronRight size={14} className="hd-row-chevron" />
+            </button>
+            <button className="hd-row" onClick={() => onNavigate("shopping-list")}>
+              <span className="hd-row-text">Start a shopping list</span>
+              <ChevronRight size={14} className="hd-row-chevron" />
+            </button>
+          </div>
+        </motion.div>
+      )}
+
       {/* ── Voxy's Picks ───────────────────────────────────── */}
       <motion.div variants={fadeUp}>
         <h2 className="hd-section-title">Voxy's Picks</h2>

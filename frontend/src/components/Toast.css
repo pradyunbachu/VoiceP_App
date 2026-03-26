@@ -61,29 +61,38 @@
 .toast-celebration::after {
   content: '';
   position: absolute;
-  width: 4px;
-  height: 4px;
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  animation: confettiDot 1.5s ease-out forwards;
+  animation: confettiDot 2s ease-out forwards;
   pointer-events: none;
 }
 
 .toast-celebration::before {
-  background: rgba(251, 191, 36, 0.6);
-  top: 8px;
-  left: 20%;
+  background: rgba(251, 191, 36, 0.8);
+  top: 6px;
+  left: 15%;
   animation-delay: 0.1s;
+  box-shadow:
+    20px 2px 0 rgba(168, 85, 247, 0.7),
+    45px -4px 0 rgba(52, 211, 153, 0.7),
+    70px 3px 0 rgba(251, 146, 60, 0.7);
 }
 
 .toast-celebration::after {
-  background: rgba(168, 85, 247, 0.6);
-  top: 8px;
-  right: 30%;
-  animation-delay: 0.3s;
+  background: rgba(168, 85, 247, 0.8);
+  top: 6px;
+  right: 20%;
+  animation-delay: 0.25s;
+  box-shadow:
+    -15px -2px 0 rgba(251, 191, 36, 0.7),
+    -40px 4px 0 rgba(96, 165, 250, 0.7),
+    -65px -3px 0 rgba(52, 211, 153, 0.7);
 }
 
 .toast-celebration .toast-icon {
   animation: sparkSpin 1s ease-out;
+  color: var(--accent-warning);
 }
 
 @keyframes celebrationPop {

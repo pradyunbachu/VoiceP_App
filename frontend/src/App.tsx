@@ -15,6 +15,7 @@ import Chef from "./components/Chef";
 import HomeDashboard from "./components/HomeDashboard";
 import Settings from "./components/Settings";
 import MealPlanner from "./components/MealPlanner";
+import SavedRecipes from "./components/SavedRecipes";
 import SpendingInsights from "./components/SpendingInsights";
 import SpendingComparisons from "./components/SpendingComparisons";
 import ToastContainer from "./components/ToastContainer";
@@ -342,6 +343,15 @@ function AppContent() {
         return (
           <div className="view-container" key="meal-planner">
             <MealPlanner
+              showToast={showToast}
+              selectedPantryGroup={selectedPantryGroup}
+            />
+          </div>
+        );
+      case "saved-recipes":
+        return (
+          <div className="view-container" key="saved-recipes">
+            <SavedRecipes
               showToast={showToast}
               selectedPantryGroup={selectedPantryGroup}
             />

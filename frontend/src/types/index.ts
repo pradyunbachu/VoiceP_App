@@ -502,6 +502,7 @@ export type AppView =
   | "shopping-list"
   | "chef"
   | "meal-planner"
+  | "saved-recipes"
   | "settings";
 
 // ── Auth ───────────────────────────────────────────────────────────────

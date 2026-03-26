@@ -20,6 +20,7 @@ import {
   Wallet,
   ArrowLeftRight,
   Settings,
+  Heart,
   X,
 } from "lucide-react";
 import type { AppView } from "../types";
@@ -47,7 +48,7 @@ const MobileBottomNav: FC<Props> = ({ currentView, onViewChange }) => {
   }, [moreOpen]);
 
   const isMoreView = [
-    "meal-planner", "dashboard", "expenses", "budgets",
+    "meal-planner", "saved-recipes", "dashboard", "expenses", "budgets",
     "insights", "comparisons", "settings",
   ].includes(currentView);
 
@@ -113,6 +114,13 @@ const MobileBottomNav: FC<Props> = ({ currentView, onViewChange }) => {
               >
                 <CalendarDays size={22} />
                 <span>Planner</span>
+              </button>
+              <button
+                className={`mobile-more-item ${currentView === "saved-recipes" ? "active" : ""}`}
+                onClick={() => handleNav("saved-recipes")}
+              >
+                <Heart size={22} />
+                <span>Saved</span>
               </button>
               <button
                 className={`mobile-more-item ${currentView === "dashboard" ? "active" : ""}`}

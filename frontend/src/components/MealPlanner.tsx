@@ -581,6 +581,15 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
         </motion.div>
       )}
 
+      {/* Empty week hint */}
+      {!isLoading && meals.length === 0 && (
+        <motion.div className="mp-empty-hint" variants={fadeUp}>
+          <CalendarDays size={28} strokeWidth={1.5} />
+          <p>No meals planned for this week</p>
+          <span>Click <strong>+</strong> on any slot to add a meal, or hit <strong>Generate</strong> to fill the week with AI suggestions</span>
+        </motion.div>
+      )}
+
       {/* Missing ingredients summary */}
       <AnimatePresence>
         {missingSummary.length > 0 && (
