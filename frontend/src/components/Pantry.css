@@ -572,14 +572,15 @@
 }
 
 .pantry-card {
-  background: transparent;
-  border: 1px solid var(--border-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-left: 2px solid var(--accent-primary);
   border-radius: var(--radius-lg);
   padding: var(--space-5);
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
   position: relative;
   animation: fadeSlideIn 0.3s ease both;
+  box-shadow: var(--shadow-sm);
 }
 
 .pantry-card.low {

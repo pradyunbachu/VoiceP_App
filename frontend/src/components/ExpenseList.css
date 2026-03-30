@@ -193,14 +193,16 @@
 .expense-card {
   padding: var(--space-5);
   margin-bottom: var(--space-3);
-  transition: border-color 0.15s ease;
-  background: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  background: var(--bg-card);
   border-radius: var(--radius-lg);
-  border: 1px solid var(--border-secondary);
+  border: 1px solid var(--border-primary);
+  box-shadow: var(--shadow-sm);
 }
 
 .expense-card:hover {
   border-color: var(--border-hover);
+  background: var(--bg-card-hover);
 }
 
 .expense-header {

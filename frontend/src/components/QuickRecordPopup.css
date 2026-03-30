@@ -25,11 +25,11 @@
 .quick-record-popup {
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
-  border-radius: 16px;
-  padding: 2rem;
+  border-radius: var(--radius-xl);
+  padding: var(--space-8);
   min-width: 320px;
   max-width: 400px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  box-shadow: var(--shadow-lg), 0 20px 60px rgba(0, 0, 0, 0.2);
   animation: scaleIn 0.2s ease-out;
 }
 
@@ -47,7 +47,7 @@
 /* Recording State */
 .quick-record-recording {
   text-align: center;
-  padding: 1rem 0;
+  padding: var(--space-4) 0;
 }
 
 .recording-pulse {
@@ -196,6 +196,7 @@
 /* Action Buttons */
 .quick-record-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
   margin-top: 1rem;
 }
@@ -291,6 +292,28 @@
 
 .quick-record-chat .chat-response-text p:last-child {
   margin-bottom: 0;
+}
+
+.chat-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: 'Bricolage Grotesque', sans-serif;
+  transition: all 0.15s ease;
+}
+
+.chat-action-btn:hover {
+  border-color: var(--accent-primary-border);
+  color: var(--accent-primary);
+  background: var(--accent-primary-bg);
 }
 
 /* Idle dropdown — anchored below the FAB */

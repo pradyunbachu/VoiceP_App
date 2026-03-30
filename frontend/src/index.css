@@ -106,7 +106,7 @@
   --bg-primary: #FAF8F5;
   --bg-secondary: #F5F0EB;
   --bg-tertiary: #EDE8E1;
-  --bg-card: rgba(255, 255, 255, 0.95);
+  --bg-card: rgba(255, 255, 255, 1);
   --bg-card-hover: rgba(245, 240, 235, 1);
   --bg-input: rgba(255, 255, 255, 1);
   --bg-input-focus: rgba(255, 255, 255, 1);
@@ -117,9 +117,9 @@
   --text-tertiary: #6B6B6B;
   --text-muted: #9B9B9B;
 
-  --border-primary: rgba(139, 115, 85, 0.10);
-  --border-secondary: rgba(139, 115, 85, 0.05);
-  --border-hover: rgba(139, 115, 85, 0.18);
+  --border-primary: rgba(139, 115, 85, 0.15);
+  --border-secondary: rgba(139, 115, 85, 0.10);
+  --border-hover: rgba(139, 115, 85, 0.25);
 
   --accent-primary: #8B7355;
   --accent-primary-hover: #6B5740;
@@ -146,9 +146,9 @@
   --accent-purple-bg-active: rgba(123, 94, 139, 0.15);
   --accent-purple-border: rgba(123, 94, 139, 0.2);
 
-  --shadow-sm: none;
-  --shadow-md: 0 1px 4px rgba(80, 60, 40, 0.04);
-  --shadow-lg: 0 2px 8px rgba(80, 60, 40, 0.06);
+  --shadow-sm: 0 1px 2px rgba(80, 60, 40, 0.04);
+  --shadow-md: 0 1px 6px rgba(80, 60, 40, 0.07);
+  --shadow-lg: 0 2px 12px rgba(80, 60, 40, 0.09);
   --shadow-accent: none;
 
   --chart-bg: rgba(255, 255, 255, 0.95);
@@ -213,4 +213,20 @@ code {
 
 input, button, textarea, select {
   font-family: inherit;
+}
+
+/* Global focus ring for keyboard navigation */
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: 2px solid var(--accent-primary);
+  outline-offset: 2px;
+}
+
+/* Consistent disabled state */
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }

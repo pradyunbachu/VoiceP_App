@@ -1,5 +1,5 @@
 .shopping-list {
-  padding: 2rem;
+  padding: var(--space-8);
   max-width: 600px;
   margin: 0 auto;
 }
@@ -8,20 +8,20 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--space-6);
 }
 
 .shopping-list-header h2 {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
   margin: 0;
   color: var(--text-primary);
 }
 
 .shopping-list-subtitle {
   color: var(--text-tertiary);
-  margin: 0.25rem 0 0 0;
+  margin: var(--space-1) 0 0 0;
   font-size: 0.9rem;
 }
 
@@ -29,10 +29,10 @@
   display: flex;
   align-items: center;
   gap: 0.4rem;
-  padding: 0.5rem 1rem;
+  padding: var(--space-2) var(--space-4);
   background: transparent;
   border: 1px solid var(--border-primary);
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   color: var(--text-tertiary);
   font-size: 0.85rem;
   cursor: pointer;
@@ -53,10 +53,11 @@
 
 /* ==================== MODERN LIST CARD ==================== */
 .list-card {
-  background: transparent;
-  border: 1px solid var(--border-secondary);
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
   border-radius: var(--radius-lg);
   overflow: hidden;
+  box-shadow: var(--shadow-sm);
 }
 
 /* ==================== ADD ITEM INPUT ==================== */
@@ -64,8 +65,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid var(--border-secondary);
   background: transparent;
   border-radius: var(--radius-lg) var(--radius-lg) 0 0;
@@ -148,8 +149,8 @@
 .shopping-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.875rem 1.25rem;
+  gap: var(--space-3);
+  padding: var(--space-3) var(--space-5);
   border-bottom: 1px solid var(--border-secondary);
   transition: background 0.15s;
 }

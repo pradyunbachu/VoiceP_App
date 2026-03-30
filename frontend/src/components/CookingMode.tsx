@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Play, Pause, RotateCcw, Mic, MicOff, Volume2, VolumeX, ChefHat, Loader } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Play, Pause, RotateCcw, Mic, MicOff, Volume2, VolumeX, ChefHat, Loader, Check } from 'lucide-react';
 import { useWebSpeechRecognition } from '../hooks/useWebSpeechRecognition';
 import { useCookingCommands, type CookingCommand } from '../hooks/useCookingCommands';
 import type { ShowToast } from '../types';
@@ -66,6 +66,10 @@ const CookingMode: React.FC<Props> = ({ recipe, onCookMeal, isCooking, onClose, 
 
   // Auto-read aloud toggle (off by default)
   const [autoRead, setAutoRead] = useState(false);
+
+  // Deduction confirmation
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [deductionItems, setDeductionItems] = useState<Array<{ item: string; amount: string; included: boolean }>>([]);
 
   // Voice feedback
   const [feedback, setFeedback] = useState<string | null>(null);
@@ -245,11 +249,28 @@ const CookingMode: React.FC<Props> = ({ recipe, onCookMeal, isCooking, onClose, 
 
   const handleDone = () => {
     if (isCooking) return;
-    const ingredients = normalizedIngredients.map(ing => ({
+    // Show confirmation with editable ingredient list
+    const items = normalizedIngredients.map(ing => ({
       item: ing.item,
       amount: ing.amount,
+      included: true,
     }));
-    onCookMeal(recipe.name, ingredients);
+    setDeductionItems(items);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmDeduction = () => {
+    const included = deductionItems
+      .filter(i => i.included)
+      .map(i => ({ item: i.item, amount: i.amount }));
+    onCookMeal(recipe.name, included);
+    setShowConfirm(false);
+  };
+
+  const toggleDeductionItem = (index: number) => {
+    setDeductionItems(prev => prev.map((item, i) =>
+      i === index ? { ...item, included: !item.included } : item
+    ));
   };
 
   return (
@@ -396,6 +417,42 @@ const CookingMode: React.FC<Props> = ({ recipe, onCookMeal, isCooking, onClose, 
           </button>
         </div>
       </div>
+
+      {/* Deduction confirmation overlay */}
+      {showConfirm && (
+        <div className="cooking-confirm-overlay">
+          <div className="cooking-confirm-panel">
+            <h3 className="cooking-confirm-title">Update Pantry</h3>
+            <p className="cooking-confirm-desc">Uncheck items you didn't use:</p>
+            <div className="cooking-confirm-list">
+              {deductionItems.map((item, i) => (
+                <label key={i} className={`cooking-confirm-item${item.included ? '' : ' excluded'}`}>
+                  <input
+                    type="checkbox"
+                    checked={item.included}
+                    onChange={() => toggleDeductionItem(i)}
+                  />
+                  <span className="cooking-confirm-name">{item.item}</span>
+                  {item.amount && <span className="cooking-confirm-amount">{item.amount}</span>}
+                </label>
+              ))}
+            </div>
+            <div className="cooking-confirm-actions">
+              <button className="cooking-confirm-skip" onClick={() => { setShowConfirm(false); onCookMeal(recipe.name, []); }}>
+                Skip deduction
+              </button>
+              <button
+                className="cooking-confirm-btn"
+                onClick={handleConfirmDeduction}
+                disabled={isCooking}
+              >
+                {isCooking ? <Loader size={14} className="recipe-spinner" /> : <Check size={14} />}
+                {isCooking ? 'Updating...' : `Deduct ${deductionItems.filter(i => i.included).length} items`}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

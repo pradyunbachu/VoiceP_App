@@ -10,13 +10,13 @@
  */
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send } from "lucide-react";
+import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send, ChefHat, ShoppingCart, BarChart3 } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ReceiptScanner from "./ReceiptScanner";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useUpdateExpense } from "../hooks";
 import { API_BASE_URL } from "../config/api";
-import type { ShowToast, Expense, ChatResponse, ReceiptScanResult, RecurringSuggestion } from "../types";
+import type { ShowToast, Expense, ChatResponse, ReceiptScanResult, RecurringSuggestion, AppView } from "../types";
 import "./QuickRecordPopup.css";
 
 const QUICK_CONFIRM_THRESHOLD = 0.85;
@@ -35,9 +35,10 @@ export interface QuickRecordPopupHandle {
 
 interface Props {
   showToast: ShowToast;
+  onNavigate?: (view: AppView) => void;
 }
 
-const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast }, ref) => {
+const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast, onNavigate }, ref) => {
   const { getToken } = useAuth();
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -694,6 +695,31 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast 
                 ))}
               </div>
               <div className="quick-record-actions">
+                {/* Context-aware action buttons */}
+                {onNavigate && chatResponse.intent === "suggestion" && (
+                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("chef"); }}>
+                    <ChefHat size={16} />
+                    <span>Try in Chef</span>
+                  </button>
+                )}
+                {onNavigate && chatResponse.intent === "pantry_query" && (
+                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("pantry"); }}>
+                    <Package size={16} />
+                    <span>Open Pantry</span>
+                  </button>
+                )}
+                {onNavigate && chatResponse.intent === "expense_query" && (
+                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("expenses"); }}>
+                    <BarChart3 size={16} />
+                    <span>View Expenses</span>
+                  </button>
+                )}
+                {onNavigate && (chatResponse.data?.added_items || chatResponse.data?.pantry_added) && (
+                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("shopping-list"); }}>
+                    <ShoppingCart size={16} />
+                    <span>Shopping List</span>
+                  </button>
+                )}
                 <button className="confirm-btn" onClick={handleDismiss}>
                   <Check size={18} />
                   <span>Done</span>

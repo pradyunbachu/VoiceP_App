@@ -390,7 +390,7 @@ function AppContent() {
             onLogout={handleLogout}
             user={user}
           />
-          <QuickRecordPopup ref={quickRecordRef} showToast={showToast} />
+          <QuickRecordPopup ref={quickRecordRef} showToast={showToast} onNavigate={setCurrentView} />
           <VoxyFAB popupRef={quickRecordRef} />
         </ErrorBoundary>
       )}

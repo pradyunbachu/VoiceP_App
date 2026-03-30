@@ -6,7 +6,7 @@
  * and lets the user review/edit before submitting selected items to the pantry.
  */
 import React, { useState } from "react";
-import { Package, X, Check, Plus, Trash2 } from "lucide-react";
+import { Package, X, Check, Plus, Trash2, ChevronDown, ChevronUp } from "lucide-react";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
 import { detectCategory, isPantryItem } from "../lib/categoryDetection";
 import { parseQuantityFromItem } from "../lib/quantityParser";
@@ -113,7 +113,12 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
     }
   };
 
+  const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const selectedCount = items.filter((i) => i.selected).length;
+
+  const toggleExpanded = (index: number) => {
+    setExpandedIndex(expandedIndex === index ? null : index);
+  };
 
   return (
     <div className="modal-overlay" onClick={onClose}>
@@ -129,10 +134,6 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
         </div>
 
         <div className="modal-body">
-          <p className="modal-description">
-            Select items from your grocery purchase to add to your pantry:
-          </p>
-
           <div className="expense-info">
             <span className="store-name">{expense?.store}</span>
             <span className="expense-date">{expense?.date}</span>
@@ -142,16 +143,15 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
             {items.map((item, index) => (
               <div
                 key={item.id}
-                className={`pantry-item-row ${
-                  item.selected ? "selected" : ""
-                }`}>
-                <input
-                  type="checkbox"
-                  checked={item.selected}
-                  onChange={() => toggleItemSelection(index)}
-                  className="item-checkbox"
-                />
-                <div className="item-fields">
+                className={`pantry-item-row ${item.selected ? "selected" : ""}`}>
+                {/* Compact row: checkbox + name + qty + expand toggle */}
+                <div className="item-compact-row">
+                  <input
+                    type="checkbox"
+                    checked={item.selected}
+                    onChange={() => toggleItemSelection(index)}
+                    className="item-checkbox"
+                  />
                   <input
                     type="text"
                     value={item.name}
@@ -161,24 +161,35 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
                     placeholder="Item name"
                     className="item-name-input"
                   />
+                  <input
+                    type="number"
+                    value={item.quantity}
+                    onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                      handleItemChange(index, "quantity", parseFloat(e.target.value) || 1)
+                    }
+                    min="0"
+                    step="0.1"
+                    className="item-quantity-input item-qty-compact"
+                  />
+                  {item.unit && <span className="item-unit-label">{item.unit}</span>}
+                  <button
+                    className="item-expand-btn"
+                    onClick={() => toggleExpanded(index)}
+                    title="Edit details"
+                  >
+                    {expandedIndex === index ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                  </button>
+                  <button
+                    className="remove-item-btn"
+                    onClick={() => removeItem(index)}
+                    title="Remove item">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+
+                {/* Expanded details — only shown when toggled */}
+                {expandedIndex === index && (
                   <div className="item-details">
-                    <div className="detail-field">
-                      <label>Qty</label>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleItemChange(
-                            index,
-                            "quantity",
-                            parseFloat(e.target.value) || 1
-                          )
-                        }
-                        min="0"
-                        step="0.1"
-                        className="item-quantity-input"
-                      />
-                    </div>
                     <div className="detail-field">
                       <label>Unit</label>
                       <input
@@ -212,23 +223,13 @@ const AddToPantryModal: React.FC<Props> = ({ expense, onClose, onSuccess }) => {
                         type="date"
                         value={item.expiration_date}
                         onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
-                          handleItemChange(
-                            index,
-                            "expiration_date",
-                            e.target.value
-                          )
+                          handleItemChange(index, "expiration_date", e.target.value)
                         }
                         className="item-expiry-input"
                       />
                     </div>
                   </div>
-                </div>
-                <button
-                  className="remove-item-btn"
-                  onClick={() => removeItem(index)}
-                  title="Remove item">
-                  <Trash2 size={16} />
-                </button>
+                )}
               </div>
             ))}
           </div>

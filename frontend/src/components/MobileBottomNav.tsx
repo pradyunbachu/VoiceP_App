@@ -14,7 +14,6 @@ import {
   ChefHat,
   MoreHorizontal,
   CalendarDays,
-  DollarSign,
   BarChart3,
   List,
   Wallet,
@@ -163,13 +162,6 @@ const MobileBottomNav: FC<Props> = ({ currentView, onViewChange }) => {
               >
                 <Settings size={22} />
                 <span>Settings</span>
-              </button>
-              <button
-                className="mobile-more-item"
-                onClick={() => handleNav("dashboard")}
-              >
-                <DollarSign size={22} />
-                <span>Finance</span>
               </button>
             </div>
           </div>

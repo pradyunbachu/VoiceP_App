@@ -39,13 +39,14 @@
   border-radius: 18px;
   padding: var(--space-6) var(--space-6) var(--space-5);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   text-align: left;
   font-family: inherit;
   color: inherit;
   width: 100%;
   display: flex;
   flex-direction: column;
+  box-shadow: var(--shadow-md);
 }
 
 .hd-hero:hover { border-color: var(--border-hover); }
@@ -101,13 +102,14 @@
   border-radius: 14px;
   padding: var(--space-4) var(--space-4);
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
   text-align: left;
   font-family: inherit;
   color: inherit;
   display: flex;
   flex-direction: column;
   gap: 1px;
+  box-shadow: var(--shadow-sm);
 }
 
 .hd-stat-card:hover { border-color: var(--border-hover); }
@@ -201,7 +203,8 @@
   font-size: inherit;
   color: inherit;
   cursor: pointer;
-  transition: border-color 0.15s;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  box-shadow: var(--shadow-sm);
 }
 
 .hd-card:hover { border-color: var(--border-hover); }
