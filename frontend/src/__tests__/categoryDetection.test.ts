@@ -98,4 +98,56 @@ describe("isPantryItem", () => {
     expect(isPantryItem("candles")).toBe(false);
     expect(isPantryItem("diapers")).toBe(false);
   });
+
+  it("returns false for household items", () => {
+    expect(isPantryItem("trash bags")).toBe(false);
+    expect(isPantryItem("toilet paper")).toBe(false);
+    expect(isPantryItem("light bulbs")).toBe(false);
+  });
+
+  it("handles case insensitivity", () => {
+    expect(isPantryItem("BLEACH")).toBe(false);
+    expect(isPantryItem("Shampoo")).toBe(false);
+    expect(isPantryItem("DOG FOOD")).toBe(false);
+  });
+});
+
+describe("detectCategory edge cases", () => {
+  it("handles leading/trailing whitespace", () => {
+    expect(detectCategory("  milk  ")).toBe("Dairy");
+  });
+
+  it("handles uppercase input", () => {
+    expect(detectCategory("MILK")).toBe("Dairy");
+    expect(detectCategory("CHICKEN")).toBe("Meat & Seafood");
+  });
+
+  it("detects frozen items", () => {
+    expect(detectCategory("frozen pizza")).toBe("Frozen");
+    expect(detectCategory("frozen waffles")).toBe("Frozen");
+  });
+
+  it("detects canned goods", () => {
+    expect(detectCategory("soup")).toBe("Canned Goods");
+    expect(detectCategory("chicken broth")).toBe("Canned Goods");
+    expect(detectCategory("chicken stock")).toBe("Canned Goods");
+  });
+
+  it("handles almond butter as Condiments", () => {
+    expect(detectCategory("almond butter")).toBe("Condiments");
+  });
+
+  it("handles string cheese as Dairy", () => {
+    expect(detectCategory("string cheese")).toBe("Dairy");
+  });
+
+  it("handles cottage cheese as Dairy", () => {
+    expect(detectCategory("cottage cheese")).toBe("Dairy");
+  });
+
+  it("detects plural produce items via singularization", () => {
+    expect(detectCategory("cherries")).toBe("Produce");
+    expect(detectCategory("potatoes")).toBe("Produce");
+    expect(detectCategory("strawberries")).toBe("Produce");
+  });
 });

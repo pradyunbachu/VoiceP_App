@@ -186,6 +186,7 @@ export type ChatIntent =
   | "mark_subscription"
   | "reminder_check"
   | "share_list"
+  | "recall_past_meal"
   | "general";
 
 export interface ChatResponseData {
@@ -420,6 +421,23 @@ export interface ReceiptScanResult {
   pantry_items?: string;
   date: string;
   category?: string;
+}
+
+// ── Cooked Meals History ───────────────────────────────────────────────
+
+export interface CookedMeal {
+  id: number;
+  recipe_name: string;
+  ingredients_deducted: Array<{
+    name: string;
+    old_quantity: number;
+    new_quantity: number;
+    new_status: string;
+    was_expiring: boolean;
+  }>;
+  expiring_items_saved: number;
+  estimated_savings: number;
+  cooked_at: string;
 }
 
 // ── Streak ─────────────────────────────────────────────────────────────

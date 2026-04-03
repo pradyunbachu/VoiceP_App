@@ -8,10 +8,25 @@ chat, insights, and receipt scanning.
 # ============================================================================
 # PYDANTIC MODELS (Request/Response Schemas)
 # ============================================================================
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
+from datetime import datetime
 import json
 import os
+
+
+def _validate_date_string(v: str | None) -> str | None:
+    """Validate that a date string is in YYYY-MM-DD format."""
+    if v is None or v == "":
+        return v
+    try:
+        datetime.strptime(v, "%Y-%m-%d")
+    except ValueError:
+        raise ValueError("Date must be in YYYY-MM-DD format")
+    return v
+
+
+VALID_STOCK_STATUSES = {"full", "low", "out_of_stock"}
 
 # ============================================================================
 # EXPENSE MODELS
@@ -86,7 +101,7 @@ PANTRY_CATEGORIES = _grocery_data["categories"]
 
 class PantryItemCreate(BaseModel):
     name: str = Field(max_length=200)
-    quantity: Optional[float] = 1
+    quantity: Optional[float] = Field(default=1, ge=0)
     unit: Optional[str] = Field(default=None, max_length=50)
     category: Optional[str] = Field(default="Other", max_length=100)
     expiration_date: Optional[str] = Field(default=None, max_length=30)
@@ -95,9 +110,21 @@ class PantryItemCreate(BaseModel):
     notes: Optional[str] = Field(default=None, max_length=500)
     expiration_predicted: Optional[bool] = None
 
+    @field_validator("expiration_date", "purchase_date")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return _validate_date_string(v)
+
+    @field_validator("stock_status")
+    @classmethod
+    def validate_stock_status(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_STOCK_STATUSES:
+            raise ValueError(f"stock_status must be one of: {', '.join(VALID_STOCK_STATUSES)}")
+        return v
+
 class PantryItemUpdate(BaseModel):
     name: Optional[str] = Field(default=None, max_length=200)
-    quantity: Optional[float] = None
+    quantity: Optional[float] = Field(default=None, ge=0)
     unit: Optional[str] = Field(default=None, max_length=50)
     category: Optional[str] = Field(default=None, max_length=100)
     expiration_date: Optional[str] = Field(default=None, max_length=30)
@@ -105,6 +132,18 @@ class PantryItemUpdate(BaseModel):
     stock_status: Optional[str] = Field(default=None, max_length=20)
     notes: Optional[str] = Field(default=None, max_length=500)
     expiration_predicted: Optional[bool] = None
+
+    @field_validator("expiration_date", "purchase_date")
+    @classmethod
+    def validate_dates(cls, v: str | None) -> str | None:
+        return _validate_date_string(v)
+
+    @field_validator("stock_status")
+    @classmethod
+    def validate_stock_status(cls, v: str | None) -> str | None:
+        if v is not None and v not in VALID_STOCK_STATUSES:
+            raise ValueError(f"stock_status must be one of: {', '.join(VALID_STOCK_STATUSES)}")
+        return v
 
 class BulkPantryDeleteRequest(BaseModel):
     item_ids: List[int]
@@ -119,7 +158,7 @@ class AutoPopulatePantryRequest(BaseModel):
 
 class ShoppingListItemCreate(BaseModel):
     name: str = Field(max_length=200)
-    quantity: Optional[float] = 1
+    quantity: Optional[float] = Field(default=1, ge=0)
     unit: Optional[str] = Field(default=None, max_length=50)
     category: Optional[str] = Field(default=None, max_length=100)
     notes: Optional[str] = Field(default=None, max_length=500)

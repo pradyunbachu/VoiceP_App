@@ -45,7 +45,7 @@
   padding: 4px 8px;
   border-radius: var(--radius-sm);
   transition: all 0.15s ease;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: inherit;
 }
 
 .recipe-back-btn:hover {
@@ -307,7 +307,7 @@
   color: var(--accent-primary, #3b82f6);
   font-size: 0.9rem;
   font-weight: 700;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -338,7 +338,7 @@
   color: var(--accent-primary, #3b82f6);
   font-size: 0.85rem;
   font-weight: 600;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 }
@@ -379,7 +379,7 @@
   color: #fff;
   font-size: 0.9rem;
   font-weight: 700;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: inherit;
   cursor: pointer;
   transition: all 0.2s ease;
 }

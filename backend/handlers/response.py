@@ -414,6 +414,40 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
             return "Your shopping list is already empty."
         return f"Shopping list cleared! Removed {count} item(s)."
 
+    elif intent == "recall_past_meal":
+        meals = data.get("meals", [])
+        searched = data.get("searched_recipe")
+        if not meals:
+            if searched:
+                return f"I couldn't find any past meals matching '{searched}'. Try a different name or check your meal history."
+            return "I don't see any recently cooked meals. Start cooking to build your meal history!"
+
+        parts = []
+        if searched:
+            parts.append(f"Found {len(meals)} meal(s) matching '{searched}':")
+        else:
+            parts.append(f"Here are your recent meals ({len(meals)}):")
+
+        for meal in meals[:5]:
+            name = meal["recipe_name"]
+            cooked_at = meal.get("cooked_at", "")
+            date_str = ""
+            if cooked_at:
+                try:
+                    from datetime import datetime as dt
+                    d = dt.fromisoformat(cooked_at.replace("Z", "+00:00"))
+                    date_str = f" ({d.strftime('%b %d')})"
+                except Exception:
+                    pass
+            has_recipe = meal.get("has_saved_recipe", False)
+            recipe_note = " — full recipe saved" if has_recipe else ""
+            parts.append(f"- {name}{date_str}{recipe_note}")
+
+        if meals and meals[0].get("has_saved_recipe"):
+            parts.append("\nI found the saved recipe — you can cook it again!")
+
+        return "\n".join(parts)
+
     elif intent == "general":
         return ("I can help you with:\n"
                 "- Log expenses: 'I spent $20 at Walmart'\n"
@@ -436,6 +470,7 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
                 "- Share list: 'Share my shopping list with Sarah'\n"
                 "- Weekly plan: 'Plan my meals for the week'\n"
                 "- Budget meals: 'What can I make under $10?'\n"
-                "- Subscriptions: 'Log that as a subscription'")
+                "- Subscriptions: 'Log that as a subscription'\n"
+                "- Recall meals: 'What did I cook last week?'")
 
     return "I'm not sure how to help with that. Try asking about expenses, pantry items, or shopping suggestions."

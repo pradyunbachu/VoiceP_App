@@ -49,6 +49,7 @@ Analyze the user message and classify it into ONE of these intents:
 - budget_query: User wants to CHECK or VIEW their budget status (e.g., "What's my grocery budget?", "How much budget do I have left?", "Am I over budget?", "Show my budgets"). NOT for setting a budget — "Set a $200 budget" is budget_set.
 - shopping_list_remove: User wants to REMOVE specific items from their shopping list (e.g., "Remove milk from my shopping list", "Take eggs off my list", "Delete bread from my shopping list"). Must mention specific items AND shopping list.
 - shopping_clear: User wants to CLEAR or EMPTY their entire shopping list (e.g., "Clear my shopping list", "Empty my shopping list", "Delete everything from my shopping list"). No specific items needed — this removes ALL items.
+- recall_past_meal: User wants to recall, look up, or remake a previously cooked meal (e.g., "Make that chicken stir fry I had last week", "What did I cook on Tuesday?", "Remake the pasta I made last time", "What was that recipe I made last week?"). The user is referencing a PAST meal, not asking for new suggestions.
 - general: General questions or greetings (e.g., "Hello", "What can you do?", "Help")
 
 Also determine the sub_intent where applicable:
@@ -58,6 +59,7 @@ Also determine the sub_intent where applicable:
 - For suggestion: shopping_list
 - For meal_suggestion: quick_meals, use_expiring
 - For shopping_complete: items_purchased
+- For recall_past_meal: find_meal, remake_meal
 
 Extract any relevant entities:
 - item_name: specific item being asked about
@@ -97,6 +99,7 @@ DISAMBIGUATION RULES (apply these when intents overlap):
 18. "What's my budget?" / "How much budget do I have left?" / "Am I over budget?" → budget_query (not budget_set or expense_query)
 19. "Remove milk from my shopping list" → shopping_list_remove (not pantry_remove or general)
 20. "Clear my shopping list" / "Empty my shopping list" → shopping_clear (not general)
+21. "Make that X I had/cooked last week" / "What did I cook?" / "Remake the X" → recall_past_meal (not meal_suggestion or cooking_deduct). References to PAST meals the user already cooked are recall_past_meal. Forward-looking "what should I cook?" is meal_suggestion.
 
 Respond ONLY with a JSON object in this format:
 {
@@ -417,6 +420,18 @@ def simple_intent_detection(message: str) -> dict:
     if "spent" in message_lower and ("on" in message_lower or "at" in message_lower):
         if not any(kw in message_lower for kw in ["i spent", "just spent"]):
             return {"intent": "expense_query", "sub_intent": "total_spending", "entities": {}}
+
+    # --- Recall past meal ---
+    recall_meal_keywords = [
+        "what did i cook", "what did i make", "what was that recipe",
+        "make that", "remake the", "cook that again", "make it again",
+        "that recipe i made", "that meal i made", "that dish i made",
+        "i had last week", "i cooked last", "i made last",
+        "what did i eat", "what have i cooked", "that chicken", "that pasta",
+        "that stir fry", "that soup", "what was the recipe",
+    ]
+    if any(kw in message_lower for kw in recall_meal_keywords):
+        return {"intent": "recall_past_meal", "sub_intent": "find_meal", "entities": {}}
 
     # --- Meal suggestion ---
     # Use specific phrases to avoid substring issues ("cook" matches "cooker", "overcooked")

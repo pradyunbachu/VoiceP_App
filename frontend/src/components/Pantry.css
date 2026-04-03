@@ -131,7 +131,11 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  opacity: 0.6;
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  color: white;
+  opacity: 0.85;
 }
 
 .stat-content {
@@ -1029,8 +1033,338 @@
   color: white;
 }
 
-.view-toggle-btn:first-child {
+.view-toggle-btn:not(:last-child) {
   border-right: 1px solid var(--border-primary);
+}
+
+/* ==================== SPREADSHEET VIEW ==================== */
+.spreadsheet-container {
+  background: var(--bg-card);
+  border: 1px solid var(--border-secondary);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+}
+
+.spreadsheet-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.spreadsheet-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+  min-width: 900px;
+}
+
+.spreadsheet-th {
+  position: sticky;
+  top: 0;
+  background: var(--bg-secondary);
+  padding: var(--space-3) var(--space-4);
+  text-align: left;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-muted);
+  border-bottom: 2px solid var(--border-primary);
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.spreadsheet-th:hover {
+  color: var(--text-primary);
+  background: var(--bg-card-hover);
+}
+
+.spreadsheet-th-content {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.spreadsheet-sort-icon {
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.spreadsheet-sort-inactive {
+  opacity: 0.25;
+}
+
+.spreadsheet-th-check {
+  width: 40px;
+  cursor: default;
+}
+
+.spreadsheet-th-actions {
+  width: 80px;
+  text-align: center;
+  cursor: default;
+}
+
+.spreadsheet-td {
+  padding: var(--space-2) var(--space-4);
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  vertical-align: middle;
+}
+
+.spreadsheet-row {
+  transition: background 0.1s ease;
+}
+
+.spreadsheet-row:hover {
+  background: var(--bg-card-hover);
+}
+
+.spreadsheet-row-editing {
+  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+}
+
+.spreadsheet-row-expired {
+  background: color-mix(in srgb, var(--status-error) 6%, transparent);
+}
+
+.spreadsheet-row-expiring {
+  background: color-mix(in srgb, var(--status-warning) 6%, transparent);
+}
+
+.spreadsheet-td-name {
+  font-weight: 500;
+  min-width: 160px;
+}
+
+.spreadsheet-name {
+  display: inline-block;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.spreadsheet-category-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  color: var(--accent-primary);
+  font-size: 0.75rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* Quantity controls */
+.spreadsheet-td-qty {
+  min-width: 90px;
+}
+
+.spreadsheet-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.spreadsheet-qty-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
+  background: var(--bg-input);
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+  transition: all 0.15s ease;
+}
+
+.spreadsheet-qty-btn:hover {
+  background: var(--accent-primary);
+  color: white;
+  border-color: var(--accent-primary);
+}
+
+.spreadsheet-qty-value {
+  min-width: 28px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Status button */
+.spreadsheet-status-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.spreadsheet-status-full {
+  background: color-mix(in srgb, var(--status-success) 15%, transparent);
+  color: var(--status-success);
+}
+
+.spreadsheet-status-low {
+  background: color-mix(in srgb, var(--status-warning) 15%, transparent);
+  color: var(--status-warning);
+}
+
+.spreadsheet-status-out_of_stock {
+  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  color: var(--status-error);
+}
+
+.spreadsheet-status-btn:hover {
+  filter: brightness(0.9);
+}
+
+/* Dates */
+.spreadsheet-date-expired {
+  color: var(--status-error);
+  font-weight: 500;
+}
+
+.spreadsheet-date-expiring {
+  color: var(--status-warning);
+  font-weight: 500;
+}
+
+.spreadsheet-predicted {
+  margin-left: 2px;
+  color: var(--text-muted);
+  font-size: 0.85em;
+}
+
+/* Notes */
+.spreadsheet-td-notes {
+  max-width: 180px;
+}
+
+.spreadsheet-notes-text {
+  display: inline-block;
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+}
+
+/* Inputs */
+.spreadsheet-input {
+  width: 100%;
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+.spreadsheet-input:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 25%, transparent);
+}
+
+.spreadsheet-input-qty {
+  width: 60px;
+}
+
+.spreadsheet-input-unit {
+  width: 80px;
+}
+
+.spreadsheet-select {
+  padding: var(--space-1) var(--space-2);
+  border: 1px solid var(--accent-primary);
+  border-radius: var(--radius-sm);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 0.8125rem;
+  outline: none;
+}
+
+/* Action buttons */
+.spreadsheet-td-actions {
+  text-align: center;
+}
+
+.spreadsheet-action-btns {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+}
+
+.spreadsheet-action-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.spreadsheet-action-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
+}
+
+.spreadsheet-save-btn:hover {
+  background: color-mix(in srgb, var(--status-success) 15%, transparent);
+  color: var(--status-success);
+}
+
+.spreadsheet-cancel-btn:hover {
+  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  color: var(--status-error);
+}
+
+.spreadsheet-delete-btn:hover {
+  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  color: var(--status-error);
+}
+
+.spreadsheet-check-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  padding: 0;
+}
+
+.spreadsheet-check-btn:hover {
+  color: var(--accent-primary);
+}
+
+.spreadsheet-td-check {
+  width: 40px;
+  text-align: center;
+}
+
+.spreadsheet-empty {
+  text-align: center;
+  padding: var(--space-8) var(--space-4);
+  color: var(--text-muted);
+  font-size: 0.875rem;
 }
 
 /* ==================== SHELF VIEW ==================== */

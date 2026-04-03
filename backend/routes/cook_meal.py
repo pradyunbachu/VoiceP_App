@@ -124,6 +124,13 @@ class CookMealRequest(BaseModel):
     recipe_name: str
     ingredients: list[dict]  # [{item: str, amount: str}]
     group_id: Optional[int] = None
+    # Optional recipe data for auto-saving (enables "recall past meal")
+    recipe_instructions: Optional[list] = None
+    recipe_description: Optional[str] = None
+    recipe_servings: Optional[int] = None
+    recipe_prep_minutes: Optional[int] = None
+    recipe_cook_minutes: Optional[int] = None
+    recipe_nutrition: Optional[dict] = None
 
 
 @router.post("/cook-meal")
@@ -229,6 +236,39 @@ async def cook_meal(
         logger.error("Failed to record cooked meal: %s", e)
         # Non-fatal — deductions already applied
 
+    # Auto-save recipe if instructions were provided and recipe doesn't already exist
+    if body.recipe_instructions:
+        try:
+            existing = (
+                supabase.table("saved_recipes")
+                .select("id")
+                .eq("user_id", user_id)
+                .eq("name", body.recipe_name)
+                .execute()
+            )
+            if not existing.data:
+                # Build ingredient list from the request
+                recipe_ingredients = [
+                    {"item": ing.get("item", ""), "amount": ing.get("amount", "")}
+                    for ing in body.ingredients
+                ]
+                supabase.table("saved_recipes").insert({
+                    "user_id": user_id,
+                    "name": body.recipe_name,
+                    "description": body.recipe_description,
+                    "servings": body.recipe_servings,
+                    "prep_minutes": body.recipe_prep_minutes,
+                    "cook_minutes": body.recipe_cook_minutes,
+                    "ingredients": recipe_ingredients,
+                    "instructions": body.recipe_instructions,
+                    "nutrition": body.recipe_nutrition,
+                    "saved_at": datetime.now().isoformat(),
+                }).execute()
+                logger.info("Auto-saved recipe '%s' for user %s", body.recipe_name, user_id)
+        except Exception as e:
+            logger.warning("Failed to auto-save recipe: %s", e)
+            # Non-fatal — the meal was still recorded
+
     # Invalidate related caches
     api_cache.invalidate_prefix(make_cache_key(user_id, "daily_recs"))
     api_cache.invalidate_prefix(make_cache_key(user_id, "cook_stats"))
@@ -244,6 +284,48 @@ async def cook_meal(
         "expiring_items_saved": expiring_items_saved,
         "estimated_savings": estimated_savings,
     }
+
+
+# ============================================================================
+# GET /cooked-meals — Full meal history with search
+# ============================================================================
+
+@router.get("/cooked-meals")
+@limiter.limit("30/minute")
+async def cooked_meals(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency),
+    days_back: int = Query(default=30, ge=1, le=365),
+    search: Optional[str] = Query(default=None),
+    limit: int = Query(default=50, ge=1, le=200),
+):
+    """Return cooked meal history with optional recipe name search."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    user_id = current_user["id"]
+    since = (datetime.now() - timedelta(days=days_back)).isoformat()
+
+    query = (
+        supabase.table("cooked_meals")
+        .select("id, recipe_name, ingredients_deducted, expiring_items_saved, estimated_savings, cooked_at")
+        .eq("user_id", user_id)
+        .gte("cooked_at", since)
+        .order("cooked_at", desc=True)
+        .limit(limit)
+    )
+
+    if search:
+        query = query.ilike("recipe_name", f"%{search}%")
+
+    try:
+        resp = query.execute()
+        rows = resp.data or []
+    except Exception as e:
+        logger.error("Failed to fetch cooked meals: %s", e)
+        rows = []
+
+    return {"meals": rows, "count": len(rows)}
 
 
 # ============================================================================

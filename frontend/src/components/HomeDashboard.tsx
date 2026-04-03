@@ -1,6 +1,6 @@
-import { useMemo } from "react";
+import { useMemo, useState, useRef } from "react";
 import type { FC } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, HelpCircle, Flame, CreditCard } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
@@ -11,10 +11,13 @@ import {
   useCookStats,
   useBudgets,
   useDailyRecs,
+  useRecipeDetail,
+  useCookMeal,
 } from "../hooks";
 import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
-import type { AppView, ShowToast, PantryItem, Expense, MealSuggestion } from "../types";
+import type { AppView, ShowToast, PantryItem, Expense, MealSuggestion, RecipeDetail, CookMealResponse } from "../types";
 import MixingBowlLoader from "./MixingBowlLoader";
+import RecipeDetailPanel from "./RecipeDetailModal";
 import "./HomeDashboard.css";
 
 interface Props {
@@ -32,7 +35,7 @@ const getGreeting = (): string => {
   return "Good Evening";
 };
 
-const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, selectedPantryGroup }) => {
+const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpenVoxy, selectedPantryGroup }) => {
   const { user } = useAuth();
   const firstName =
     user?.user_metadata?.first_name ||
@@ -53,6 +56,47 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
   const { data: budgets } = useBudgets({ month: now.getMonth() + 1, year: now.getFullYear() });
   const preference = localStorage.getItem("voxal_dietary_preference") || "";
   const { data: dailyRecsData, isLoading: recsLoading } = useDailyRecs(preference, pantryGroupId as number | undefined);
+  const recipeDetail = useRecipeDetail();
+  const cookMeal = useCookMeal();
+
+  // Recipe panel state
+  const [selectedMeal, setSelectedMeal] = useState<MealSuggestion | null>(null);
+  const [cachedRecipe, setCachedRecipe] = useState<RecipeDetail | null>(null);
+  const recipeCacheRef = useRef<Record<string, RecipeDetail>>({});
+
+  const handleMealClick = (meal: MealSuggestion) => {
+    setSelectedMeal(meal);
+    const cached = recipeCacheRef.current[meal.name];
+    if (cached) {
+      setCachedRecipe(cached);
+      recipeDetail.reset();
+      return;
+    }
+    setCachedRecipe(null);
+    recipeDetail.reset();
+    recipeDetail.mutate(
+      { meal_name: meal.name, meal_description: meal.description || "", available_ingredients: dailyRecsData?.available_ingredients || "" },
+      { onSuccess: (result: RecipeDetail) => { recipeCacheRef.current[meal.name] = result; } }
+    );
+  };
+
+  const closeRecipe = () => { setSelectedMeal(null); setCachedRecipe(null); recipeDetail.reset(); };
+
+  const handleCookMeal = (name: string, ingredients: Array<{ item: string; amount: string }>) => {
+    cookMeal.mutate(
+      { recipe_name: name, ingredients, group_id: pantryGroupId as number | undefined },
+      {
+        onSuccess: (result: CookMealResponse) => {
+          const msg = result.expiring_items_saved > 0
+            ? `Used ${result.expiring_items_saved} expiring item${result.expiring_items_saved > 1 ? "s" : ""} — $${result.estimated_savings} saved!`
+            : `Logged! ${result.deducted_count} pantry item${result.deducted_count !== 1 ? "s" : ""} updated.`;
+          showToast(msg, "celebration", 5000);
+          setTimeout(closeRecipe, 300);
+        },
+        onError: () => showToast("Couldn't log meal", "error"),
+      }
+    );
+  };
 
   const weeklyExpenses = useMemo(() => {
     if (!expenseData?.expenses) return { total: 0, count: 0, recent: [] as Expense[] };
@@ -228,7 +272,7 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
             <div className="hd-card-center"><MixingBowlLoader size="sm" /></div>
           ) : dailyRecsData?.meals && dailyRecsData.meals.length > 0 ? (
             dailyRecsData.meals.slice(0, 3).map((meal: MealSuggestion, i: number) => (
-              <button key={i} className="hd-row" onClick={() => onNavigate("chef")}>
+              <button key={i} className="hd-row" onClick={() => handleMealClick(meal)}>
                 <span className="hd-row-text">{meal.name}</span>
                 <span className="hd-row-right">
                   {meal.uses_expiring && <span className="hd-pill">expiring</span>}
@@ -276,6 +320,39 @@ const HomeDashboard: FC<Props> = ({ onNavigate, onShowTutorial, onOpenVoxy, sele
 
       {/* hidden anchor for tutorial targeting */}
       <div data-tutorial="quick-actions" />
+
+      {/* ── Recipe Detail Slide-out ────────────────────────── */}
+      <AnimatePresence>
+        {selectedMeal && (
+          <>
+            <motion.div
+              className="hd-recipe-backdrop"
+              onClick={closeRecipe}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+            />
+            <motion.div
+              className="hd-recipe-panel"
+              initial={{ x: "100%" }}
+              animate={{ x: 0 }}
+              exit={{ x: "100%" }}
+              transition={{ type: "spring", stiffness: 300, damping: 30 }}
+            >
+              <RecipeDetailPanel
+                recipe={cachedRecipe || (recipeDetail.data as RecipeDetail | undefined)}
+                isLoading={!cachedRecipe && recipeDetail.isPending}
+                error={!cachedRecipe && recipeDetail.isError}
+                onClose={closeRecipe}
+                onCookMeal={handleCookMeal}
+                isCooking={cookMeal.isPending}
+                availableIngredients={dailyRecsData?.available_ingredients?.split(", ").filter(Boolean)}
+                showToast={showToast}
+              />
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };

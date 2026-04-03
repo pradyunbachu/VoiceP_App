@@ -43,4 +43,36 @@ describe("getFriendlyError", () => {
   it("returns generic message for unrecognized errors", () => {
     expect(getFriendlyError("Internal server error 500")).toBe("Something went wrong. Please try again.");
   });
+
+  // Status code-based tests
+  it("handles 429 status code even without message", () => {
+    expect(getFriendlyError(undefined, 429)).toContain("lot of requests");
+    expect(getFriendlyError("", 429)).toContain("lot of requests");
+  });
+
+  it("handles 401 status code", () => {
+    expect(getFriendlyError(undefined, 401)).toContain("session has expired");
+  });
+
+  it("handles 403 status code", () => {
+    expect(getFriendlyError(undefined, 403)).toContain("session has expired");
+  });
+
+  it("handles 413 status code", () => {
+    expect(getFriendlyError(undefined, 413)).toContain("too large");
+  });
+
+  it("handles 422 status code", () => {
+    expect(getFriendlyError(undefined, 422)).toContain("check your input");
+  });
+
+  it("handles validation error messages", () => {
+    expect(getFriendlyError("Validation error: quantity must be >= 0")).toContain("check your input");
+    expect(getFriendlyError("Invalid date format")).toContain("check your input");
+  });
+
+  it("prioritizes status code over message", () => {
+    // 429 status code should match even if message says something else
+    expect(getFriendlyError("some random error", 429)).toContain("lot of requests");
+  });
 });

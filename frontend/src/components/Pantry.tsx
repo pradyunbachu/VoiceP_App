@@ -21,6 +21,7 @@ import {
   Trash2,
   LayoutGrid,
   List,
+  Table,
   Download,
   RefreshCw,
   ShoppingCart,
@@ -57,6 +58,7 @@ import PantryBulkActions from "./PantryBulkActions";
 import PantryGroupSelector from "./PantryGroupSelector";
 import PantryShelfView from "./PantryShelfView";
 import PantryListView from "./PantryListView";
+import PantrySpreadsheetView from "./PantrySpreadsheetView";
 import "./Pantry.css";
 
 interface Props {
@@ -66,7 +68,7 @@ interface Props {
   onCookExpiring?: (itemNames: string[]) => void;
 }
 
-type ViewMode = "shelf" | "list";
+type ViewMode = "shelf" | "list" | "spreadsheet";
 
 interface FormData {
   name: string;
@@ -184,8 +186,8 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
   // component can reference `items` and `loading` without branching.
   const items: PantryItem[] = isDemoMode
     ? demoFiltered
-    : (viewMode === 'shelf' ? (shelfItems as PantryItem[]) : listItems);
-  const loading: boolean = isDemoMode ? false : (viewMode === 'shelf' ? shelfLoading : listLoading);
+    : (viewMode === 'list' ? listItems : (shelfItems as PantryItem[]));
+  const loading: boolean = isDemoMode ? false : (viewMode === 'list' ? listLoading : shelfLoading);
 
   const { data: stats } = usePantryStats(apiGroupId as number | undefined);
 
@@ -622,6 +624,13 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
             >
               <List size={18} />
             </button>
+            <button
+              className={`view-toggle-btn ${viewMode === 'spreadsheet' ? 'active' : ''}`}
+              onClick={() => setViewMode('spreadsheet')}
+              title="Spreadsheet View"
+            >
+              <Table size={18} />
+            </button>
           </div>
           {!isDemoMode && (
             <>
@@ -898,7 +907,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       {loading ? (
         <div className="loading-state" style={{ padding: 0, textAlign: "left" }}>
           {!isDemoMode && <SkeletonStats count={4} />}
-          {viewMode === "shelf" ? <SkeletonShelfView shelves={3} /> : <SkeletonPantryGrid count={6} />}
+          {viewMode === "shelf" ? <SkeletonShelfView shelves={3} /> : viewMode === "spreadsheet" ? <SkeletonPantryGrid count={6} /> : <SkeletonPantryGrid count={6} />}
         </div>
       ) : items.length === 0 ? (
         <div className="empty-state">
@@ -921,6 +930,24 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
           onRemove={handleRemoveFromPantry}
           onStatusChange={handleStatusChange}
           onQuantityChange={handleQuantityChange}
+        />
+      ) : viewMode === 'spreadsheet' ? (
+        <PantrySpreadsheetView
+          items={filteredItems}
+          editingId={editingId}
+          editForm={editForm}
+          isSelectMode={isSelectMode}
+          selectedItems={selectedItems}
+          onEditFormChange={setEditForm}
+          onStartEdit={startEdit}
+          onSaveEdit={handleUpdate}
+          onCancelEdit={() => setEditingId(null)}
+          onDelete={handleDelete}
+          onStatusChange={handleStatusChange}
+          onQuantityChange={handleQuantityChange}
+          onToggleSelect={toggleItemSelection}
+          updatePending={updateMutation.isPending}
+          deletePending={deleteMutation.isPending}
         />
       ) : (
         <PantryListView

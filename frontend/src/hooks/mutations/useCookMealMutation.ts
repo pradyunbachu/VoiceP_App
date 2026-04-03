@@ -14,6 +14,13 @@ interface CookMealVariables {
   recipe_name: string;
   ingredients: Array<{ item: string; amount: string }>;
   group_id?: number;
+  // Optional recipe data for auto-saving (enables "recall past meal")
+  recipe_instructions?: string[];
+  recipe_description?: string;
+  recipe_servings?: number;
+  recipe_prep_minutes?: number;
+  recipe_cook_minutes?: number;
+  recipe_nutrition?: Record<string, unknown>;
 }
 
 export const useCookMeal = () => {
@@ -21,10 +28,20 @@ export const useCookMeal = () => {
   const queryClient = useQueryClient();
 
   return useMutation<CookMealResponse, Error, CookMealVariables>({
-    mutationFn: async ({ recipe_name, ingredients, group_id }: CookMealVariables): Promise<CookMealResponse> => {
+    mutationFn: async (vars: CookMealVariables): Promise<CookMealResponse> => {
       const token = await getToken();
-      const body: Record<string, unknown> = { recipe_name, ingredients };
-      if (group_id) body.group_id = group_id;
+      const body: Record<string, unknown> = {
+        recipe_name: vars.recipe_name,
+        ingredients: vars.ingredients,
+      };
+      if (vars.group_id) body.group_id = vars.group_id;
+      // Pass recipe data for auto-saving
+      if (vars.recipe_instructions) body.recipe_instructions = vars.recipe_instructions;
+      if (vars.recipe_description) body.recipe_description = vars.recipe_description;
+      if (vars.recipe_servings) body.recipe_servings = vars.recipe_servings;
+      if (vars.recipe_prep_minutes) body.recipe_prep_minutes = vars.recipe_prep_minutes;
+      if (vars.recipe_cook_minutes) body.recipe_cook_minutes = vars.recipe_cook_minutes;
+      if (vars.recipe_nutrition) body.recipe_nutrition = vars.recipe_nutrition;
 
       const response = await fetch(`${API_BASE_URL}/api/cook-meal`, {
         method: 'POST',

@@ -6,6 +6,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+# Accept build-time env vars (Vite inlines these at build time)
+ARG VITE_API_URL
+ARG VITE_SUPABASE_URL
+ARG VITE_SUPABASE_ANON_KEY
+
 # Copy package files
 COPY package*.json ./
 

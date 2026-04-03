@@ -195,7 +195,7 @@
   border: none;
   cursor: pointer;
   transition: all 0.15s ease;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: inherit;
 }
 
 .tutorial-btn-primary {

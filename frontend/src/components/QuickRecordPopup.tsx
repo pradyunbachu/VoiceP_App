@@ -10,13 +10,13 @@
  */
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send, ChefHat, ShoppingCart, BarChart3 } from "lucide-react";
+import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send, ChefHat, ShoppingCart, BarChart3, Clock, ChevronRight, UtensilsCrossed } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ReceiptScanner from "./ReceiptScanner";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useUpdateExpense } from "../hooks";
 import { API_BASE_URL } from "../config/api";
-import type { ShowToast, Expense, ChatResponse, ReceiptScanResult, RecurringSuggestion, AppView } from "../types";
+import type { ShowToast, Expense, ChatResponse, ReceiptScanResult, RecurringSuggestion, AppView, MealSuggestion } from "../types";
 import "./QuickRecordPopup.css";
 
 const QUICK_CONFIRM_THRESHOLD = 0.85;
@@ -31,14 +31,18 @@ interface ExtractedExpenseData {
 
 export interface QuickRecordPopupHandle {
   triggerOpen: () => void;
+  triggerRecord: () => void;
+  triggerType: () => void;
+  triggerScan: () => void;
 }
 
 interface Props {
   showToast: ShowToast;
   onNavigate?: (view: AppView) => void;
+  onSelectMeal?: (meal: { name: string; description: string }) => void;
 }
 
-const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast, onNavigate }, ref) => {
+const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast, onNavigate, onSelectMeal }, ref) => {
   const { getToken } = useAuth();
   const [isVisible, setIsVisible] = useState<boolean>(false);
   const [isRecording, setIsRecording] = useState<boolean>(false);
@@ -75,7 +79,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
 
   const isProcessing = createExpenseMutation.isPending || createExpenseSimpleMutation.isPending || chatMutation.isPending || isTranscribing;
 
-  // Expose triggerOpen to parent via ref
+  // Expose triggerOpen (dropdown) and triggerRecord (instant voice) to parent via ref
   useImperativeHandle(ref, () => ({
     triggerOpen() {
       setIsVisible(true);
@@ -86,6 +90,37 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
       setShowManualInput(false);
       setShowReceiptScanner(false);
       setManualInput("");
+    },
+    triggerRecord() {
+      setError("");
+      setExtractedExpense(null);
+      setChatResponse(null);
+      setPendingPantryExpense(null);
+      setShowManualInput(false);
+      setShowReceiptScanner(false);
+      setManualInput("");
+      startedViaButtonRef.current = true;
+      startRecording();
+    },
+    triggerType() {
+      setIsVisible(true);
+      setError("");
+      setExtractedExpense(null);
+      setChatResponse(null);
+      setPendingPantryExpense(null);
+      setShowReceiptScanner(false);
+      setManualInput("");
+      setShowManualInput(true);
+    },
+    triggerScan() {
+      setIsVisible(true);
+      setError("");
+      setExtractedExpense(null);
+      setChatResponse(null);
+      setPendingPantryExpense(null);
+      setShowManualInput(false);
+      setManualInput("");
+      setShowReceiptScanner(true);
     },
   }));
 
@@ -120,6 +155,20 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
     return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
+  const GROCERY_STORES = [
+    "costco", "walmart", "trader joe", "kroger", "target", "aldi", "safeway",
+    "publix", "heb", "h-e-b", "winco", "sprouts", "whole foods", "sam's club",
+    "wegmans", "meijer", "food lion", "stop and shop", "giant", "shoprite",
+    "albertsons", "vons", "ralphs", "piggly wiggly", "grocery",
+  ];
+
+  const isPantryWorthy = (exp: Expense): boolean => {
+    const cat = (exp.category || "").toLowerCase();
+    if (cat.includes("groceries") || cat.includes("grocery")) return true;
+    const store = (exp.store || "").toLowerCase();
+    return GROCERY_STORES.some((s) => store.includes(s));
+  };
+
   const checkForPantryItems = (expenseData: ExtractedExpenseData | Expense): void => {
     let expenses: Expense[] = [];
     if ((expenseData as ExtractedExpenseData).expenses) {
@@ -128,10 +177,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
       expenses = [expenseData as Expense];
     }
 
-    const groceryExpense = expenses.find((exp) => {
-      const category = (exp.category || "").toLowerCase();
-      return category.includes("groceries") || category.includes("grocery");
-    });
+    const groceryExpense = expenses.find(isPantryWorthy);
 
     if (groceryExpense) {
       setPendingPantryExpense(groceryExpense);
@@ -297,8 +343,13 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
           const expenseData = await createExpenseMutation.mutateAsync(text);
           handleExpenseData(expenseData as unknown as ExtractedExpenseData);
         } catch {
-          const expenseData = await createExpenseSimpleMutation.mutateAsync(text);
-          handleExpenseData(expenseData as unknown as ExtractedExpenseData);
+          try {
+            const expenseData = await createExpenseSimpleMutation.mutateAsync(text);
+            handleExpenseData(expenseData as unknown as ExtractedExpenseData);
+          } catch (fallbackErr) {
+            console.error("Both extraction methods failed:", fallbackErr);
+            setError("Couldn't extract expense details. Try again or type it out.");
+          }
         }
       } else {
         setChatResponse(chatResult);
@@ -322,8 +373,10 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
     const confidence = expenseData.confidence ?? 0;
     const recurringSuggestion = expenseData.recurring_suggestion;
 
-    // Quick-confirm: if confidence is high, auto-dismiss and just show a toast
-    if (confidence >= QUICK_CONFIRM_THRESHOLD) {
+    // Quick-confirm: if confidence is high AND not a grocery trip, auto-dismiss with toast.
+    // Grocery trips always show the full UI so the user can add items to pantry.
+    const hasGroceryItems = expenses.some(isPantryWorthy);
+    if (confidence >= QUICK_CONFIRM_THRESHOLD && !hasGroceryItems) {
       // Build toast message: "$12.50 at Starbucks"
       const store = expenses[0]?.store;
       const amountStr = totalAmount ? `$${totalAmount.toFixed(2)}` : "";
@@ -353,17 +406,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
         showToast(toastMsg, "celebration", 4000);
       }
 
-      // Check for pantry prompt before dismissing
-      const groceryExpense = expenses.find((exp) => {
-        const cat = (exp.category || "").toLowerCase();
-        return cat.includes("groceries") || cat.includes("grocery");
-      });
-      if (groceryExpense) {
-        setPendingPantryExpense(groceryExpense);
-        setShowPantryModal(true);
-      } else {
-        handleDismiss();
-      }
+      handleDismiss();
       return;
     }
 
@@ -686,14 +729,60 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
                   {chatResponse.intent === "pantry_query" && "Pantry"}
                   {chatResponse.intent === "expense_query" && "Spending"}
                   {chatResponse.intent === "suggestion" && "Shopping List"}
+                  {(chatResponse.intent === "meal_suggestion" || chatResponse.intent === "budget_meal") && "Meal Ideas"}
+                  {chatResponse.intent === "recall_past_meal" && "Past Meals"}
                   {chatResponse.intent === "general" && "Help"}
+                  {!["pantry_query", "expense_query", "suggestion", "meal_suggestion", "budget_meal", "recall_past_meal", "general"].includes(chatResponse.intent) && "Done"}
                 </span>
               </h3>
-              <div className="chat-response-text">
-                {chatResponse.response_text.split("\n").map((line, index) => (
-                  <p key={index}>{line}</p>
-                ))}
-              </div>
+
+              {/* Meal suggestions — render as clickable cards */}
+              {(chatResponse.intent === "meal_suggestion" || chatResponse.intent === "budget_meal" || chatResponse.intent === "recall_past_meal") && chatResponse.data?.meals && chatResponse.data.meals.length > 0 ? (
+                <div className="qr-meal-cards">
+                  {(chatResponse.data.meals as Array<MealSuggestion & { recipe_name?: string; cooked_at?: string }>).map((meal, i) => (
+                    <button
+                      key={i}
+                      className="qr-meal-card"
+                      onClick={() => {
+                        const mealName = meal.name || meal.recipe_name || "";
+                        const mealDesc = meal.description || "";
+                        handleDismiss();
+                        if (onSelectMeal && mealName) {
+                          onSelectMeal({ name: mealName, description: mealDesc });
+                        }
+                      }}
+                    >
+                      <div className="qr-meal-info">
+                        <span className="qr-meal-name">{meal.name || meal.recipe_name || "Meal"}</span>
+                        <div className="qr-meal-meta">
+                          {meal.time_minutes && (
+                            <span className="qr-meal-time">
+                              <Clock size={11} />
+                              {meal.time_minutes} min
+                            </span>
+                          )}
+                          {meal.uses_expiring && (
+                            <span className="qr-meal-badge">uses expiring</span>
+                          )}
+                          {meal.cooked_at && (
+                            <span className="qr-meal-time">
+                              {new Date(meal.cooked_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                      <ChevronRight size={16} className="qr-meal-arrow" />
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="chat-response-text">
+                  {chatResponse.response_text.split("\n").map((line, index) => (
+                    <p key={index}>{line}</p>
+                  ))}
+                </div>
+              )}
+
               <div className="quick-record-actions">
                 {/* Context-aware action buttons */}
                 {onNavigate && chatResponse.intent === "suggestion" && (

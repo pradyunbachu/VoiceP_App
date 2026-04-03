@@ -282,7 +282,17 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
   const handleCookMeal = useCallback(
     (recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {
       cookMeal.mutate(
-        { recipe_name: recipeName, ingredients, group_id: apiGroupId as number | undefined },
+        {
+          recipe_name: recipeName,
+          ingredients,
+          group_id: apiGroupId as number | undefined,
+          recipe_instructions: cachedRecipe?.instructions as string[] | undefined,
+          recipe_description: cachedRecipe?.description,
+          recipe_servings: cachedRecipe?.servings,
+          recipe_prep_minutes: cachedRecipe?.prep_minutes,
+          recipe_cook_minutes: cachedRecipe?.cook_minutes,
+          recipe_nutrition: cachedRecipe?.nutrition as Record<string, unknown> | undefined,
+        },
         {
           onSuccess: (result: CookMealResponse) => {
             const msg =

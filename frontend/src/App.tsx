@@ -32,8 +32,9 @@ import UpdatePassword from "./components/UpdatePassword";
 import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
-import { useAnalytics, useClearAllExpenses } from "./hooks";
-import type { AppUser, AppView, Toast as ToastType, ToastAction } from "./types";
+import RecipeDetailPanel from "./components/RecipeDetailModal";
+import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems } from "./hooks";
+import type { AppUser, AppView, Toast as ToastType, ToastAction, RecipeDetail, MealSuggestion, CookMealResponse } from "./types";
 import "./App.css";
 
 const pageVariants = {
@@ -59,6 +60,12 @@ function AppContent() {
   const [showTutorial, setShowTutorial] = useState(false);
   const [selectedPantryGroup, setSelectedPantryGroup] = useState<number | null | "demo">(null);
   const [chefInitialItems, setChefInitialItems] = useState<string[]>([]);
+  // Global recipe panel state (slides out on any screen)
+  const [globalMeal, setGlobalMeal] = useState<{ name: string; description: string } | null>(null);
+  const [globalRecipeCache, setGlobalRecipeCache] = useState<RecipeDetail | null>(null);
+  const globalRecipeDetail = useRecipeDetail();
+  const globalCookMeal = useCookMeal();
+  const { data: globalPantryData } = usePantryItems({ group_id: (selectedPantryGroup === "demo" ? undefined : selectedPantryGroup ?? undefined) as number | undefined });
   const [sessionExpired, setSessionExpired] = useState(false);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
 
@@ -163,6 +170,59 @@ function AppContent() {
     setCurrentView("login");
   }, [signOut, queryClient]);
 
+  // Global recipe panel handlers
+  const handleSelectMeal = useCallback((meal: { name: string; description: string }) => {
+    setGlobalMeal(meal);
+    setGlobalRecipeCache(null);
+    globalRecipeDetail.reset();
+    const available = (Array.isArray(globalPantryData) ? globalPantryData : [])
+      .filter((i: { quantity?: number; stock_status?: string }) => (i.quantity ?? 0) > 0 && i.stock_status !== 'out_of_stock')
+      .map((i: { name: string }) => i.name)
+      .join(', ');
+    globalRecipeDetail.mutate(
+      { meal_name: meal.name, meal_description: meal.description, available_ingredients: available },
+      { onSuccess: (result: RecipeDetail) => setGlobalRecipeCache(result) }
+    );
+  }, [globalPantryData, globalRecipeDetail]);
+
+  const handleCloseGlobalRecipe = useCallback(() => {
+    setGlobalMeal(null);
+    setGlobalRecipeCache(null);
+    globalRecipeDetail.reset();
+  }, [globalRecipeDetail]);
+
+  const handleGlobalCookMeal = useCallback((recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {
+    const recipe = globalRecipeCache || (globalRecipeDetail.data as RecipeDetail | undefined);
+    globalCookMeal.mutate(
+      {
+        recipe_name: recipeName,
+        ingredients,
+        group_id: (selectedPantryGroup === "demo" ? undefined : selectedPantryGroup ?? undefined) as number | undefined,
+        recipe_instructions: recipe?.instructions as string[] | undefined,
+        recipe_description: recipe?.description,
+        recipe_servings: recipe?.servings,
+        recipe_prep_minutes: recipe?.prep_minutes,
+        recipe_cook_minutes: recipe?.cook_minutes,
+        recipe_nutrition: recipe?.nutrition as Record<string, unknown> | undefined,
+      },
+      {
+        onSuccess: (result: CookMealResponse) => {
+          const msg = result.expiring_items_saved > 0
+            ? `Used ${result.expiring_items_saved} expiring item${result.expiring_items_saved > 1 ? 's' : ''} — $${result.estimated_savings} saved!`
+            : `Recipe logged! ${result.deducted_count} pantry item${result.deducted_count !== 1 ? 's' : ''} updated.`;
+          showToast(msg, 'celebration', 5000);
+          handleCloseGlobalRecipe();
+        },
+        onError: () => {
+          showToast("Couldn't log your meal.", 'error', 6000, {
+            label: "Retry",
+            onClick: () => handleGlobalCookMeal(recipeName, ingredients),
+          });
+        },
+      }
+    );
+  }, [globalRecipeCache, globalRecipeDetail.data, selectedPantryGroup, globalCookMeal, showToast, handleCloseGlobalRecipe]);
+
   const handleClearAll = async () => {
     try {
       await clearAllMutation.mutateAsync();
@@ -252,7 +312,7 @@ function AppContent() {
               showToast={showToast}
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
-              onOpenVoxy={() => quickRecordRef.current?.triggerOpen()}
+              onOpenVoxy={() => quickRecordRef.current?.triggerRecord()}
               selectedPantryGroup={selectedPantryGroup}
             />
           </div>
@@ -370,7 +430,7 @@ function AppContent() {
               showToast={showToast}
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
-              onOpenVoxy={() => quickRecordRef.current?.triggerOpen()}
+              onOpenVoxy={() => quickRecordRef.current?.triggerRecord()}
               selectedPantryGroup={selectedPantryGroup}
             />
           </div>
@@ -390,8 +450,24 @@ function AppContent() {
             onLogout={handleLogout}
             user={user}
           />
-          <QuickRecordPopup ref={quickRecordRef} showToast={showToast} onNavigate={setCurrentView} />
+          <QuickRecordPopup ref={quickRecordRef} showToast={showToast} onNavigate={setCurrentView} onSelectMeal={handleSelectMeal} />
           <VoxyFAB popupRef={quickRecordRef} />
+
+          {/* Global recipe panel — slides out on any screen */}
+          <div className={`global-recipe-panel ${globalMeal ? 'open' : ''}`}>
+            {globalMeal && (
+              <RecipeDetailPanel
+                recipe={globalRecipeCache || (globalRecipeDetail.data as RecipeDetail | undefined)}
+                isLoading={!globalRecipeCache && globalRecipeDetail.isPending}
+                error={!globalRecipeCache && globalRecipeDetail.isError}
+                onClose={handleCloseGlobalRecipe}
+                onCookMeal={handleGlobalCookMeal}
+                isCooking={globalCookMeal.isPending}
+                showToast={showToast}
+              />
+            )}
+          </div>
+          {globalMeal && <div className="global-recipe-backdrop" onClick={handleCloseGlobalRecipe} />}
         </ErrorBoundary>
       )}
       <ErrorBoundary name="view" key={currentView}>

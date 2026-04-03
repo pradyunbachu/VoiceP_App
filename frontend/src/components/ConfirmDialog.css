@@ -52,7 +52,7 @@
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
-  font-family: 'Bricolage Grotesque', sans-serif;
+  font-family: inherit;
   transition: all 0.2s;
 }
 

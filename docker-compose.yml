@@ -1,48 +1,53 @@
-version: '3.8'
-
 services:
   # Backend API (FastAPI)
   backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: voxalyze-backend
+    container_name: voxal-backend
     restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
+      - ENVIRONMENT=production
       - SUPABASE_URL=${SUPABASE_URL}
       - SUPABASE_KEY=${SUPABASE_KEY}
       - SUPABASE_JWT_SECRET=${SUPABASE_JWT_SECRET}
       - GROQ_API_KEY=${GROQ_API_KEY}
       - DEEPGRAM_API_KEY=${DEEPGRAM_API_KEY}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-https://yourdomain.com}
     networks:
-      - voxalyze-network
+      - voxal-network
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 10s
+      start_period: 15s
 
   # Frontend (React + Nginx)
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-    container_name: voxalyze-frontend
+      args:
+        - VITE_API_URL=${VITE_API_URL:-}
+        - VITE_SUPABASE_URL=${VITE_SUPABASE_URL:-}
+        - VITE_SUPABASE_ANON_KEY=${VITE_SUPABASE_ANON_KEY:-}
+    container_name: voxal-frontend
     restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
-      - voxalyze-network
-    # Uncomment below for HTTPS support:
+      - voxal-network
+    # Uncomment for HTTPS:
     # volumes:
     #   - ./certs:/etc/nginx/ssl:ro
 
 networks:
-  voxalyze-network:
+  voxal-network:
     driver: bridge

@@ -32,6 +32,7 @@ from handlers import (
     handle_reminder_check,
     handle_meal_plan_week,
     handle_budget_meal,
+    handle_recall_past_meal,
     handle_shopping_complete,
     handle_shopping_list_add,
     handle_shopping_list_remove,
@@ -124,6 +125,9 @@ async def chat(
 
     elif intent == "budget_meal":
         data = await handle_budget_meal(user_id, entities, message)
+
+    elif intent == "recall_past_meal":
+        data = await handle_recall_past_meal(user_id, sub_intent, entities, message)
 
     # --- Shopping list domain ---
     elif intent == "shopping_complete":

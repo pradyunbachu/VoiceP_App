@@ -22,7 +22,7 @@
   --radius-xl: 14px;
   --radius-full: 9999px;
 
-  --font-brand: 'Bricolage Grotesque', sans-serif;
+  --font-brand: 'Montserrat', sans-serif;
 }
 
 /* Dark Theme (default) — True black / gold palette */
@@ -197,7 +197,7 @@ body {
 }
 
 body {
-  font-family: 'Bricolage Grotesque', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Oxygen',
+  font-family: 'Montserrat', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', 'Roboto', 'Oxygen',
     'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
   -webkit-font-smoothing: antialiased;

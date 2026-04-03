@@ -1,30 +1,55 @@
-.voxy-fab {
+/* ── Voxy Action Bar — Type / Voice / Scan ──────────────── */
+.voxy-bar {
   position: fixed;
   top: 80px;
   left: 24px;
   z-index: 999;
-  width: 44px;
-  height: 44px;
-  border-radius: 50%;
-  border: none;
-  background: var(--accent-primary);
-  color: white;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 6px;
+  background: var(--bg-card);
+  border: 1px solid var(--border-primary);
+  border-radius: 100px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+/* Shared button base */
+.voxy-bar-btn {
   display: flex;
   align-items: center;
   justify-content: center;
+  border: none;
   cursor: pointer;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.25);
-  transition: transform 0.15s, box-shadow 0.15s, background 0.15s;
+  transition: background 0.15s, transform 0.1s;
 }
 
-.voxy-fab:hover {
-  transform: scale(1.08);
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+/* Voice — large center button */
+.voxy-bar-btn--primary {
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--accent-primary);
+  color: white;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.voxy-bar-btn--primary:hover {
   background: var(--accent-primary-hover);
 }
 
-.voxy-fab:active {
-  transform: scale(0.95);
+/* Type / Scan — smaller side buttons */
+.voxy-bar-btn--secondary {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--text-muted);
+}
+
+.voxy-bar-btn--secondary:hover {
+  background: var(--bg-card-hover);
+  color: var(--text-primary);
 }
 
 /* Theme toggle — fixed bottom-left */
@@ -36,8 +61,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 36px;
+  height: 36px;
   background: var(--bg-card);
   border: 1px solid var(--border-primary);
   border-radius: 50%;
@@ -51,23 +76,30 @@
   background: var(--bg-card-hover);
   border-color: var(--border-hover);
   color: var(--text-primary);
-  transform: scale(1.08);
 }
 
+/* ── Mobile ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
-  .voxy-fab {
-    top: auto;
-    bottom: 100px; /* above the bottom nav */
-    left: 12px;
-    width: 40px;
-    height: 40px;
+  .voxy-bar {
+    bottom: 80px; /* above mobile bottom nav */
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 5px;
+    gap: var(--space-1);
+  }
+
+  .voxy-bar-btn--primary {
+    width: 46px;
+    height: 46px;
+  }
+
+  .voxy-bar-btn--secondary {
+    width: 36px;
+    height: 36px;
   }
 
   .theme-toggle-fixed {
-    bottom: 100px; /* above the bottom nav */
-    right: 12px;
-    left: auto;
-    width: 36px;
-    height: 36px;
+    display: none; /* hide on mobile — theme toggle is in settings */
   }
 }

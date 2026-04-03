@@ -13,6 +13,7 @@ export { useSpendingComparison } from './queries/useSpendingComparison';
 export { useDailyRecs } from './queries/useDailyRecs';
 export { useStreak } from './queries/useStreak';
 export { useCookStats } from './queries/useCookStats';
+export { useCookedMeals } from './queries/useCookedMeals';
 export { queryKeys } from './queries/queryKeys';
 
 // Expense mutations

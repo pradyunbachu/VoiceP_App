@@ -74,6 +74,101 @@ async def handle_suggestion(user_id: str, sub_intent: str, entities: dict) -> di
     }
 
 
+async def handle_recall_past_meal(user_id: str, sub_intent: str, entities: dict, message: str = None) -> dict:
+    """Look up a user's cooked meal history and cross-reference saved recipes."""
+    if supabase is None:
+        return {"meals": [], "message": "Database not configured"}
+
+    # Search cooked_meals for matching recipe names
+    recipe_name = entities.get("recipe_name")
+    time_period = entities.get("time_period")
+
+    # Determine how far back to look
+    days_back = 30
+    if time_period:
+        tp = time_period.lower()
+        if "today" in tp:
+            days_back = 1
+        elif "yesterday" in tp:
+            days_back = 2
+        elif "week" in tp:
+            days_back = 7
+        elif "month" in tp:
+            days_back = 30
+        elif "year" in tp:
+            days_back = 365
+
+    since = (datetime.now() - timedelta(days=days_back)).isoformat()
+
+    try:
+        query = (
+            supabase.table("cooked_meals")
+            .select("id, recipe_name, ingredients_deducted, cooked_at")
+            .eq("user_id", user_id)
+            .gte("cooked_at", since)
+            .order("cooked_at", desc=True)
+            .limit(10)
+        )
+        if recipe_name:
+            query = query.ilike("recipe_name", f"%{recipe_name}%")
+
+        resp = query.execute()
+        cooked = resp.data or []
+    except Exception as e:
+        logger.error("Failed to recall past meals: %s", e)
+        cooked = []
+
+    if not cooked:
+        # If the user mentioned a specific recipe, try a broader search (all time)
+        if recipe_name:
+            try:
+                resp = (
+                    supabase.table("cooked_meals")
+                    .select("id, recipe_name, ingredients_deducted, cooked_at")
+                    .eq("user_id", user_id)
+                    .ilike("recipe_name", f"%{recipe_name}%")
+                    .order("cooked_at", desc=True)
+                    .limit(5)
+                    .execute()
+                )
+                cooked = resp.data or []
+            except Exception:
+                pass
+
+    # Cross-reference with saved_recipes to get full recipe data
+    found_recipes = []
+    for meal in cooked:
+        saved = None
+        try:
+            saved_resp = (
+                supabase.table("saved_recipes")
+                .select("*")
+                .eq("user_id", user_id)
+                .ilike("name", f"%{meal['recipe_name']}%")
+                .limit(1)
+                .execute()
+            )
+            if saved_resp.data:
+                saved = saved_resp.data[0]
+        except Exception:
+            pass
+
+        found_recipes.append({
+            "recipe_name": meal["recipe_name"],
+            "cooked_at": meal["cooked_at"],
+            "ingredients_used": meal.get("ingredients_deducted", []),
+            "has_saved_recipe": saved is not None,
+            "saved_recipe": saved,
+        })
+
+    return {
+        "meals": found_recipes,
+        "count": len(found_recipes),
+        "query_type": "recall_past_meal",
+        "searched_recipe": recipe_name,
+    }
+
+
 async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict, message: str = None) -> dict:
     """Generate meal suggestions based on pantry contents and user preferences."""
     if supabase is None:

@@ -24,7 +24,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: inherit;
   box-shadow: var(--shadow-sm);
   z-index: 10;
 }
@@ -108,7 +108,7 @@
   transition: all 0.3s ease;
   box-shadow: var(--shadow-accent);
   margin-top: 0.5rem;
-  font-family: "Bricolage Grotesque", sans-serif;
+  font-family: inherit;
 }
 
 .get-started-button:hover {

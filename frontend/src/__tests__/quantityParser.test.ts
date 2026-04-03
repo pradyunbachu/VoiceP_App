@@ -133,4 +133,38 @@ describe("parseQuantityFromItem", () => {
       });
     });
   });
+
+  describe("edge cases: quantity bounds", () => {
+    it("clamps extremely large leading quantities to 99999", () => {
+      const result = parseQuantityFromItem("9999999 apples");
+      expect(result.quantity).toBe(99999);
+      expect(result.name).toBe("apples");
+    });
+
+    it("clamps extremely large trailing x quantities", () => {
+      const result = parseQuantityFromItem("eggs x9999999");
+      expect(result.quantity).toBe(99999);
+    });
+
+    it("clamps extremely large parenthesized quantities", () => {
+      const result = parseQuantityFromItem("eggs (9999999)");
+      expect(result.quantity).toBe(99999);
+    });
+
+    it("handles empty string input", () => {
+      const result = parseQuantityFromItem("");
+      expect(result).toEqual({ quantity: 1, unit: "", name: "" });
+    });
+
+    it("handles whitespace-only input", () => {
+      const result = parseQuantityFromItem("   ");
+      expect(result).toEqual({ quantity: 1, unit: "", name: "" });
+    });
+
+    it("handles zero quantity by defaulting to 1", () => {
+      const result = parseQuantityFromItem("0 apples");
+      expect(result.quantity).toBe(1);
+      expect(result.name).toBe("apples");
+    });
+  });
 });

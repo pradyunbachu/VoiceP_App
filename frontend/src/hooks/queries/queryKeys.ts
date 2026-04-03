@@ -121,6 +121,12 @@ export const queryKeys = {
     all: ['cookStats'] as const,
   },
 
+  // Cooked Meals History
+  cookedMeals: {
+    all: ['cookedMeals'] as const,
+    list: (filters: { days_back?: number; search?: string }) => [...queryKeys.cookedMeals.all, 'list', filters] as const,
+  },
+
   // Meal Planner
   mealPlan: {
     all: ['mealPlan'] as const,

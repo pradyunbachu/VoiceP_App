@@ -18,16 +18,23 @@ const ADJECTIVE_TO_UNIT: Record<string, string> = {
   jarred: "jar", sliced: "slice", packed: "pack",
 };
 
+const MAX_QUANTITY = 99999;
+
+// Clamp parsed quantity to a reasonable range
+const clampQty = (qty: number): number =>
+  Number.isFinite(qty) && qty > 0 ? Math.min(qty, MAX_QUANTITY) : 1;
+
 // Extract quantity, unit, and name from a single item string.
 // Supports patterns like "6 chocolates", "2 lbs chicken", "eggs x12",
 // "eggs (12)", "bottle of chipotle sauce", "Bottled Chipotle Sauce".
 export const parseQuantityFromItem = (itemStr: string): ParsedQuantity => {
   const trimmed = itemStr.trim();
+  if (!trimmed) return { quantity: 1, unit: "", name: "" };
 
   // Pattern 1: leading number -- "6 chocolates", "2 lbs chicken"
   const leadingNumMatch = trimmed.match(/^(\d+(?:\.\d+)?)\s*(.+)$/);
   if (leadingNumMatch) {
-    const qty = parseFloat(leadingNumMatch[1]);
+    const qty = clampQty(parseFloat(leadingNumMatch[1]));
     const rest = leadingNumMatch[2].trim();
 
     // Check for unit words between quantity and name
@@ -44,7 +51,7 @@ export const parseQuantityFromItem = (itemStr: string): ParsedQuantity => {
   const trailingXMatch = trimmed.match(/^(.+?)\s*x\s*(\d+(?:\.\d+)?)$/i);
   if (trailingXMatch) {
     return {
-      quantity: parseFloat(trailingXMatch[2]),
+      quantity: clampQty(parseFloat(trailingXMatch[2])),
       unit: "",
       name: trailingXMatch[1].trim(),
     };
@@ -54,7 +61,7 @@ export const parseQuantityFromItem = (itemStr: string): ParsedQuantity => {
   const parenMatch = trimmed.match(/^(.+?)\s*\((\d+(?:\.\d+)?)\)$/);
   if (parenMatch) {
     return {
-      quantity: parseFloat(parenMatch[2]),
+      quantity: clampQty(parseFloat(parenMatch[2])),
       unit: "",
       name: parenMatch[1].trim(),
     };
