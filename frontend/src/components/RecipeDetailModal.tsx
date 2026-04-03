@@ -68,20 +68,9 @@ const RecipeDetailPanel: React.FC<Props> = ({ recipe, isLoading, error, onClose,
   const handleToggleSave = () => {
     if (!recipe) return;
     if (isSaved && savedEntry) {
-      deleteSavedRecipe.mutate(savedEntry.id, {
-        onSuccess: () => showToast?.('Recipe removed from saved', 'info', 3000),
-      });
+      deleteSavedRecipe.mutate(savedEntry.id);
     } else {
-      saveRecipe.mutate({ ...recipe, instructions: recipe.instructions || [], ingredients: recipe.ingredients || [] } as import('../types').RecipeDetail, {
-        onSuccess: () => showToast?.('Recipe saved!', 'success', 3000),
-        onError: (err) => {
-          if (err.message === 'Already saved') {
-            showToast?.('Recipe already saved', 'info', 3000);
-          } else {
-            showToast?.('Failed to save recipe', 'error', 3000);
-          }
-        },
-      });
+      saveRecipe.mutate({ ...recipe, instructions: recipe.instructions || [], ingredients: recipe.ingredients || [] } as import('../types').RecipeDetail);
     }
   };
 

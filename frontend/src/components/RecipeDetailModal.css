@@ -28,8 +28,12 @@
   justify-content: space-between;
   align-items: center;
   padding: var(--space-3) var(--space-4);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-secondary);
   flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  background: var(--bg-primary);
+  z-index: 10;
 }
 
 .recipe-back-btn {
@@ -397,6 +401,12 @@
 /* Responsive — stack panels on small screens */
 @media (max-width: 700px) {
   .recipe-panel {
+    top: 0;
+    height: 100%;
     width: 100%;
+  }
+
+  .recipe-panel-header {
+    padding-top: 60px;
   }
 }

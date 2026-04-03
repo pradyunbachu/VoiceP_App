@@ -58,7 +58,7 @@ const MobileBottomNav: FC<Props> = ({ currentView, onViewChange }) => {
 
   return (
     <>
-      <nav className="mobile-bottom-nav">
+      <nav className="mobile-bottom-nav" data-tutorial="mobile-nav">
         <button
           className={`mobile-nav-tab ${currentView === "home" ? "active" : ""}`}
           onClick={() => handleNav("home")}

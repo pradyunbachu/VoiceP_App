@@ -757,6 +757,8 @@
 
 @media (max-width: 700px) {
   .mp-recipe-panel {
+    top: 0;
+    height: 100%;
     width: 100%;
   }
 }

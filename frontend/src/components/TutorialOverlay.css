@@ -254,8 +254,8 @@
   }
 }
 
-/* Responsive: smaller screens get a narrower card */
-@media (max-width: 420px) {
+/* ── Mobile ≤768px ──────────────────────────────────────── */
+@media (max-width: 768px) {
   .tutorial-card {
     max-width: calc(100vw - 32px);
     padding: var(--space-5);
@@ -265,7 +265,38 @@
     width: calc(100vw - 32px);
   }
 
+  .tutorial-title {
+    font-size: 1.0625rem;
+  }
+
+  .tutorial-description {
+    font-size: 0.8125rem;
+    margin-bottom: var(--space-4);
+  }
+
+  /* Smaller dots on mobile to prevent overflow */
+  .tutorial-dots {
+    gap: 4px;
+  }
+
+  .tutorial-dot {
+    width: 6px;
+    height: 6px;
+  }
+
+  .tutorial-dot.active {
+    width: 14px;
+  }
+
+  /* Compact buttons on mobile */
+  .tutorial-btn {
+    padding: var(--space-2) var(--space-3);
+    font-size: 0.75rem;
+  }
+
+  /* Move interaction hint above mobile bottom nav + voxy bar */
   .tutorial-interaction-hint {
+    bottom: 150px;
     left: 16px;
     right: 16px;
     transform: none;
@@ -273,6 +304,7 @@
     justify-content: center;
     white-space: normal;
     text-align: center;
+    padding: var(--space-3) var(--space-4);
   }
 
   @keyframes tutorialHintSlideUp {
@@ -284,5 +316,42 @@
       opacity: 1;
       transform: translateY(0);
     }
+  }
+}
+
+/* ── Small phones ≤380px ────────────────────────────────── */
+@media (max-width: 380px) {
+  .tutorial-card {
+    padding: var(--space-4);
+  }
+
+  .tutorial-icon {
+    width: 32px;
+    height: 32px;
+    margin-bottom: var(--space-2);
+  }
+
+  .tutorial-title {
+    font-size: 1rem;
+  }
+
+  .tutorial-description {
+    font-size: 0.8125rem;
+    line-height: 1.5;
+  }
+
+  /* Stack footer vertically on very small screens */
+  .tutorial-footer {
+    flex-direction: column;
+    align-items: stretch;
+    gap: var(--space-2);
+  }
+
+  .tutorial-dots {
+    justify-content: center;
+  }
+
+  .tutorial-nav-buttons {
+    justify-content: flex-end;
   }
 }

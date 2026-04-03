@@ -81,6 +81,7 @@
 /* ── Mobile ─────────────────────────────────────────────── */
 @media (max-width: 768px) {
   .voxy-bar {
+    top: auto;
     bottom: 80px; /* above mobile bottom nav */
     right: auto;
     left: 50%;

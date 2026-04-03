@@ -23,7 +23,7 @@ const defaultProps = () => ({
     makeItem({ id: 2, name: "Apples", category: "Produce", quantity: 5, unit: "lb" }),
     makeItem({ id: 3, name: "Chicken", category: "Meat & Seafood", quantity: 1, unit: "lb", stock_status: "low" as StockStatus }),
   ],
-  editingId: null,
+  editingId: null as number | null,
   editForm: {
     name: "",
     quantity: 1,

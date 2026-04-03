@@ -98,6 +98,25 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
 
+  // Settings-driven filter: hide out-of-stock items
+  const [hideOutOfStock, setHideOutOfStock] = useState<boolean>(
+    () => localStorage.getItem("voxal_hide_out_of_stock") === "true"
+  );
+
+  // Re-read the setting when the window regains focus (user may toggle in Settings tab)
+  useEffect(() => {
+    const handleFocus = () => {
+      setHideOutOfStock(localStorage.getItem("voxal_hide_out_of_stock") === "true");
+    };
+    window.addEventListener("focus", handleFocus);
+    // Also listen for storage events from other tabs
+    window.addEventListener("storage", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+      window.removeEventListener("storage", handleFocus);
+    };
+  }, []);
+
   // Form state
   const [showAddForm, setShowAddForm] = useState<boolean>(false);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -241,7 +260,9 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
 
   // Server-side filtering has already been applied via query params,
   // so no additional client-side filtering is needed.
-  const filteredItems: PantryItem[] = items;
+  const filteredItems: PantryItem[] = hideOutOfStock && !statusFilter
+    ? items.filter((item) => item.stock_status !== "out_of_stock")
+    : items;
 
   // Dynamically compute how many columns fit in the container
   // (280px min card width, 16px gap) for responsive grid virtualization.

@@ -1,7 +1,7 @@
 import { useMemo, useState, useRef } from "react";
 import type { FC } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronRight, HelpCircle, Flame, CreditCard } from "lucide-react";
+import { ChevronRight, HelpCircle, Flame, CreditCard, X } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import {
   useExpenses,
@@ -81,6 +81,9 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
   };
 
   const closeRecipe = () => { setSelectedMeal(null); setCachedRecipe(null); recipeDetail.reset(); };
+
+  // Wrap onNavigate so it closes the recipe panel before navigating
+  const navigate = (view: AppView) => { closeRecipe(); onNavigate(view); };
 
   const handleCookMeal = (name: string, ingredients: Array<{ item: string; amount: string }>) => {
     cookMeal.mutate(
@@ -171,29 +174,71 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
         )}
       </motion.div>
 
-      {/* ── Hero: Budget ───────────────────────────────────── */}
-      <motion.button className="hd-hero" onClick={() => onNavigate("budgets")} variants={fadeUp}>
-        <span className="hd-hero-amount">
-          ${budgetSummary ? budgetSummary.remaining.toFixed(0) : weeklyExpenses.total.toFixed(0)}
-        </span>
-        <span className="hd-hero-label">
-          {budgetSummary ? "Monthly Budget" : "Spent This Week"}
-        </span>
-        {budgetSummary && (
-          <div className="hd-hero-bar">
-            <div className="hd-hero-bar-fill" style={{ width: `${budgetSummary.pct}%` }} />
-          </div>
+      {/* ── Hero: What to Cook ──────────────────────────────── */}
+      <motion.div className="hd-hero" variants={fadeUp} data-tutorial="hero-meal">
+        {recsLoading ? (
+          <div className="hd-card-center"><MixingBowlLoader size="sm" /></div>
+        ) : dailyRecsData?.meals && dailyRecsData.meals.length > 0 ? (
+          <>
+            <span className="hd-hero-label">Tonight's Pick</span>
+            <button className="hd-hero-meal" onClick={() => handleMealClick(dailyRecsData.meals[0])}>
+              <span className="hd-hero-meal-name">{dailyRecsData.meals[0].name}</span>
+              {dailyRecsData.meals[0].time_minutes && (
+                <span className="hd-hero-meal-time">{dailyRecsData.meals[0].time_minutes} min</span>
+              )}
+            </button>
+            {dailyRecsData.meals[0].ingredients_used && dailyRecsData.meals[0].ingredients_used.length > 0 && (
+              <span className="hd-hero-detail">
+                Uses {dailyRecsData.meals[0].ingredients_used.slice(0, 4).join(", ")}
+              </span>
+            )}
+          </>
+        ) : (
+          <>
+            <span className="hd-hero-label">What's Cooking?</span>
+            <span className="hd-hero-detail">Add items to your pantry to get recipe ideas</span>
+          </>
         )}
-        {budgetSummary && (
-          <span className="hd-hero-detail">
-            ${budgetSummary.spent.toFixed(0)} spent of ${budgetSummary.total.toFixed(0)}
-          </span>
-        )}
-      </motion.button>
+      </motion.div>
 
-      {/* ── Stat Grid 2x2 ──────────────────────────────────── */}
-      <motion.div className="hd-stats" variants={fadeUp}>
-        <button className="hd-stat-card" onClick={() => onNavigate("chef")}>
+      {/* ── More Recipes ───────────────────────────────────── */}
+      {dailyRecsData?.meals && dailyRecsData.meals.length > 1 && (
+        <motion.div variants={fadeUp}>
+          <h2 className="hd-section-title">More Ideas</h2>
+          <div className="hd-card">
+            {dailyRecsData.meals.slice(1, 4).map((meal: MealSuggestion, i: number) => (
+              <button key={i} className="hd-row" onClick={() => handleMealClick(meal)}>
+                <span className="hd-row-text">{meal.name}</span>
+                <span className="hd-row-right">
+                  {meal.uses_expiring && <span className="hd-pill">expiring</span>}
+                  {meal.time_minutes && <span className="hd-row-dim">{meal.time_minutes}m</span>}
+                </span>
+              </button>
+            ))}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Expiring Soon ──────────────────────────────────── */}
+      {expiringItems.length > 0 && (
+        <motion.div variants={fadeUp}>
+          <h2 className="hd-section-title">Use It or Lose It</h2>
+          <button className="hd-card" onClick={() => navigate("chef")}>
+            {expiringItems.map((item, i) => (
+              <div key={i} className="hd-row hd-row--static">
+                <span className="hd-row-text">{item.name}</span>
+                <span className={`hd-row-dim${item.daysLeft <= 1 ? " hd-row-dim--urgent" : ""}`}>
+                  {item.daysLeft === 0 ? "today" : item.daysLeft === 1 ? "tomorrow" : `${item.daysLeft} days`}
+                </span>
+              </div>
+            ))}
+          </button>
+        </motion.div>
+      )}
+
+      {/* ── Cooking Stats ──────────────────────────────────── */}
+      <motion.div className="hd-stats" variants={fadeUp} data-tutorial="cooking-stats">
+        <button className="hd-stat-card" onClick={() => navigate("chef")}>
           <div className="hd-stat-top">
             <div>
               <span className="hd-stat-label">Streak</span>
@@ -203,7 +248,7 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
             <Flame size={42} className="hd-stat-icon" />
           </div>
         </button>
-        <button className="hd-stat-card hd-stat-card--warm" onClick={() => onNavigate("pantry")}>
+        <button className="hd-stat-card hd-stat-card--warm" onClick={() => navigate("pantry")}>
           <div className="hd-stat-top">
             <div>
               <span className="hd-stat-label">Pantry</span>
@@ -217,7 +262,33 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
             </div>
           </div>
         </button>
-        <button className="hd-stat-card hd-stat-card--warm" onClick={() => onNavigate("shopping-list")}>
+      </motion.div>
+
+      {/* ── Cooked This Week ───────────────────────────────── */}
+      {cookStats && cookStats.recent_meals && cookStats.recent_meals.length > 0 && (
+        <motion.div variants={fadeUp}>
+          <h2 className="hd-section-title">Cooked This Week</h2>
+          <div className="hd-card">
+            {cookStats.recent_meals.slice(0, 4).map((meal, i) => (
+              <div key={i} className="hd-row hd-row--static">
+                <span className="hd-row-text">{meal.recipe_name}</span>
+                <span className="hd-row-dim">
+                  {new Date(meal.cooked_at).toLocaleDateString(undefined, { weekday: "short" })}
+                </span>
+              </div>
+            ))}
+            {cookStats.week_estimated_savings > 0 && (
+              <div className="hd-card-footer">
+                ~${cookStats.week_estimated_savings} saved from waste this week
+              </div>
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* ── Shopping + Spending (secondary) ─────────────────── */}
+      <motion.div className="hd-stats" variants={fadeUp}>
+        <button className="hd-stat-card hd-stat-card--warm" onClick={() => navigate("shopping-list")}>
           <div className="hd-stat-top">
             <div>
               <span className="hd-stat-label">Shopping</span>
@@ -231,12 +302,16 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
             </div>
           </div>
         </button>
-        <button className="hd-stat-card" onClick={() => onNavigate("expenses")}>
+        <button className="hd-stat-card" onClick={() => navigate("budgets")}>
           <div className="hd-stat-top">
             <div>
-              <span className="hd-stat-label">Purchases</span>
-              <span className="hd-stat-num">{weeklyExpenses.count}</span>
-              <span className="hd-stat-sub">this week</span>
+              <span className="hd-stat-label">{budgetSummary ? "Budget" : "Spent"}</span>
+              <span className="hd-stat-num">
+                ${budgetSummary ? Math.abs(budgetSummary.remaining).toFixed(0) : weeklyExpenses.total.toFixed(0)}
+              </span>
+              <span className="hd-stat-sub">
+                {budgetSummary ? (budgetSummary.remaining >= 0 ? "left" : "over") : "this week"}
+              </span>
             </div>
             <CreditCard size={38} className="hd-stat-icon" />
           </div>
@@ -245,81 +320,25 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
 
       {/* ── Getting Started (first-time user) ────────────────── */}
       {weeklyExpenses.count === 0 && pantryTotal === 0 && !recsLoading && (
-        <motion.div className="hd-getting-started" variants={fadeUp}>
+        <motion.div variants={fadeUp}>
           <h2 className="hd-section-title">Get Started</h2>
           <div className="hd-card">
             <button className="hd-row" onClick={onOpenVoxy}>
-              <span className="hd-row-text">Log your first expense by voice</span>
+              <span className="hd-row-text">Tell Voxy what's in your kitchen</span>
               <span className="hd-pill">try it</span>
             </button>
-            <button className="hd-row" onClick={() => onNavigate("pantry")}>
+            <button className="hd-row" onClick={() => navigate("pantry")}>
               <span className="hd-row-text">Add items to your pantry</span>
               <ChevronRight size={14} className="hd-row-chevron" />
             </button>
-            <button className="hd-row" onClick={() => onNavigate("shopping-list")}>
-              <span className="hd-row-text">Start a shopping list</span>
+            <button className="hd-row" onClick={() => navigate("chef")}>
+              <span className="hd-row-text">Find a recipe to cook</span>
               <ChevronRight size={14} className="hd-row-chevron" />
             </button>
           </div>
         </motion.div>
       )}
 
-      {/* ── Voxy's Picks ───────────────────────────────────── */}
-      <motion.div variants={fadeUp}>
-        <h2 className="hd-section-title">Voxy's Picks</h2>
-        <div className="hd-card">
-          {recsLoading ? (
-            <div className="hd-card-center"><MixingBowlLoader size="sm" /></div>
-          ) : dailyRecsData?.meals && dailyRecsData.meals.length > 0 ? (
-            dailyRecsData.meals.slice(0, 3).map((meal: MealSuggestion, i: number) => (
-              <button key={i} className="hd-row" onClick={() => handleMealClick(meal)}>
-                <span className="hd-row-text">{meal.name}</span>
-                <span className="hd-row-right">
-                  {meal.uses_expiring && <span className="hd-pill">expiring</span>}
-                  {meal.time_minutes && <span className="hd-row-dim">{meal.time_minutes}m</span>}
-                </span>
-              </button>
-            ))
-          ) : (
-            <p className="hd-empty">Add pantry items to get meal ideas</p>
-          )}
-        </div>
-      </motion.div>
-
-      {/* ── Expiring Soon ──────────────────────────────────── */}
-      {expiringItems.length > 0 && (
-        <motion.div variants={fadeUp}>
-          <h2 className="hd-section-title">Expiring Soon</h2>
-          <button className="hd-card" onClick={() => onNavigate("chef")}>
-            {expiringItems.map((item, i) => (
-              <div key={i} className="hd-row hd-row--static">
-                <span className="hd-row-text">{item.name}</span>
-                <span className={`hd-row-dim${item.daysLeft <= 1 ? " hd-row-dim--urgent" : ""}`}>
-                  {item.daysLeft === 0 ? "today" : item.daysLeft === 1 ? "tomorrow" : `${item.daysLeft} days`}
-                </span>
-              </div>
-            ))}
-          </button>
-        </motion.div>
-      )}
-
-      {/* ── Recent Activity ────────────────────────────────── */}
-      {weeklyExpenses.recent.length > 0 && (
-        <motion.div variants={fadeUp}>
-          <h2 className="hd-section-title">Recent Activity</h2>
-          <button className="hd-card" onClick={() => onNavigate("expenses")}>
-            {weeklyExpenses.recent.map((exp, i) => (
-              <div key={exp.id || i} className="hd-row hd-row--static">
-                <span className="hd-row-text">{exp.store}</span>
-                <span className="hd-row-amount">-${exp.amount.toFixed(2)}</span>
-              </div>
-            ))}
-          </button>
-        </motion.div>
-      )}
-
-      {/* hidden anchor for tutorial targeting */}
-      <div data-tutorial="quick-actions" />
 
       {/* ── Recipe Detail Slide-out ────────────────────────── */}
       <AnimatePresence>

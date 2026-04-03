@@ -23,7 +23,7 @@ import MixingBowlLoader from "./components/MixingBowlLoader";
 import QuickRecordPopup from "./components/QuickRecordPopup";
 import type { QuickRecordPopupHandle } from "./components/QuickRecordPopup";
 import VoxyFAB from "./components/VoxyFAB";
-import DailyRecs from "./components/DailyRecs";
+// DailyRecs slide-out panel removed — recipes now shown inline on dashboard
 import TutorialOverlay from "./components/TutorialOverlay";
 import ConfirmDialog from "./components/ConfirmDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -32,15 +32,16 @@ import UpdatePassword from "./components/UpdatePassword";
 import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { X } from "lucide-react";
 import RecipeDetailPanel from "./components/RecipeDetailModal";
 import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems } from "./hooks";
 import type { AppUser, AppView, Toast as ToastType, ToastAction, RecipeDetail, MealSuggestion, CookMealResponse } from "./types";
 import "./App.css";
 
 const pageVariants = {
-  initial: { opacity: 0, y: 12 },
-  animate: { opacity: 1, y: 0 },
-  exit: { opacity: 0, y: -8 },
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
 };
 
 const pageTransition = {
@@ -454,6 +455,7 @@ function AppContent() {
           <VoxyFAB popupRef={quickRecordRef} />
 
           {/* Global recipe panel — slides out on any screen */}
+          {globalMeal && <div className="global-recipe-backdrop" onClick={handleCloseGlobalRecipe} />}
           <div className={`global-recipe-panel ${globalMeal ? 'open' : ''}`}>
             {globalMeal && (
               <RecipeDetailPanel
@@ -467,7 +469,6 @@ function AppContent() {
               />
             )}
           </div>
-          {globalMeal && <div className="global-recipe-backdrop" onClick={handleCloseGlobalRecipe} />}
         </ErrorBoundary>
       )}
       <ErrorBoundary name="view" key={currentView}>
@@ -488,7 +489,6 @@ function AppContent() {
         </main>
       </ErrorBoundary>
       {isAuthenticated && <MobileBottomNav currentView={currentView} onViewChange={setCurrentView} />}
-      {isAuthenticated && currentView !== "home" && <DailyRecs showToast={showToast} selectedPantryGroup={selectedPantryGroup} />}
       <TutorialOverlay isOpen={showTutorial} onClose={handleTutorialClose} />
       <AnimatePresence>
         {showClearAllConfirm && (

@@ -45,16 +45,14 @@ const SavedRecipes: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
     setRemovingId(id);
     deleteSaved.mutate(id, {
       onSuccess: () => {
-        showToast('Recipe removed', 'info');
         if (selectedRecipe?.id === id) closePanel();
         setRemovingId(null);
       },
       onError: () => {
-        showToast('Failed to remove recipe', 'error');
         setRemovingId(null);
       },
     });
-  }, [deleteSaved, showToast, selectedRecipe, closePanel]);
+  }, [deleteSaved, selectedRecipe, closePanel]);
 
   const handleCookMeal = useCallback(
     (recipeName: string, ingredients: Array<{ item: string; amount: string }>) => {

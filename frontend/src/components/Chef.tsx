@@ -512,7 +512,8 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
         </DragOverlay>
       </DndContext>
 
-      {/* Recipe detail side panel (left) */}
+      {/* Recipe detail side panel */}
+      {selectedMeal && <div className="chef-recipe-backdrop" onClick={closeRecipePanel} />}
       <div className={`chef-recipe-panel ${selectedMeal ? 'open' : ''}`}>
         {selectedMeal && (
           <RecipeDetailPanel
@@ -527,7 +528,6 @@ const Chef: React.FC<ChefProps> = ({ showToast, selectedGroupId, initialBowlItem
           />
         )}
       </div>
-      {selectedMeal && <div className="chef-recipe-backdrop" onClick={closeRecipePanel} />}
     </div>
   );
 };

@@ -511,11 +511,24 @@
   box-shadow: 0 20px 60px rgba(10, 8, 4, 0.6);
 }
 
-/* Mobile responsive */
+/* Mobile responsive — bottom sheet style */
 @media (max-width: 768px) {
+  .quick-record-overlay {
+    align-items: flex-end;
+  }
+
   .quick-record-popup {
-    min-width: calc(100vw - 2rem);
-    margin: 1rem;
+    min-width: 100%;
+    max-width: 100%;
+    margin: 0;
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--space-6) var(--space-5) max(var(--space-6), env(safe-area-inset-bottom));
+    animation: slideUp 0.25s ease-out;
+  }
+
+  @keyframes slideUp {
+    from { transform: translateY(100%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
   }
 
   .quick-record-actions {

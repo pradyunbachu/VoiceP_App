@@ -9,6 +9,7 @@ import {
   UtensilsCrossed,
   Bell,
   RotateCcw,
+  Package,
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { useTheme } from "../context/ThemeContext";
@@ -55,6 +56,9 @@ const Settings: FC<Props> = ({ showToast }) => {
   );
   const [budgetAlerts, setBudgetAlerts] = useState(() =>
     localStorage.getItem("voxal_budget_alerts") !== "false"
+  );
+  const [hideOutOfStock, setHideOutOfStock] = useState(() =>
+    localStorage.getItem("voxal_hide_out_of_stock") === "true"
   );
 
   // Initialize profile from user_metadata
@@ -119,6 +123,12 @@ const Settings: FC<Props> = ({ showToast }) => {
     const next = !budgetAlerts;
     setBudgetAlerts(next);
     localStorage.setItem("voxal_budget_alerts", String(next));
+  };
+
+  const handleHideOutOfStockToggle = () => {
+    const next = !hideOutOfStock;
+    setHideOutOfStock(next);
+    localStorage.setItem("voxal_hide_out_of_stock", String(next));
   };
 
   const handleResetTutorial = () => {
@@ -379,6 +389,33 @@ const Settings: FC<Props> = ({ showToast }) => {
           <span className="settings-field-hint">
             Items expiring within this window appear in pantry alerts
           </span>
+        </div>
+      </div>
+
+      {/* ── Pantry ──────────────────────────────────── */}
+      <div className="settings-section">
+        <div className="settings-section-header">
+          <Package size={18} />
+          <h3>Pantry</h3>
+        </div>
+
+        <div className="settings-toggle-row">
+          <div className="settings-toggle-info">
+            <span className="settings-toggle-label">Hide out-of-stock items</span>
+            <span className="settings-toggle-desc">
+              Automatically hide items marked as out of stock from pantry views
+            </span>
+          </div>
+          <button
+            className={`settings-toggle ${hideOutOfStock ? "on" : ""}`}
+            onClick={handleHideOutOfStockToggle}
+            role="switch"
+            aria-checked={hideOutOfStock}
+          >
+            <span className="settings-toggle-track">
+              <span className="settings-toggle-thumb" />
+            </span>
+          </button>
         </div>
       </div>
 

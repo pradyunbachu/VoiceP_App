@@ -4,19 +4,20 @@
  * and first pantry add. Uses spotlight cutouts to highlight UI elements
  * and walks through actionable steps rather than a passive tour.
  *
- * Phase 1: Welcome + overview (2 steps)
- * Phase 2: Guided first expense via voice/type (3 steps)
- * Phase 3: Guided first pantry add (3 steps)
- * Phase 4: Wrap-up with remaining features (2 steps)
+ * Phase 1: Welcome (1 step)
+ * Phase 2: Guided first expense via voice/type (2 steps)
+ * Phase 3: Guided first pantry add (2 steps)
+ * Phase 4: Dashboard & feature overview (4 steps)
  */
 import { useState, useEffect, useCallback } from "react";
 import type { FC, CSSProperties } from "react";
-import { X, ChevronLeft, ChevronRight, Mic, Keyboard, Package, DollarSign, UtensilsCrossed, ChefHat } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Package, DollarSign, UtensilsCrossed, ChefHat, Flame, LayoutDashboard } from "lucide-react";
 import "./TutorialOverlay.css";
 
 interface TutorialStep {
   id: string;
-  target: string | null;
+  /** CSS selector(s) for the spotlight target. If an array, the first visible match is used. */
+  target: string | string[] | null;
   title: string;
   description: string;
   /** If set, the "Next" button reads this label instead. */
@@ -33,6 +34,19 @@ interface SpotlightRect {
   height: number;
 }
 
+/** Find the first DOM element from one or more selectors that is actually visible (non-zero size). */
+const findVisibleTarget = (target: string | string[] | null): Element | null => {
+  if (!target) return null;
+  const selectors = Array.isArray(target) ? target : [target];
+  for (const sel of selectors) {
+    const el = document.querySelector(sel);
+    if (!el) continue;
+    const rect = el.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) return el;
+  }
+  return null;
+};
+
 const TUTORIAL_STEPS: TutorialStep[] = [
   // ── Phase 1: Welcome ──────────────────────────────────────────────
   {
@@ -40,7 +54,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: null,
     title: "Welcome to Voxal!",
     description:
-      "Your voice-powered kitchen & finance assistant. Let's get you set up in 60 seconds — we'll log your first expense and add your first pantry item.",
+      "Your voice-powered kitchen & finance assistant. Just talk \u2014 Voxal tracks expenses, manages your pantry, and suggests meals. Let\u2019s get you started in under a minute.",
     icon: <UtensilsCrossed size={20} />,
   },
   // ── Phase 2: First Expense ─────────────────────────────────────────
@@ -49,7 +63,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="voxy-fab"]',
     title: "Log Your First Expense",
     description:
-      'Tap the mic button to say something like "I spent $5 at Starbucks on coffee" — or tap Type if you prefer. Voxal will extract the store, amount, and category automatically.',
+      'Tap the mic and say something like "I spent $12 at Trader Joe\u2019s on groceries" \u2014 or tap Type if you prefer. Voxal extracts the store, amount, and category automatically.',
     action: "Try it now",
     icon: <DollarSign size={20} />,
     waitForInteraction: true,
@@ -59,15 +73,15 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: null,
     title: "Nice! Expense Logged",
     description:
-      "That's it — one sentence and your expense is tracked. You can also scan a receipt with your camera or type it out. All your spending shows up on the dashboard.",
+      "One sentence and it\u2019s tracked. You can also scan receipts with your camera. Everything flows into your budgets and spending insights automatically.",
   },
   // ── Phase 3: First Pantry Add ──────────────────────────────────────
   {
     id: "pantry-intro",
     target: '[data-tutorial="voxy-fab"]',
-    title: "Add to Your Pantry",
+    title: "Stock Your Pantry",
     description:
-      'Now try adding what\'s in your kitchen. Tap the mic and say "I have eggs, milk, and butter" — or type it. Voxal will add each item to your pantry inventory.',
+      'Now tell Voxal what\u2019s in your kitchen. Tap the mic and say "I have eggs, milk, and butter" \u2014 or type it out. Each item gets added to your pantry inventory.',
     action: "Try it now",
     icon: <Package size={20} />,
     waitForInteraction: true,
@@ -77,37 +91,39 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: null,
     title: "Pantry Stocked!",
     description:
-      "Voxal now knows what's in your kitchen. It'll track expiration dates, alert you when items run low, and suggest meals based on what you have.",
+      "Voxal now tracks what\u2019s in your kitchen \u2014 expiration dates, stock levels, and all. It\u2019ll suggest meals based on what you have and nudge you before things expire.",
   },
   // ── Phase 4: Feature overview ──────────────────────────────────────
   {
+    id: "hero-meal",
+    target: '[data-tutorial="hero-meal"]',
+    title: "Tonight\u2019s Pick",
+    description:
+      "Your dashboard shows a personalized meal suggestion based on what\u2019s in your pantry. It prioritizes ingredients that are expiring soon to help reduce waste. Tap it to see the full recipe.",
+    icon: <ChefHat size={20} />,
+  },
+  {
+    id: "cooking-stats",
+    target: '[data-tutorial="cooking-stats"]',
+    title: "Your Stats at a Glance",
+    description:
+      "Track your cooking streak, pantry stock levels, shopping list, and budget \u2014 all from the home screen. Tap any card to dive deeper.",
+    icon: <Flame size={20} />,
+  },
+  {
     id: "nav-overview",
-    target: '[data-tutorial="nav-tabs"]',
+    target: ['[data-tutorial="nav-tabs"]', '[data-tutorial="mobile-nav"]'],
     title: "Explore the App",
     description:
-      "Pantry manages your inventory. Shopping List tracks what to buy. Chef suggests recipes from your ingredients. Finance has expenses, budgets, and insights.",
-  },
-  {
-    id: "quick-actions",
-    target: '[data-tutorial="quick-actions"]',
-    title: "Quick Actions",
-    description:
-      "These shortcuts let you jump to your pantry, shopping list, or recipes in one tap. The voice button works from every page — and you can hold spacebar to quick-record!",
-  },
-  {
-    id: "daily-recs",
-    target: '[data-tutorial="daily-recs-toggle"]',
-    title: "Voxy's Picks",
-    description:
-      "Tap here anytime for AI meal suggestions based on what's in your pantry. It prioritizes expiring items to help reduce waste. You can save recipes you love with the heart button.",
-    icon: <ChefHat size={20} />,
+      "Pantry manages your inventory. Shopping List tracks what to buy. Chef lets you drag ingredients into a bowl to generate recipes. Planner organizes your week. Saved Recipes keeps your favorites.",
+    icon: <LayoutDashboard size={20} />,
   },
   {
     id: "finish",
     target: null,
-    title: "You're All Set!",
+    title: "You\u2019re All Set!",
     description:
-      "You've logged an expense, stocked your pantry, and explored the key features. Voxal learns your habits over time — the more you use it, the smarter it gets. Enjoy!",
+      "You\u2019ve logged an expense, stocked your pantry, and explored the dashboard. The voice bar works from every page \u2014 and you can hold spacebar to quick-record anytime. Voxal gets smarter the more you use it. Enjoy!",
     action: "Get Started",
   },
 ];
@@ -127,11 +143,7 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
   const isLast = currentStep === TUTORIAL_STEPS.length - 1;
 
   const measureSpotlight = useCallback((): void => {
-    if (!step.target) {
-      setSpotlightRect(null);
-      return;
-    }
-    const el = document.querySelector(step.target);
+    const el = findVisibleTarget(step.target);
     if (!el) {
       setSpotlightRect(null);
       return;
@@ -148,11 +160,7 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
 
   // Scroll the target element into view, then measure its position
   const scrollAndSpotlight = useCallback((): void => {
-    if (!step.target) {
-      setSpotlightRect(null);
-      return;
-    }
-    const el = document.querySelector(step.target);
+    const el = findVisibleTarget(step.target);
     if (!el) {
       setSpotlightRect(null);
       return;
@@ -239,21 +247,28 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
   const getCardStyle = (): CSSProperties => {
     if (!spotlightRect) return {};
 
-    const cardWidth = 360;
-    const cardMargin = 16;
     const viewportW = window.innerWidth;
     const viewportH = window.innerHeight;
+    const cardMargin = 16;
+    const cardWidth = Math.min(360, viewportW - cardMargin * 2);
 
     const spotCenterX = spotlightRect.left + spotlightRect.width / 2;
     const spotBottom = spotlightRect.top + spotlightRect.height;
 
     let top: number, left: number;
 
-    if (spotBottom + cardMargin + 200 < viewportH) {
+    // Estimate card height — give more room on narrow screens (text wraps more)
+    const estimatedCardHeight = viewportW <= 420 ? 260 : 220;
+
+    if (spotBottom + cardMargin + estimatedCardHeight < viewportH) {
+      // Place below the spotlight
       top = spotBottom + cardMargin;
+    } else if (spotlightRect.top - cardMargin - estimatedCardHeight > 0) {
+      // Place above the spotlight
+      top = spotlightRect.top - cardMargin - estimatedCardHeight;
     } else {
-      top = spotlightRect.top - cardMargin - 200;
-      if (top < cardMargin) top = cardMargin;
+      // Fallback: center vertically
+      top = Math.max(cardMargin, (viewportH - estimatedCardHeight) / 2);
     }
 
     left = spotCenterX - cardWidth / 2;
