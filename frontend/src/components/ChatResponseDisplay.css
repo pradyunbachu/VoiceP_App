@@ -399,6 +399,165 @@
   font-weight: 600;
 }
 
+/* Store trip interactive styles */
+.store-trip-confirm {
+  margin-top: 1rem;
+}
+
+.store-trip-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.store-trip-name-input {
+  flex: 1;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  padding: 0.25rem 0;
+  outline: none;
+}
+
+.store-trip-name-input:focus {
+  border-bottom-color: var(--accent-primary);
+}
+
+.store-trip-qty-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.store-trip-qty-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-input);
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 0;
+}
+
+.store-trip-qty-btn:hover {
+  background: var(--bg-hover);
+}
+
+.store-trip-qty-value {
+  min-width: 20px;
+  text-align: center;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.store-trip-remove-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--text-muted);
+  border-radius: 4px;
+}
+
+.store-trip-remove-btn:hover {
+  color: var(--accent-danger, #ef4444);
+}
+
+.store-trip-amount-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  margin-top: 0.75rem;
+  background: var(--bg-input);
+  border-radius: 8px;
+  border: 1px solid var(--border-secondary);
+}
+
+.store-trip-amount-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.store-trip-amount-input-wrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.store-trip-dollar-sign {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.store-trip-amount-input {
+  width: 80px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 0.25rem 0;
+  text-align: right;
+  outline: none;
+}
+
+.store-trip-amount-input:focus {
+  border-bottom-color: var(--accent-primary);
+}
+
+.store-trip-amount-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 400;
+}
+
+.store-trip-actions {
+  margin-top: 0.75rem;
+  display: flex;
+  gap: 0.5rem;
+}
+
+.store-trip-confirm-btn {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: none;
+  background: var(--accent-primary);
+  color: white;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.store-trip-confirm-btn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.store-trip-confirm-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 /* Responsive adjustments */
 @media (max-width: 480px) {
   .chat-response {

@@ -118,20 +118,12 @@ def generate_response(intent: str, sub_intent: str, data: dict, entities: dict) 
         if message:
             return message
         store = data.get("store", "the store")
-        added = data.get("added_items", [])
-        count = data.get("added_count", 0)
-        amount = data.get("expense_amount")
-        skipped = data.get("skipped_items", [])
-        skipped_count = data.get("skipped_count", 0)
-        parts = []
-        if count > 0:
-            amount_str = f" (${amount})" if amount else ""
-            parts.append(f"Welcome back from {store}{amount_str}! Added {count} item(s) to your pantry: {', '.join(added)}")
+        pending = data.get("pending_items", [])
+        if pending:
+            item_names = [item["name"] for item in pending]
+            return f"Welcome back from {store}! Review your items below and confirm to add to pantry."
         else:
-            parts.append(f"Welcome back from {store}! No items to add to your pantry.")
-        if skipped_count > 0:
-            parts.append(f"Skipped {skipped_count} non-pantry item(s): {', '.join(skipped)}")
-        return "\n".join(parts)
+            return f"Welcome back from {store}! No items found to add."
 
     elif intent == "mark_subscription":
         message = data.get("message")

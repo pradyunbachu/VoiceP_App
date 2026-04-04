@@ -55,7 +55,6 @@ export const useChat = () => {
         intent === 'pantry_add' ||
         intent === 'pantry_remove' ||
         intent === 'cooking_deduct' ||
-        intent === 'store_trip' ||
         intent === 'shopping_complete'
       ) {
         queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });

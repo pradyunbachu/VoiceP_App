@@ -548,3 +548,129 @@
     left: 12px;
   }
 }
+
+/* Store trip interactive confirmation */
+.qr-store-trip-items {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0.75rem 0;
+}
+
+.qr-store-trip-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  background: var(--bg-input, rgba(255,255,255,0.05));
+  border-radius: 8px;
+  border: 1px solid var(--border-secondary, rgba(255,255,255,0.1));
+}
+
+.qr-store-trip-name {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: var(--text-primary, #fff);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0;
+  outline: none;
+  min-width: 0;
+}
+
+.qr-store-trip-qty {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.qr-store-trip-qty-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 5px;
+  border: 1px solid var(--border-secondary, rgba(255,255,255,0.15));
+  background: var(--bg-card, rgba(255,255,255,0.05));
+  color: var(--text-secondary, #aaa);
+  cursor: pointer;
+  padding: 0;
+}
+
+.qr-store-trip-qty-btn:active {
+  background: var(--bg-hover, rgba(255,255,255,0.1));
+}
+
+.qr-store-trip-qty-val {
+  min-width: 18px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.qr-store-trip-remove {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--text-muted, #666);
+  border-radius: 4px;
+}
+
+.qr-store-trip-remove:active {
+  color: var(--accent-danger, #ef4444);
+}
+
+.qr-store-trip-amount {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  margin-bottom: 0.75rem;
+  background: var(--bg-input, rgba(255,255,255,0.05));
+  border-radius: 8px;
+  border: 1px solid var(--border-secondary, rgba(255,255,255,0.1));
+}
+
+.qr-store-trip-amount-label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-secondary, #aaa);
+}
+
+.qr-store-trip-amount-input {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--text-primary, #fff);
+}
+
+.qr-store-trip-amount-input input {
+  width: 70px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--border-secondary, rgba(255,255,255,0.15));
+  color: var(--text-primary, #fff);
+  font-size: 1rem;
+  font-weight: 600;
+  text-align: right;
+  padding: 2px 0;
+  outline: none;
+}
+
+.qr-store-trip-amount-input input::placeholder {
+  color: var(--text-muted, #555);
+  font-weight: 400;
+}
+
+.qr-store-trip-amount-input input:focus {
+  border-bottom-color: var(--accent-primary, #d4a76a);
+}

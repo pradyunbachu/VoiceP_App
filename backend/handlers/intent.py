@@ -280,7 +280,8 @@ def simple_intent_detection(message: str) -> dict:
     for store in _store_names:
         store_trip_keywords.extend([
             f"got back from {store}", f"came from {store}", f"back from {store}",
-            f"just left {store}", f"just came from {store}"
+            f"just left {store}", f"just came from {store}",
+            f"went to {store}", f"i went to {store}"
         ])
     if any(kw in message_lower for kw in store_trip_keywords):
         return {"intent": "store_trip", "sub_intent": None, "entities": {}}

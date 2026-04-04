@@ -10,11 +10,14 @@
  */
 import React, { useState, useRef, useEffect, useCallback, forwardRef, useImperativeHandle } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send, ChefHat, ShoppingCart, BarChart3, Clock, ChevronRight, UtensilsCrossed } from "lucide-react";
+import { Mic, Loader2, Check, X, Package, AlertCircle, MessageCircle, Keyboard, Camera, Send, ChefHat, ShoppingCart, BarChart3, Clock, ChevronRight, UtensilsCrossed, Plus, Minus } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
 import ReceiptScanner from "./ReceiptScanner";
 import { useAuth } from "../context/AuthContext";
 import { useCreateExpense, useCreateExpenseSimple, useChat, useUpdateExpense } from "../hooks";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../hooks/queries/queryKeys";
+import { getCsrfHeaders } from "../lib/csrf";
 import { API_BASE_URL } from "../config/api";
 import type { ShowToast, Expense, ChatResponse, ReceiptScanResult, RecurringSuggestion, AppView, MealSuggestion } from "../types";
 import "./QuickRecordPopup.css";
@@ -54,6 +57,12 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
   const [showPantryModal, setShowPantryModal] = useState<boolean>(false);
   const [pendingPantryExpense, setPendingPantryExpense] = useState<Expense | null>(null);
 
+  // Store trip confirmation state
+  const [storeTripItems, setStoreTripItems] = useState<Array<{ name: string; quantity: number; unit: string | null; category: string }> | null>(null);
+  const [storeTripAmount, setStoreTripAmount] = useState<string>("");
+  const [storeTripConfirmed, setStoreTripConfirmed] = useState(false);
+  const [storeTripSubmitting, setStoreTripSubmitting] = useState(false);
+
   // New states for idle mode
   const [showManualInput, setShowManualInput] = useState<boolean>(false);
   const [showReceiptScanner, setShowReceiptScanner] = useState<boolean>(false);
@@ -71,7 +80,8 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
   const isProcessingRef = useRef<boolean>(false);
   const lastStopTimeRef = useRef<number>(0);
 
-  // React Query mutations
+  // React Query
+  const queryClient = useQueryClient();
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
   const chatMutation = useChat();
@@ -353,6 +363,17 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
         }
       } else {
         setChatResponse(chatResult);
+        // Initialize store trip items for interactive confirmation
+        if (chatResult.intent === "store_trip" && chatResult.data) {
+          const rawData = chatResult.data as Record<string, unknown>;
+          const pending = rawData.pending_items as Array<{ name: string; quantity: number; unit: string | null; category: string; is_pantry_item: boolean }> | undefined;
+          if (pending && pending.length > 0) {
+            setStoreTripItems(pending.filter(i => i.is_pantry_item).map(i => ({ name: i.name, quantity: i.quantity, unit: i.unit, category: i.category })));
+            if (rawData.expense_amount) {
+              setStoreTripAmount(String(rawData.expense_amount));
+            }
+          }
+        }
       }
     } catch (error) {
       const err = error as Error;
@@ -424,6 +445,42 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
     showToast(amountStr, "celebration", 4000);
   };
 
+  const handleStoreTripConfirm = async (): Promise<void> => {
+    if (!storeTripItems || storeTripItems.length === 0) return;
+    setStoreTripSubmitting(true);
+    try {
+      const token = await getToken();
+      const amount = storeTripAmount ? parseFloat(storeTripAmount) : null;
+      const store = chatResponse?.data ? (chatResponse.data as Record<string, unknown>).store as string : "Store";
+      await fetch(`${API_BASE_URL}/api/pantry/store-trip`, {
+        method: "POST",
+        headers: getCsrfHeaders({
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        }),
+        credentials: "include",
+        body: JSON.stringify({
+          items: storeTripItems,
+          store: store || "Store",
+          amount: amount && amount > 0 ? amount : null,
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
+      if (amount && amount > 0) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+      }
+      setStoreTripConfirmed(true);
+      showToast(`Added ${storeTripItems.length} item${storeTripItems.length !== 1 ? "s" : ""} to pantry!`, "success");
+      handleDismiss();
+    } catch (err) {
+      console.error("Error confirming store trip:", err);
+      showToast("Failed to add items. Please try again.", "error");
+    } finally {
+      setStoreTripSubmitting(false);
+    }
+  };
+
   const handleDismiss = (): void => {
     // Cancel any in-flight transcription/processing requests
     if (abortControllerRef.current) {
@@ -451,6 +508,10 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
     setShowManualInput(false);
     setShowReceiptScanner(false);
     setManualInput("");
+    setStoreTripItems(null);
+    setStoreTripAmount("");
+    setStoreTripConfirmed(false);
+    setStoreTripSubmitting(false);
   };
 
   const handleConfirm = (): void => {
@@ -736,8 +797,91 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
                 </span>
               </h3>
 
-              {/* Meal suggestions — render as clickable cards */}
-              {(chatResponse.intent === "meal_suggestion" || chatResponse.intent === "budget_meal" || chatResponse.intent === "recall_past_meal") && chatResponse.data?.meals && chatResponse.data.meals.length > 0 ? (
+              {/* Store trip — interactive confirmation */}
+              {chatResponse.intent === "store_trip" && storeTripItems && storeTripItems.length > 0 ? (
+                <>
+                  <div className="chat-response-text">
+                    <p>{chatResponse.response_text}</p>
+                  </div>
+                  <div className="qr-store-trip-items">
+                    {storeTripItems.map((item, index) => (
+                      <div key={index} className="qr-store-trip-row">
+                        <input
+                          type="text"
+                          value={item.name}
+                          onChange={(e) => {
+                            const next = [...storeTripItems];
+                            next[index] = { ...next[index], name: e.target.value };
+                            setStoreTripItems(next);
+                          }}
+                          className="qr-store-trip-name"
+                        />
+                        <div className="qr-store-trip-qty">
+                          <button
+                            className="qr-store-trip-qty-btn"
+                            onClick={() => {
+                              const next = [...storeTripItems];
+                              next[index] = { ...next[index], quantity: Math.max(1, next[index].quantity - 1) };
+                              setStoreTripItems(next);
+                            }}
+                            type="button"
+                          >
+                            <Minus size={12} />
+                          </button>
+                          <span className="qr-store-trip-qty-val">{item.quantity}</span>
+                          <button
+                            className="qr-store-trip-qty-btn"
+                            onClick={() => {
+                              const next = [...storeTripItems];
+                              next[index] = { ...next[index], quantity: next[index].quantity + 1 };
+                              setStoreTripItems(next);
+                            }}
+                            type="button"
+                          >
+                            <Plus size={12} />
+                          </button>
+                        </div>
+                        <button
+                          className="qr-store-trip-remove"
+                          onClick={() => setStoreTripItems(storeTripItems.filter((_, i) => i !== index))}
+                          type="button"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="qr-store-trip-amount">
+                    <span className="qr-store-trip-amount-label">Total spent</span>
+                    <div className="qr-store-trip-amount-input">
+                      <span>$</span>
+                      <input
+                        type="number"
+                        value={storeTripAmount}
+                        onChange={(e) => setStoreTripAmount(e.target.value)}
+                        placeholder="0.00"
+                        step="0.01"
+                        min="0"
+                      />
+                    </div>
+                  </div>
+                  <div className="quick-record-actions">
+                    <button
+                      className="confirm-btn"
+                      onClick={handleStoreTripConfirm}
+                      disabled={storeTripSubmitting}
+                    >
+                      <Check size={18} />
+                      <span>{storeTripSubmitting ? "Adding..." : `Add ${storeTripItems.length} to Pantry`}</span>
+                    </button>
+                    <button className="dismiss-btn" onClick={handleDismiss}>
+                      <X size={18} />
+                    </button>
+                  </div>
+                </>
+              ) : (chatResponse.intent === "meal_suggestion" || chatResponse.intent === "budget_meal" || chatResponse.intent === "recall_past_meal") && chatResponse.data?.meals && chatResponse.data.meals.length > 0 ? (
+                /* Meal suggestions — render as clickable cards */
+                <>
                 <div className="qr-meal-cards">
                   {(chatResponse.data.meals as Array<MealSuggestion & { recipe_name?: string; cooked_at?: string }>).map((meal, i) => (
                     <button
@@ -775,45 +919,53 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
                     </button>
                   ))}
                 </div>
+                <div className="quick-record-actions">
+                  <button className="confirm-btn" onClick={handleDismiss}>
+                    <Check size={18} />
+                    <span>Done</span>
+                  </button>
+                </div>
+                </>
               ) : (
+                <>
                 <div className="chat-response-text">
                   {chatResponse.response_text.split("\n").map((line, index) => (
                     <p key={index}>{line}</p>
                   ))}
                 </div>
+                <div className="quick-record-actions">
+                  {/* Context-aware action buttons */}
+                  {onNavigate && chatResponse.intent === "suggestion" && (
+                    <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("chef"); }}>
+                      <ChefHat size={16} />
+                      <span>Try in Chef</span>
+                    </button>
+                  )}
+                  {onNavigate && chatResponse.intent === "pantry_query" && (
+                    <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("pantry"); }}>
+                      <Package size={16} />
+                      <span>Open Pantry</span>
+                    </button>
+                  )}
+                  {onNavigate && chatResponse.intent === "expense_query" && (
+                    <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("expenses"); }}>
+                      <BarChart3 size={16} />
+                      <span>View Expenses</span>
+                    </button>
+                  )}
+                  {onNavigate && (chatResponse.data?.added_items || chatResponse.data?.pantry_added) && (
+                    <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("shopping-list"); }}>
+                      <ShoppingCart size={16} />
+                      <span>Shopping List</span>
+                    </button>
+                  )}
+                  <button className="confirm-btn" onClick={handleDismiss}>
+                    <Check size={18} />
+                    <span>Done</span>
+                  </button>
+                </div>
+                </>
               )}
-
-              <div className="quick-record-actions">
-                {/* Context-aware action buttons */}
-                {onNavigate && chatResponse.intent === "suggestion" && (
-                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("chef"); }}>
-                    <ChefHat size={16} />
-                    <span>Try in Chef</span>
-                  </button>
-                )}
-                {onNavigate && chatResponse.intent === "pantry_query" && (
-                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("pantry"); }}>
-                    <Package size={16} />
-                    <span>Open Pantry</span>
-                  </button>
-                )}
-                {onNavigate && chatResponse.intent === "expense_query" && (
-                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("expenses"); }}>
-                    <BarChart3 size={16} />
-                    <span>View Expenses</span>
-                  </button>
-                )}
-                {onNavigate && (chatResponse.data?.added_items || chatResponse.data?.pantry_added) && (
-                  <button className="chat-action-btn" onClick={() => { handleDismiss(); onNavigate("shopping-list"); }}>
-                    <ShoppingCart size={16} />
-                    <span>Shopping List</span>
-                  </button>
-                )}
-                <button className="confirm-btn" onClick={handleDismiss}>
-                  <Check size={18} />
-                  <span>Done</span>
-                </button>
-              </div>
             </div>
           )}
         </motion.div>

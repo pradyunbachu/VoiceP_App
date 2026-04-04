@@ -223,7 +223,11 @@ async def handle_expense_delete(user_id: str, entities: dict, original_message: 
 
 
 async def handle_store_trip(user_id: str, entities: dict, original_message: str) -> dict:
-    """Handle when user returns from a store — find recent expense and add items to pantry."""
+    """Handle when user returns from a store — add items to pantry.
+
+    If the user mentions specific items in their message, use those directly.
+    Only fall back to looking up the most recent expense if no items are mentioned.
+    """
     if supabase is None:
         return {"message": "Database not configured"}
 
@@ -244,86 +248,95 @@ async def handle_store_trip(user_id: str, entities: dict, original_message: str)
         store = "the store"
 
     try:
-        today = datetime.now().date()
-        week_ago = (today - timedelta(days=7)).strftime("%Y-%m-%d")
+        # First, check if the user mentioned specific items in their message
+        from handlers.shopping_handler import parse_purchased_items
+        message_items = entities.get("purchased_items", [])
+        if not message_items:
+            message_items = parse_purchased_items(original_message)
+            # Filter out store names from parsed items
+            store_lower = store.lower()
+            message_items = [
+                item for item in message_items
+                if item.lower().strip() not in [store_lower, "the store"]
+                and store_lower not in item.lower()
+            ]
 
-        query = (
-            supabase.table("expenses")
-            .select("*")
-            .eq("user_id", user_id)
-            .gte("date", week_ago)
-            .order("date", desc=True)
-        )
+        items_str = ""
+        expense_amount = None
 
-        if store != "the store":
-            query = query.ilike("store", f"%{store}%")
+        if message_items:
+            # User mentioned specific items — use those directly
+            items_str = ", ".join(message_items)
+        else:
+            # No items mentioned — fall back to most recent expense from this store
+            today = datetime.now().date()
+            week_ago = (today - timedelta(days=7)).strftime("%Y-%m-%d")
 
-        response = query.limit(1).execute()
-        expenses = response.data if response.data else []
+            query = (
+                supabase.table("expenses")
+                .select("*")
+                .eq("user_id", user_id)
+                .gte("date", week_ago)
+                .order("date", desc=True)
+            )
 
-        if not expenses:
-            return {
-                "success": False,
-                "store": store,
-                "message": f"I couldn't find a recent expense from {store}. Log the expense first, then I can add items to your pantry.",
-                "query_type": "store_trip"
-            }
+            if store != "the store":
+                query = query.ilike("store", f"%{store}%")
 
-        expense = expenses[0]
-        items_str = expense.get("items") or expense.get("description") or ""
+            response = query.limit(1).execute()
+            expenses = response.data if response.data else []
+
+            if not expenses:
+                return {
+                    "success": False,
+                    "store": store,
+                    "message": f"I couldn't find a recent expense from {store}. Log the expense first, then I can add items to your pantry.",
+                    "query_type": "store_trip"
+                }
+
+            expense = expenses[0]
+            expense_amount = expense.get("amount")
+            items_str = expense.get("items") or expense.get("description") or ""
 
         if items_str:
-            from handlers.pantry_handler import parse_pantry_items_from_message, categorize_pantry_item, is_pantry_item
+            from handlers.pantry_handler import categorize_pantry_item, is_pantry_item
 
             item_names = re.split(r'[,;]|\band\b', items_str)
             item_names = [i.strip().strip(".") for i in item_names if i.strip() and len(i.strip()) > 1]
 
-            now = datetime.now().isoformat()
-            today_str = today.strftime("%Y-%m-%d")
-            added_items = []
-            skipped_items = []
-
+            # Deduplicate and return items as pending — frontend will show editable confirmation UI
+            seen: dict[str, dict] = {}
             for item_name in item_names:
-                if not is_pantry_item(item_name):
-                    skipped_items.append(item_name.title())
-                    continue
-                category = categorize_pantry_item(item_name)
-                try:
-                    supabase.table("pantry_items").insert({
-                        "user_id": user_id,
+                key = item_name.lower().strip()
+                if key in seen:
+                    seen[key]["quantity"] += 1
+                else:
+                    category = categorize_pantry_item(item_name)
+                    seen[key] = {
                         "name": item_name.title(),
                         "quantity": 1,
                         "unit": None,
                         "category": category,
-                        "expiration_date": None,
-                        "purchase_date": today_str,
-                        "stock_status": "full",
-                        "notes": f"Added from {store} trip",
-                        "created_at": now,
-                        "updated_at": now
-                    }).execute()
-                    added_items.append(item_name.title())
-                except Exception as e:
-                    logger.error("Error adding pantry item from store trip: %s", e)
+                        "is_pantry_item": is_pantry_item(item_name),
+                    }
+            pending_items = list(seen.values())
 
             return {
                 "success": True,
                 "store": store,
-                "expense_amount": expense.get("amount"),
-                "added_items": added_items,
-                "added_count": len(added_items),
-                "skipped_items": skipped_items,
-                "skipped_count": len(skipped_items),
+                "expense_amount": expense_amount,
+                "pending_items": pending_items,
+                "needs_confirmation": True,
                 "query_type": "store_trip"
             }
         else:
             return {
                 "success": True,
                 "store": store,
-                "expense_amount": expense.get("amount"),
-                "added_items": [],
-                "added_count": 0,
-                "message": f"Found your ${expense.get('amount', 0)} expense at {store}, but no specific items were listed. You can add items to your pantry by saying what you bought.",
+                "expense_amount": expense_amount,
+                "pending_items": [],
+                "needs_confirmation": True,
+                "message": f"No specific items found. You can add items to your pantry by saying what you bought.",
                 "query_type": "store_trip"
             }
     except Exception as e:

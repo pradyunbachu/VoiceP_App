@@ -37,7 +37,9 @@ def parse_purchased_items(message: str) -> list:
         "add them to my pantry", "add to the pantry", "add to my pantry",
         "add to pantry", "put these in the pantry", "put these in my pantry",
         "put them in the pantry", "put them in my pantry",
-        "stock the pantry", "stock my pantry"
+        "stock the pantry", "stock my pantry",
+        "i went to", "went to", "i came from", "came from",
+        "i just came from", "just came from", "i'm back from", "back from",
     ]
 
     cleaned = message_lower

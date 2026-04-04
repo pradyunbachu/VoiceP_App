@@ -5,23 +5,54 @@
  * the voice assistant and renders an intent-specific card with tailored
  * data layouts for all supported intents.
  */
+import { useState } from "react";
 import type { FC, ReactNode } from "react";
 import {
   ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle,
   UtensilsCrossed, Clock, CheckCircle, Trash2, Plus, Minus,
   MapPin, Repeat, Bell, Calendar, Wallet, Share2, Flame,
+  Check, X,
 } from "lucide-react";
 import type { ChatResponse } from "../types";
+import { useAuth } from "../context/AuthContext";
+import { API_BASE_URL } from "../config/api";
+import { getCsrfHeaders } from "../lib/csrf";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../hooks/queries/queryKeys";
 import "./ChatResponseDisplay.css";
+
+interface PendingItem {
+  name: string;
+  quantity: number;
+  unit: string | null;
+  category: string;
+  is_pantry_item: boolean;
+}
 
 interface Props {
   chatResponse: ChatResponse | null;
 }
 
 const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
+  const { getToken } = useAuth();
+  const queryClient = useQueryClient();
+  const [storeTripItems, setStoreTripItems] = useState<PendingItem[] | null>(null);
+  const [storeTripAmount, setStoreTripAmount] = useState<string>("");
+  const [storeTripConfirmed, setStoreTripConfirmed] = useState(false);
+  const [storeTripSubmitting, setStoreTripSubmitting] = useState(false);
+
   if (!chatResponse) return null;
 
   const { intent, sub_intent, response_text, data } = chatResponse;
+
+  // Initialize store trip items from data on first render
+  if (intent === "store_trip" && data?.pending_items && storeTripItems === null && !storeTripConfirmed) {
+    const items = (data.pending_items as PendingItem[]).filter(i => i.is_pantry_item);
+    setStoreTripItems(items);
+    if (data.expense_amount) {
+      setStoreTripAmount(String(data.expense_amount));
+    }
+  }
 
   // Map intent to its corresponding icon
   const getIcon = (): ReactNode => {
@@ -114,7 +145,7 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
       case "budget_meal":
         return "Budget Meals";
       case "store_trip":
-        return "Store Trip";
+        return storeTripConfirmed ? "Added to Pantry" : "Store Trip";
       case "mark_subscription":
         return "Subscription";
       case "reminder_check":
@@ -516,27 +547,148 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
     );
   };
 
-  // --- Store trip ---
+  // --- Store trip (interactive) ---
+  const updateStoreTripItem = (index: number, field: keyof PendingItem, value: string | number) => {
+    if (!storeTripItems) return;
+    const next = [...storeTripItems];
+    (next[index] as unknown as Record<string, unknown>)[field] = value;
+    setStoreTripItems(next);
+  };
+
+  const adjustStoreTripQty = (index: number, delta: number) => {
+    if (!storeTripItems) return;
+    const next = [...storeTripItems];
+    next[index].quantity = Math.max(1, next[index].quantity + delta);
+    setStoreTripItems(next);
+  };
+
+  const removeStoreTripItem = (index: number) => {
+    if (!storeTripItems) return;
+    setStoreTripItems(storeTripItems.filter((_, i) => i !== index));
+  };
+
+  const handleStoreTripConfirm = async () => {
+    if (!storeTripItems || storeTripItems.length === 0) return;
+    setStoreTripSubmitting(true);
+    try {
+      const token = await getToken();
+      const amount = storeTripAmount ? parseFloat(storeTripAmount) : null;
+      await fetch(`${API_BASE_URL}/api/pantry/store-trip`, {
+        method: "POST",
+        headers: getCsrfHeaders({
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        }),
+        credentials: "include",
+        body: JSON.stringify({
+          items: storeTripItems.map(i => ({
+            name: i.name,
+            quantity: i.quantity,
+            unit: i.unit,
+            category: i.category,
+          })),
+          store: data?.store || "Store",
+          amount: amount && amount > 0 ? amount : null,
+        }),
+      });
+      queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
+      if (amount && amount > 0) {
+        queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
+        queryClient.invalidateQueries({ queryKey: queryKeys.analytics.all });
+      }
+      setStoreTripConfirmed(true);
+    } catch (err) {
+      console.error("Error confirming store trip:", err);
+    } finally {
+      setStoreTripSubmitting(false);
+    }
+  };
+
   const renderStoreTrip = (): ReactNode => {
-    // store_trip data uses added_items as string[] (from backend), not the typed added_items
-    const addedItems = (data as Record<string, unknown>)?.added_items as string[] | undefined;
-    const skippedItems = data?.skipped_items;
-    if ((!addedItems || addedItems.length === 0) && (!skippedItems || skippedItems.length === 0)) return null;
+    if (storeTripConfirmed) {
+      return (
+        <div className="chat-data-list">
+          {storeTripItems && storeTripItems.map((item, index) => (
+            <div key={index} className="chat-data-item pantry-add-item">
+              <span className="item-name">{item.name}</span>
+              <span className="item-details">
+                x{item.quantity}
+                <span className="stock-badge full">Added</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      );
+    }
+
+    if (!storeTripItems || storeTripItems.length === 0) return null;
 
     return (
-      <div className="chat-data-list">
-        {addedItems && addedItems.map((name: string, index: number) => (
-          <div key={`a-${index}`} className="chat-data-item pantry-add-item">
-            <span className="item-name">{name}</span>
-            <span className="stock-badge full">Added to pantry</span>
+      <div className="store-trip-confirm">
+        <div className="chat-data-list">
+          {storeTripItems.map((item, index) => (
+            <div key={index} className="chat-data-item store-trip-item">
+              <input
+                type="text"
+                value={item.name}
+                onChange={(e) => updateStoreTripItem(index, "name", e.target.value)}
+                className="store-trip-name-input"
+              />
+              <div className="store-trip-qty-controls">
+                <button
+                  className="store-trip-qty-btn"
+                  onClick={() => adjustStoreTripQty(index, -1)}
+                  type="button"
+                >
+                  <Minus size={12} />
+                </button>
+                <span className="store-trip-qty-value">{item.quantity}</span>
+                <button
+                  className="store-trip-qty-btn"
+                  onClick={() => adjustStoreTripQty(index, 1)}
+                  type="button"
+                >
+                  <Plus size={12} />
+                </button>
+              </div>
+              <button
+                className="store-trip-remove-btn"
+                onClick={() => removeStoreTripItem(index)}
+                type="button"
+              >
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+        </div>
+
+        <div className="store-trip-amount-row">
+          <label className="store-trip-amount-label">Total spent</label>
+          <div className="store-trip-amount-input-wrapper">
+            <span className="store-trip-dollar-sign">$</span>
+            <input
+              type="number"
+              value={storeTripAmount}
+              onChange={(e) => setStoreTripAmount(e.target.value)}
+              placeholder="0.00"
+              step="0.01"
+              min="0"
+              className="store-trip-amount-input"
+            />
           </div>
-        ))}
-        {skippedItems && skippedItems.length > 0 && skippedItems.map((name: string, index: number) => (
-          <div key={`s-${index}`} className="chat-data-item">
-            <span className="item-name">{name}</span>
-            <span className="item-details">Skipped</span>
-          </div>
-        ))}
+        </div>
+
+        <div className="store-trip-actions">
+          <button
+            className="store-trip-confirm-btn"
+            onClick={handleStoreTripConfirm}
+            disabled={storeTripSubmitting || storeTripItems.length === 0}
+          >
+            {storeTripSubmitting ? "Adding..." : (
+              <><Check size={16} /> Add {storeTripItems.length} Item{storeTripItems.length !== 1 ? "s" : ""} to Pantry</>
+            )}
+          </button>
+        </div>
       </div>
     );
   };

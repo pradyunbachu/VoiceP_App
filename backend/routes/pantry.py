@@ -404,6 +404,94 @@ async def auto_populate_pantry_from_expense(
         "items": created_items
     }
 
+@router.post("/pantry/store-trip")
+@limiter.limit("20/minute")
+async def confirm_store_trip(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Confirm a store trip: add items to pantry and optionally log an expense."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    body = await request.json()
+    items = body.get("items", [])
+    store = body.get("store", "Store")
+    amount = body.get("amount")  # optional
+
+    user_id = current_user["id"]
+    now = datetime.now().isoformat()
+    today_str = datetime.now().strftime("%Y-%m-%d")
+
+    # Deduplicate items within the batch first (merge same-name items)
+    merged_items: dict[str, dict] = {}
+    for item_data in items:
+        item_name = item_data.get("name", "").strip()
+        if not item_name:
+            continue
+        key = item_name.lower()
+        if key in merged_items:
+            merged_items[key]["quantity"] += item_data.get("quantity", 1)
+        else:
+            merged_items[key] = {
+                "name": item_name,
+                "quantity": item_data.get("quantity", 1),
+                "unit": item_data.get("unit"),
+                "category": item_data.get("category", "Other"),
+            }
+
+    created_items = []
+    for item_data in merged_items.values():
+        item_name = item_data["name"]
+        item_qty = item_data["quantity"]
+        item_unit = item_data["unit"]
+        item_category = item_data["category"]
+
+        # Check for existing item and merge if found
+        existing = _find_existing_pantry_item(user_id, item_name)
+        if existing:
+            _merge_pantry_item(existing, item_qty, today_str)
+            created_items.append({**existing, "quantity": existing.get("quantity", 1) + item_qty})
+        else:
+            resp = supabase.table("pantry_items").insert({
+                "user_id": user_id,
+                "name": item_name,
+                "quantity": item_qty,
+                "unit": item_unit,
+                "category": item_category,
+                "expiration_date": None,
+                "purchase_date": today_str,
+                "stock_status": "full",
+                "notes": f"Added from {store} trip",
+                "created_at": now,
+                "updated_at": now
+            }).execute()
+            if resp.data:
+                created_items.append(resp.data[0])
+
+    # Optionally log an expense if the user entered an amount
+    expense_id = None
+    if amount is not None and amount > 0:
+        item_names_str = ", ".join(i.get("name", "") for i in items if i.get("name"))
+        expense_resp = supabase.table("expenses").insert({
+            "user_id": user_id,
+            "store": store,
+            "items": item_names_str,
+            "category": "Groceries",
+            "amount": amount,
+            "date": today_str,
+            "created_at": now,
+        }).execute()
+        if expense_resp.data:
+            expense_id = expense_resp.data[0]["id"]
+
+    return {
+        "message": f"Added {len(created_items)} item(s) to pantry",
+        "items": created_items,
+        "expense_id": expense_id,
+    }
+
+
 @router.put("/pantry/{item_id}")
 @limiter.limit("30/minute")
 async def update_pantry_item(
@@ -706,6 +794,8 @@ async def resync_pantry(
             name_corrected += 1
 
     # --- Pass 1: Deduplicate (group by lowercase name, merge quantities) ---
+    # Track original quantities so we can detect changes after merging
+    original_quantities: dict[int, float] = {item["id"]: (item.get("quantity") or 1) for item in items}
     canonical: dict[str, dict] = {}
     delete_ids: list[str] = []
     for item in items:
@@ -735,8 +825,8 @@ async def resync_pantry(
             recategorized += 1
 
         # Persist merged quantity if this item absorbed duplicates
-        orig = next((i for i in items if i["id"] == item["id"]), None)
-        if orig and item.get("quantity") != orig.get("quantity"):
+        orig_qty = original_quantities.get(item["id"])
+        if orig_qty is not None and item.get("quantity") != orig_qty:
             update_data["quantity"] = item["quantity"]
 
         # Backfill purchase_date
