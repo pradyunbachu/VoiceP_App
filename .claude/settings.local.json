@@ -33,7 +33,10 @@
       "Bash(npx tsc:*)",
       "Bash(lsof:*)",
       "Bash(npx vitest:*)",
-      "Bash(python -m pytest tests/test_schemas.py -v)"
+      "Bash(python -m pytest tests/test_schemas.py -v)",
+      "Bash(cat frontend/package.json)",
+      "Bash(cat package.json)",
+      "Bash(npx cap *)"
     ]
   }
 }

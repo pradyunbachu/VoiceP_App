@@ -1,7 +1,7 @@
 """
 Transcription & User Routes
 ----------------------------
-Handles speech-to-text transcription via the Deepgram Nova-2 API and
+Handles speech-to-text transcription via the Deepgram Nova-3 API and
 exposes a simple endpoint for retrieving the authenticated user's profile.
 Audio files are uploaded, validated for size, and sent to Deepgram for
 real-time transcription.
@@ -29,7 +29,7 @@ async def get_current_user_info(request: Request, current_user: dict = Depends(g
     return current_user
 
 # Accept an audio file upload and return its text transcription.
-# Uses Deepgram's Nova-2 model with smart formatting, punctuation, and numeral conversion.
+# Uses Deepgram's Nova-3 multilingual model with smart formatting, punctuation, and numeral conversion.
 @router.post("/transcribe")
 @limiter.limit("10/minute")
 async def transcribe_audio(
@@ -54,13 +54,14 @@ async def transcribe_audio(
                 detail="Audio file too large. Maximum size is 10MB."
             )
 
-        # Use Deepgram REST API v1 endpoint with nova-2 model
+        # Use Deepgram REST API v1 endpoint with nova-3 multilingual model
         url = "https://api.deepgram.com/v1/listen"
         headers = {
             "Authorization": f"Token {deepgram_api_key}",
         }
         params = {
-            "model": "nova-2",  # Deepgram's latest general-purpose STT model
+            "model": "nova-3",  # Deepgram's latest STT model
+            "language": "multi",  # Multilingual mode w/ code-switching (en, es, fr, de, hi, it, ja, nl, ru, pt)
             "smart_format": "true",
             "punctuate": "true",
             "numerals": "true",
