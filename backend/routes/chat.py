@@ -1,159 +1,114 @@
-"""Chat router — the single entry point for the Voxal voice assistant.
+"""Chat router — entry point for the Voxy voice agent.
 
-Every user message hits POST /chat, which runs through a three-step pipeline:
-  1. Intent detection  — NLP classification of the raw message (25+ intents)
-  2. Handler dispatch  — delegates to the correct domain handler
-  3. Response generation — formats handler output into user-facing text
-
-The expense_input intent is special-cased: instead of being handled here, it
-returns a routing flag so the frontend can redirect to the expense-entry UI.
+Primary path: an LLM tool-calling agent (agent.runner.run_agent) that can take
+multiple actions, answer questions, and reason over the user's data.
+Fallback path: the legacy single-intent classifier (kept for resilience).
 """
+import logging
 
-# ============================================================================
-# CHAT ROUTES - Thin router for conversational voice assistant
-# ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
 
 from auth import get_current_user_dependency
 from rate_limit import limiter
-from schemas import ChatRequest, ChatResponse
+from schemas import ChatRequest, ChatResponse, ChatConfirmRequest
+
+import agent  # noqa: F401 — import side-effect registers all tools
+from agent.runner import run_agent, execute_pending
+
+# Fallback (legacy classifier) — imported lazily-safe at module load.
+from handlers import detect_intent, generate_response
 from handlers import (
-    detect_intent,
-    handle_pantry_query,
-    handle_pantry_add,
-    handle_pantry_remove,
-    handle_cooking_deduct,
-    handle_expense_query,
-    handle_expense_delete,
-    handle_store_trip,
-    handle_mark_subscription,
-    handle_suggestion,
-    handle_meal_suggestion,
-    handle_reminder_check,
-    handle_meal_plan_week,
-    handle_budget_meal,
-    handle_recall_past_meal,
-    handle_shopping_complete,
-    handle_shopping_list_add,
-    handle_shopping_list_remove,
-    handle_shopping_clear,
-    handle_budget_query,
-    handle_budget_set,
-    handle_share_list,
-    generate_response,
+    handle_pantry_query, handle_pantry_add, handle_pantry_remove, handle_cooking_deduct,
+    handle_expense_query, handle_expense_delete, handle_store_trip, handle_mark_subscription,
+    handle_suggestion, handle_meal_suggestion, handle_reminder_check, handle_meal_plan_week,
+    handle_budget_meal, handle_recall_past_meal, handle_shopping_complete,
+    handle_shopping_list_add, handle_shopping_list_remove, handle_shopping_clear,
+    handle_budget_query, handle_budget_set, handle_share_list,
 )
 
+logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _result_to_response(result) -> ChatResponse:
+    return ChatResponse(
+        intent=result.intent,
+        sub_intent=result.sub_intent,
+        response_text=result.reply,           # legacy mirror
+        reply=result.reply,
+        actions=[a.model_dump() for a in result.actions],
+        pending=[p.model_dump() for p in result.pending],
+        data={"actions": [a.model_dump() for a in result.actions],
+              "pending": [p.model_dump() for p in result.pending]},
+    )
 
 
 @router.post("/chat", response_model=ChatResponse)
 @limiter.limit("30/minute")
-async def chat(
-    request: Request,
-    chat_request: ChatRequest,
-    current_user: dict = Depends(get_current_user_dependency)
-):
-    """
-    Unified chat endpoint for the conversational voice assistant.
-    Detects intent and routes to appropriate handler.
-    """
+async def chat(request: Request, chat_request: ChatRequest,
+               current_user: dict = Depends(get_current_user_dependency)):
     message = chat_request.message.strip()
-
     if not message:
         raise HTTPException(status_code=400, detail="Empty message")
+    user_id = current_user["id"]
 
-    # Step 1: Detect intent — returns intent name, optional sub-intent, and entities
+    try:
+        result = await run_agent(user_id, message, chat_request.history)
+        return _result_to_response(result)
+    except Exception:
+        logger.exception("Agent failed; falling back to classifier")
+        return await _classifier_fallback(user_id, message)
+
+
+@router.post("/chat/confirm", response_model=ChatResponse)
+@limiter.limit("30/minute")
+async def chat_confirm(request: Request, confirm_request: ChatConfirmRequest,
+                       current_user: dict = Depends(get_current_user_dependency)):
+    user_id = current_user["id"]
+    result = await execute_pending(user_id, confirm_request.pending, confirm_request.ids)
+    return _result_to_response(result)
+
+
+async def _classifier_fallback(user_id, message) -> ChatResponse:
+    """Legacy single-intent path — unchanged behavior, used only on agent failure."""
     intent_result = detect_intent(message)
     intent = intent_result.get("intent", "general")
     sub_intent = intent_result.get("sub_intent")
     entities = intent_result.get("entities", {})
-
-    # Step 2: Handle based on intent
-    user_id = current_user["id"]
     data = {}
 
-    # Expense input is handled client-side; return a redirect flag instead
     if intent == "expense_input":
-        return ChatResponse(
-            intent=intent,
-            sub_intent=sub_intent,
-            response_text="",
-            data={"route_to_expense": True, "original_message": message}
-        )
+        return ChatResponse(intent=intent, sub_intent=sub_intent, response_text="",
+                            reply="", data={"route_to_expense": True, "original_message": message},
+                            actions=[], pending=[])
 
-    # --- Pantry domain ---
-    elif intent == "pantry_query":
-        data = await handle_pantry_query(user_id, sub_intent, entities)
+    dispatch = {
+        "pantry_query": lambda: handle_pantry_query(user_id, sub_intent, entities),
+        "pantry_add": lambda: handle_pantry_add(user_id, entities, message),
+        "pantry_remove": lambda: handle_pantry_remove(user_id, entities, message),
+        "cooking_deduct": lambda: handle_cooking_deduct(user_id, entities, message),
+        "expense_query": lambda: handle_expense_query(user_id, sub_intent, entities),
+        "store_trip": lambda: handle_store_trip(user_id, entities, message),
+        "mark_subscription": lambda: handle_mark_subscription(user_id, entities),
+        "expense_delete": lambda: handle_expense_delete(user_id, entities, message),
+        "budget_query": lambda: handle_budget_query(user_id, sub_intent, entities),
+        "suggestion": lambda: handle_suggestion(user_id, sub_intent, entities),
+        "meal_suggestion": lambda: handle_meal_suggestion(user_id, sub_intent, entities, message),
+        "reminder_check": lambda: handle_reminder_check(user_id, entities, message),
+        "meal_plan_week": lambda: handle_meal_plan_week(user_id, entities),
+        "budget_meal": lambda: handle_budget_meal(user_id, entities, message),
+        "recall_past_meal": lambda: handle_recall_past_meal(user_id, sub_intent, entities, message),
+        "shopping_complete": lambda: handle_shopping_complete(user_id, entities, message),
+        "shopping_list_add": lambda: handle_shopping_list_add(user_id, entities, message),
+        "shopping_list_remove": lambda: handle_shopping_list_remove(user_id, entities, message),
+        "shopping_clear": lambda: handle_shopping_clear(user_id),
+        "budget_set": lambda: handle_budget_set(user_id, entities, message),
+        "share_list": lambda: handle_share_list(user_id, entities, message),
+    }
+    if intent in dispatch:
+        data = await dispatch[intent]()
 
-    elif intent == "pantry_add":
-        data = await handle_pantry_add(user_id, entities, message)
-
-    elif intent == "pantry_remove":
-        data = await handle_pantry_remove(user_id, entities, message)
-
-    elif intent == "cooking_deduct":
-        data = await handle_cooking_deduct(user_id, entities, message)
-
-    # --- Expense / budget domain ---
-    elif intent == "expense_query":
-        data = await handle_expense_query(user_id, sub_intent, entities)
-
-    elif intent == "store_trip":
-        data = await handle_store_trip(user_id, entities, message)
-
-    elif intent == "mark_subscription":
-        data = await handle_mark_subscription(user_id, entities)
-
-    elif intent == "expense_delete":
-        data = await handle_expense_delete(user_id, entities, message)
-
-    elif intent == "budget_query":
-        data = await handle_budget_query(user_id, sub_intent, entities)
-
-    # --- Suggestions and meal planning ---
-    elif intent == "suggestion":
-        data = await handle_suggestion(user_id, sub_intent, entities)
-
-    elif intent == "meal_suggestion":
-        data = await handle_meal_suggestion(user_id, sub_intent, entities, message)
-
-    elif intent == "reminder_check":
-        data = await handle_reminder_check(user_id, entities, message)
-
-    elif intent == "meal_plan_week":
-        data = await handle_meal_plan_week(user_id, entities)
-
-    elif intent == "budget_meal":
-        data = await handle_budget_meal(user_id, entities, message)
-
-    elif intent == "recall_past_meal":
-        data = await handle_recall_past_meal(user_id, sub_intent, entities, message)
-
-    # --- Shopping list domain ---
-    elif intent == "shopping_complete":
-        data = await handle_shopping_complete(user_id, entities, message)
-
-    elif intent == "shopping_list_add":
-        data = await handle_shopping_list_add(user_id, entities, message)
-
-    elif intent == "shopping_list_remove":
-        data = await handle_shopping_list_remove(user_id, entities, message)
-
-    elif intent == "shopping_clear":
-        data = await handle_shopping_clear(user_id)
-
-    elif intent == "budget_set":
-        data = await handle_budget_set(user_id, entities, message)
-
-    elif intent == "share_list":
-        data = await handle_share_list(user_id, entities, message)
-
-    # Step 3: Generate natural-language response from structured handler data
     response_text = generate_response(intent, sub_intent, data, entities)
-
-    return ChatResponse(
-        intent=intent,
-        sub_intent=sub_intent,
-        response_text=response_text,
-        data=data
-    )
+    return ChatResponse(intent=intent, sub_intent=sub_intent,
+                        response_text=response_text, reply=response_text, data=data,
+                        actions=[], pending=[])
