@@ -215,17 +215,30 @@ class PantryGroupJoinByCode(BaseModel):
 class ChatRequest(BaseModel):
     """User message sent to the Voxal chat assistant."""
     message: str = Field(max_length=2000)
+    # Recent conversation turns for context: [{"role": "user"|"assistant", "content": "..."}]
+    history: Optional[List[dict]] = None
+
 
 class ChatResponse(BaseModel):
     """Structured response from the chat assistant.
 
-    intent/sub_intent indicate what action was taken, response_text is the
-    human-readable reply, and data carries any structured payload.
+    Backward-compatible: intent/sub_intent/response_text/data are always present.
+    New agent fields (reply/actions/pending) are additive.
     """
     intent: str
     sub_intent: Optional[str] = None
     response_text: str
     data: Optional[dict] = None
+    reply: Optional[str] = None
+    actions: Optional[List[dict]] = None
+    pending: Optional[List[dict]] = None
+
+
+class ChatConfirmRequest(BaseModel):
+    """Approve previously-proposed pending actions."""
+    ids: List[str]
+    pending: List[dict]  # the PendingAction dicts returned by /chat
+    history: Optional[List[dict]] = None
 
 # ============================================================================
 # INSIGHTS MODELS
