@@ -9,7 +9,41 @@ from agent.prompt import build_messages
 
 logger = logging.getLogger(__name__)
 
-MODEL = "llama-3.3-70b-versatile"
+# gpt-oss-120b reliably formats tool calls on Groq; llama-3.3-70b-versatile
+# frequently fails with 400 tool_use_failed (malformed <function=...> syntax),
+# which would crash the agent down to the classifier fallback. (The retry below
+# is kept as a safety net for transient hiccups.)
+MODEL = "openai/gpt-oss-120b"
+
+# Llama-on-Groq intermittently emits a malformed tool call, and Groq rejects it
+# with a 400 "tool_use_failed" instead of recovering. Generation is
+# nondeterministic, so retrying (with a little extra temperature for variety)
+# usually succeeds. Without this, one bad generation would crash the whole turn
+# down to the dumb classifier fallback.
+_TOOL_RETRY_TEMPS = [0.2, 0.5, 0.7, 0.9]
+
+
+def _is_tool_use_failed(err) -> bool:
+    s = str(err).lower()
+    return "tool_use_failed" in s or "failed to call a function" in s
+
+
+def _create_completion(client, messages, specs):
+    last_err = None
+    for i, temp in enumerate(_TOOL_RETRY_TEMPS):
+        try:
+            return client.chat.completions.create(
+                model=MODEL, messages=messages, tools=specs,
+                tool_choice="auto", temperature=temp,
+            )
+        except Exception as err:
+            if _is_tool_use_failed(err):
+                last_err = err
+                logger.warning("Groq tool_use_failed (attempt %d/%d); retrying",
+                               i + 1, len(_TOOL_RETRY_TEMPS))
+                continue
+            raise
+    raise last_err
 
 
 async def run_agent(user_id, message, history=None, *, client=None,
@@ -23,10 +57,7 @@ async def run_agent(user_id, message, history=None, *, client=None,
     pending: list[PendingAction] = []
 
     for _ in range(max_iters):
-        resp = client.chat.completions.create(
-            model=MODEL, messages=messages, tools=specs,
-            tool_choice="auto", temperature=0.2,
-        )
+        resp = _create_completion(client, messages, specs)
         msg = resp.choices[0].message
         tool_calls = getattr(msg, "tool_calls", None)
 
@@ -49,6 +80,10 @@ async def run_agent(user_id, message, history=None, *, client=None,
             try:
                 args = json.loads(tc.function.arguments or "{}")
             except json.JSONDecodeError:
+                args = {}
+            # The model sometimes sends the JSON literal `null` (or a non-object)
+            # for no-arg tools; coerce so tools can safely do args.get(...).
+            if not isinstance(args, dict):
                 args = {}
             tool_def = registry.get(name)
 

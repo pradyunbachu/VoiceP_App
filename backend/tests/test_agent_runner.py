@@ -118,3 +118,60 @@ async def test_runner_iteration_cap(reg):
     # 3 iterations consumed; returns a graceful fallback reply, no crash.
     assert isinstance(result.reply, str) and result.reply
     assert len(client.calls) == 3
+
+
+# --- Resilience: retry on Groq tool_use_failed + null-arg coercion -----------
+
+class _FlakyGroq:
+    """Yields scripted items in order; an Exception item is raised on that call."""
+    def __init__(self, script): self._script = list(script); self.calls = 0
+    @property
+    def chat(self): return self
+    @property
+    def completions(self): return self
+    def create(self, **kwargs):
+        self.calls += 1
+        item = self._script.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+
+@pytest.mark.asyncio
+async def test_runner_retries_on_tool_use_failed(reg):
+    local, specs, captured = reg
+    err = Exception("Error code: 400 - {'error': {'code': 'tool_use_failed'}}")
+    client = _FlakyGroq([
+        err,  # first create() fails -> _create_completion retries
+        _Resp(_Msg(tool_calls=[_ToolCall("c1", "add_to_shopping_list", {"items": ["milk"]})])),
+        _Resp(_Msg(content="Added milk.")),
+    ])
+    result = await run_agent("u1", "add milk", client=client, tool_registry=local, tool_specs=specs)
+    assert result.reply == "Added milk."
+    assert captured["items"] == ["milk"]
+    assert client.calls == 3  # 1 failed + retry(tool turn) + final reply
+
+
+@pytest.mark.asyncio
+async def test_runner_non_tool_error_is_not_retried(reg):
+    local, specs, _ = reg
+    boom = Exception("some other 500 error")
+    client = _FlakyGroq([boom])
+    with pytest.raises(Exception, match="some other 500 error"):
+        await run_agent("u1", "hi", client=client, tool_registry=local, tool_specs=specs)
+    assert client.calls == 1  # non-tool errors propagate immediately (-> caller's fallback)
+
+
+@pytest.mark.asyncio
+async def test_runner_coerces_null_tool_args_to_dict(reg):
+    local, specs, captured = reg
+    # _ToolCall json.dumps(None) -> "null"; run_agent must coerce to {} so the
+    # tool's args.get(...) does not crash on None.
+    client = FakeGroq([
+        _Resp(_Msg(tool_calls=[_ToolCall("c1", "add_to_shopping_list", None)])),
+        _Resp(_Msg(content="ok")),
+    ])
+    result = await run_agent("u1", "add stuff", client=client, tool_registry=local, tool_specs=specs)
+    assert result.reply == "ok"
+    assert captured["user_id"] == "u1"   # tool ran without crashing
+    assert captured["items"] is None     # args coerced to {}, .get returns None
