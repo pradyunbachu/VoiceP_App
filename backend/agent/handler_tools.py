@@ -13,6 +13,7 @@ from handlers import (
     handle_meal_suggestion, handle_meal_plan_week, handle_budget_meal,
     handle_suggestion, handle_budget_set, handle_mark_subscription,
 )
+from handlers import handle_expense_delete, handle_shopping_clear, handle_share_list
 from agent.tools import ToolDef, ToolResult, register
 
 logger = logging.getLogger(__name__)
@@ -285,3 +286,39 @@ register(ToolDef("log_expense",
            "recurring": {"type": "boolean"}},
           ["store", "amount"]),
     _log_expense, policy="threshold", threshold_field="amount", threshold=100.0))
+
+
+# --- delete_expense (confirm) -------------------------------------------
+async def _delete_expense(user_id, args, message):
+    entities = {"delete_item_name": args.get("ref"), "delete_amount": args.get("amount")}
+    data = await handle_expense_delete(user_id, entities, message or args.get("ref", ""))
+    return ToolResult(data=data, summary="Deleted expense", action_type="expense_deleted")
+
+register(ToolDef("delete_expense",
+    _spec("delete_expense", "Delete an existing expense the user referenced.",
+          {"ref": {"type": "string", "description": "store/description of the expense"},
+           "amount": {"type": "number"}}),
+    _delete_expense, policy="always"))
+
+
+# --- clear_shopping_list (confirm) --------------------------------------
+async def _clear_shopping_list(user_id, args, message):
+    data = await handle_shopping_clear(user_id)
+    return ToolResult(data=data, summary="Cleared shopping list", action_type="shopping_cleared")
+
+register(ToolDef("clear_shopping_list",
+    _spec("clear_shopping_list", "Remove ALL items from the shopping list."),
+    _clear_shopping_list, policy="always"))
+
+
+# --- share_list (confirm) -----------------------------------------------
+async def _share_list(user_id, args, message):
+    entities = {"share_target": args.get("target")}
+    data = await handle_share_list(user_id, entities, message or "")
+    return ToolResult(data=data, summary=f"Shared list with {args.get('target', 'them')}",
+                      action_type="list_shared")
+
+register(ToolDef("share_list",
+    _spec("share_list", "Share the shopping list with another person.",
+          {"target": {"type": "string", "description": "name or email"}}, ["target"]),
+    _share_list, policy="always"))
