@@ -187,7 +187,8 @@ async def _suggest_meals(user_id, args, message):
 
 register(ToolDef("suggest_meals",
     _spec("suggest_meals", "Suggest meals/recipes from what the user has.",
-          {"meal_type": {"type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"]}}),
+          {"meal_type": {"type": ["string", "null"],
+                         "description": "optional: breakfast, lunch, dinner, or snack"}}),
     _suggest_meals, policy="none"))
 
 
