@@ -1,9 +1,9 @@
 import { useState, useRef, useCallback } from "react";
 import { useAuth } from "../context/AuthContext";
-import { useCreateExpense, useCreateExpenseSimple, useChat, useRemovePurchasedItems } from "./index";
+import { useCreateExpense, useCreateExpenseSimple, useChat, useChatConfirm, useRemovePurchasedItems } from "./index";
 import { API_BASE_URL } from "../config/api";
 import { getFriendlyError } from "../lib/friendlyError";
-import type { Expense, ChatResponse, ExpenseExtractionResult } from "../types";
+import type { Expense, ChatResponse, ExpenseExtractionResult, AgentAction, PendingAction, ChatTurn } from "../types";
 
 const useVoiceProcessor = () => {
   const { getToken } = useAuth();
@@ -14,6 +14,11 @@ const useVoiceProcessor = () => {
   const [pendingPantryExpense, setPendingPantryExpense] = useState<Expense | null>(null);
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [expenseJustCreated, setExpenseJustCreated] = useState(0);
+
+  const [actions, setActions] = useState<AgentAction[]>([]);
+  const [pending, setPending] = useState<PendingAction[]>([]);
+  const historyRef = useRef<ChatTurn[]>([]);
+  const chatConfirmMutation = useChatConfirm();
 
   const createExpenseMutation = useCreateExpense();
   const createExpenseSimpleMutation = useCreateExpenseSimple();
@@ -98,6 +103,14 @@ const useVoiceProcessor = () => {
     }
   };
 
+  const appendHistory = (user: string, assistant: string) => {
+    historyRef.current.push({ role: "user", content: user });
+    if (assistant) historyRef.current.push({ role: "assistant", content: assistant });
+    if (historyRef.current.length > 20) {
+      historyRef.current = historyRef.current.slice(-20);
+    }
+  };
+
   const processAudio = async (audioBlob: Blob, mimeType = "audio/webm") => {
     if (isProcessingRef.current) return;
     isProcessingRef.current = true;
@@ -113,6 +126,8 @@ const useVoiceProcessor = () => {
     setTranscript("");
     setExtractedExpense(null);
     setChatResponse(null);
+    setActions([]);
+    setPending([]);
 
     try {
       const token = await getToken();
@@ -148,7 +163,8 @@ const useVoiceProcessor = () => {
         return;
       }
 
-      const chatResult = await chatMutation.mutateAsync(transcriptText);
+      const chatResult = await chatMutation.mutateAsync({ message: transcriptText, history: historyRef.current });
+      appendHistory(transcriptText, chatResult.reply || chatResult.response_text || "");
 
       if (chatResult.intent === "expense_input" && (chatResult.data as Record<string, unknown>)?.route_to_expense) {
         const expenseData = await createExpenseMutation.mutateAsync(transcriptText);
@@ -156,6 +172,8 @@ const useVoiceProcessor = () => {
         handleExpenseCreated(expenseData as ExpenseExtractionResult);
       } else {
         setChatResponse(chatResult as ChatResponse);
+        setActions(chatResult.actions ?? []);
+        setPending(chatResult.pending ?? []);
       }
     } catch (err) {
       if ((err as Error).name === "AbortError") return;
@@ -173,15 +191,20 @@ const useVoiceProcessor = () => {
     if (isProcessingRef.current) return false;
     isProcessingRef.current = true;
     setError(""); setTranscript(""); setExtractedExpense(null); setChatResponse(null);
+    setActions([]); setPending([]);
 
     try {
-      const chatResult = await chatMutation.mutateAsync(input);
+      const chatResult = await chatMutation.mutateAsync({ message: input, history: historyRef.current });
+      appendHistory(input, chatResult.reply || chatResult.response_text || "");
+
       if (chatResult.intent === "expense_input" && (chatResult.data as Record<string, unknown>)?.route_to_expense) {
         const expenseData = await createExpenseMutation.mutateAsync(input);
         setExtractedExpense(expenseData as ExpenseExtractionResult);
         handleExpenseCreated(expenseData as ExpenseExtractionResult);
       } else {
         setChatResponse(chatResult as ChatResponse);
+        setActions(chatResult.actions ?? []);
+        setPending(chatResult.pending ?? []);
       }
       return true;
     } catch (err) {
@@ -204,10 +227,32 @@ const useVoiceProcessor = () => {
     setExtractedExpense(null);
     setChatResponse(null);
     setError("");
+    setActions([]);
+    setPending([]);
   };
 
   const dismissPantryModal = () => {
     setPendingPantryExpense(null);
+  };
+
+  const confirmPending = async (p: PendingAction): Promise<void> => {
+    try {
+      const result = await chatConfirmMutation.mutateAsync({
+        ids: [p.id], pending, history: historyRef.current,
+      });
+      setPending((prev) => prev.filter((x) => x.id !== p.id));
+      setActions((prev) => [...prev, ...(result.actions ?? [])]);
+      if (result.reply || result.response_text) {
+        setChatResponse((prev) => (prev ? { ...prev, response_text: result.reply || result.response_text } : result));
+      }
+      appendHistory(`(confirmed: ${p.summary})`, result.reply || result.response_text || "");
+    } catch (err) {
+      setError(getFriendlyError((err as Error).message));
+    }
+  };
+
+  const cancelPending = (p: PendingAction): void => {
+    setPending((prev) => prev.filter((x) => x.id !== p.id));
   };
 
   return {
@@ -226,6 +271,10 @@ const useVoiceProcessor = () => {
     dismissPantryModal,
     setExtractedExpense,
     setPendingPantryExpense,
+    actions,
+    pending,
+    confirmPending,
+    cancelPending,
   };
 };
 
