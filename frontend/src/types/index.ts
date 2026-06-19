@@ -187,7 +187,8 @@ export type ChatIntent =
   | "reminder_check"
   | "share_list"
   | "recall_past_meal"
-  | "general";
+  | "general"
+  | "agent";
 
 export interface ChatResponseData {
   items?: Array<Record<string, unknown>>;
@@ -213,10 +214,31 @@ export interface ChatResponseData {
   [key: string]: unknown;
 }
 
+export interface AgentAction {
+  type: string;
+  summary: string;
+  data?: Record<string, unknown>;
+}
+
+export interface PendingAction {
+  id: string;
+  tool: string;
+  summary: string;
+  args?: Record<string, unknown>;
+}
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
 export interface ChatResponse {
   intent: ChatIntent;
   sub_intent?: string;
   response_text: string;
+  reply?: string;
+  actions?: AgentAction[];
+  pending?: PendingAction[];
   data?: ChatResponseData;
 }
 

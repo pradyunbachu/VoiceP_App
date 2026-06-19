@@ -45,7 +45,7 @@ export {
 } from './mutations/usePantryMutations';
 
 // Chat mutations
-export { useChat } from './mutations/useChatMutation';
+export { useChat, useChatConfirm } from './mutations/useChatMutation';
 
 // Receipt mutations
 export { useScanReceipt } from './mutations/useReceiptMutation';
