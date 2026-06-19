@@ -6,6 +6,12 @@ from handlers import (
     handle_pantry_query, handle_expense_query, handle_budget_query,
     handle_reminder_check, handle_recall_past_meal,
 )
+from handlers import (
+    handle_pantry_add, handle_pantry_remove, handle_cooking_deduct,
+    handle_shopping_list_add, handle_shopping_list_remove,
+    handle_meal_suggestion, handle_meal_plan_week, handle_budget_meal,
+    handle_suggestion, handle_budget_set, handle_mark_subscription,
+)
 from agent.tools import ToolDef, ToolResult, register
 
 logger = logging.getLogger(__name__)
@@ -101,3 +107,132 @@ register(ToolDef(
     spec=_spec("recall_meal", "Recall/look up a previously cooked meal.",
                {"query": {"type": "string", "description": "What the user is recalling"}}),
     fn=_recall_meal, policy="none"))
+
+
+# --- add_pantry_items ----------------------------------------------------
+async def _add_pantry_items(user_id, args, message):
+    entities = {"pantry_items": args.get("items", [])}
+    data = await handle_pantry_add(user_id, entities, message)
+    return ToolResult(data=data, summary="Added pantry items", action_type="pantry_add")
+
+register(ToolDef("add_pantry_items",
+    _spec("add_pantry_items", "Add items the user already has to their pantry (no expense).",
+          {"items": {"type": "array", "items": {"type": "string"}}}, ["items"]),
+    _add_pantry_items, policy="none"))
+
+
+# --- remove_pantry_items -------------------------------------------------
+async def _remove_pantry_items(user_id, args, message):
+    entities = {"item_name": args.get("items", [])}
+    data = await handle_pantry_remove(user_id, entities, message)
+    return ToolResult(data=data, summary="Removed pantry items", action_type="pantry_remove")
+
+register(ToolDef("remove_pantry_items",
+    _spec("remove_pantry_items", "Remove specific items from the pantry.",
+          {"items": {"type": "array", "items": {"type": "string"}}}, ["items"]),
+    _remove_pantry_items, policy="none"))
+
+
+# --- add_to_shopping_list ------------------------------------------------
+async def _add_to_shopping_list(user_id, args, message):
+    entities = {"shopping_items": args.get("items", [])}
+    data = await handle_shopping_list_add(user_id, entities, message)
+    return ToolResult(data=data, summary="Added to shopping list", action_type="shopping_add")
+
+register(ToolDef("add_to_shopping_list",
+    _spec("add_to_shopping_list", "Add items to the shopping list for future purchase.",
+          {"items": {"type": "array", "items": {"type": "string"}}}, ["items"]),
+    _add_to_shopping_list, policy="none"))
+
+
+# --- remove_from_shopping_list -------------------------------------------
+async def _remove_from_shopping_list(user_id, args, message):
+    entities = {"shopping_items": args.get("items", [])}
+    data = await handle_shopping_list_remove(user_id, entities, message)
+    return ToolResult(data=data, summary="Removed from shopping list", action_type="shopping_remove")
+
+register(ToolDef("remove_from_shopping_list",
+    _spec("remove_from_shopping_list", "Remove specific items from the shopping list.",
+          {"items": {"type": "array", "items": {"type": "string"}}}, ["items"]),
+    _remove_from_shopping_list, policy="none"))
+
+
+# --- suggest_meals -------------------------------------------------------
+async def _suggest_meals(user_id, args, message):
+    entities = {"meal_type": args.get("meal_type")}
+    data = await handle_meal_suggestion(user_id, "quick_meals", entities, message)
+    return ToolResult(data=data, summary="Suggested meals", action_type="meal_suggestions")
+
+register(ToolDef("suggest_meals",
+    _spec("suggest_meals", "Suggest meals/recipes from what the user has.",
+          {"meal_type": {"type": "string", "enum": ["breakfast", "lunch", "dinner", "snack"]}}),
+    _suggest_meals, policy="none"))
+
+
+# --- meal_plan_week ------------------------------------------------------
+async def _meal_plan_week(user_id, args, message):
+    data = await handle_meal_plan_week(user_id, args)
+    return ToolResult(data=data, summary="Built a weekly meal plan", action_type="meal_plan")
+
+register(ToolDef("meal_plan_week",
+    _spec("meal_plan_week", "Build a full weekly meal plan."),
+    _meal_plan_week, policy="none"))
+
+
+# --- budget_meal ---------------------------------------------------------
+async def _budget_meal(user_id, args, message):
+    entities = {"price_limit": args.get("price_limit")}
+    data = await handle_budget_meal(user_id, entities, message)
+    return ToolResult(data=data, summary="Suggested budget meals", action_type="meal_suggestions")
+
+register(ToolDef("budget_meal",
+    _spec("budget_meal", "Suggest meals under a price limit.",
+          {"price_limit": {"type": "number"}}, ["price_limit"]),
+    _budget_meal, policy="none"))
+
+
+# --- suggest_shopping ----------------------------------------------------
+async def _suggest_shopping(user_id, args, message):
+    data = await handle_suggestion(user_id, "shopping_list", args)
+    return ToolResult(data=data, summary="Suggested shopping items", action_type="shopping_suggestions")
+
+register(ToolDef("suggest_shopping",
+    _spec("suggest_shopping", "Suggest what to buy based on what's running low."),
+    _suggest_shopping, policy="none"))
+
+
+# --- set_budget ----------------------------------------------------------
+async def _set_budget(user_id, args, message):
+    entities = {"budget_amount": args.get("amount"),
+                "category": args.get("category"),
+                "budget_month": args.get("month")}
+    data = await handle_budget_set(user_id, entities, message)
+    return ToolResult(data=data, summary="Set budget", action_type="budget_set")
+
+register(ToolDef("set_budget",
+    _spec("set_budget", "Set or update a spending budget for a category.",
+          {"category": {"type": "string"}, "amount": {"type": "number"},
+           "month": {"type": "string"}}, ["category", "amount"]),
+    _set_budget, policy="none"))
+
+
+# --- mark_recurring ------------------------------------------------------
+async def _mark_recurring(user_id, args, message):
+    data = await handle_mark_subscription(user_id, args)
+    return ToolResult(data=data, summary="Marked as recurring", action_type="mark_recurring")
+
+register(ToolDef("mark_recurring",
+    _spec("mark_recurring", "Tag the most recent / referenced expense as recurring."),
+    _mark_recurring, policy="none"))
+
+
+# --- cook_deduct ---------------------------------------------------------
+async def _cook_deduct(user_id, args, message):
+    entities = {"recipe_name": args.get("recipe")}
+    data = await handle_cooking_deduct(user_id, entities, message)
+    return ToolResult(data=data, summary="Deducted recipe ingredients", action_type="cook_deduct")
+
+register(ToolDef("cook_deduct",
+    _spec("cook_deduct", "Deduct a recipe's ingredients from the pantry (user is cooking now).",
+          {"recipe": {"type": "string"}}, ["recipe"]),
+    _cook_deduct, policy="none"))
