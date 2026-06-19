@@ -5,8 +5,12 @@
   padding: 12px 14px; border-radius: 12px;
   background: var(--card-bg, #faf7f2); border: 1px solid var(--border, #e7e0d4);
 }
-.agent-action-icon { color: #2e7d32; display: flex; }
+.agent-action-icon { color: var(--success, #2e7d32); display: flex; }
 .agent-action-summary { font-size: 0.95rem; }
+.agent-expense-body { display: flex; flex-direction: column; flex: 1; }
+.agent-expense-store { font-weight: 600; font-size: 0.95rem; }
+.agent-expense-category { font-size: 0.8rem; opacity: 0.7; }
+.agent-expense-amount { font-weight: 700; color: var(--accent, #b58a4a); }
 .agent-confirm-card {
   padding: 12px 14px; border-radius: 12px;
   background: var(--card-bg, #faf7f2); border: 1px solid var(--accent, #b58a4a);

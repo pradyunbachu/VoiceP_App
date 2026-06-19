@@ -18,6 +18,26 @@ interface Props {
   onCancel: (p: PendingAction) => void;
 }
 
+/** Rich card for a logged expense (uses the action's structured data). */
+const ExpenseActionCard: FC<{ action: AgentAction }> = ({ action }) => {
+  const data = action.data ?? {};
+  const store = typeof data.store === "string" ? data.store : "Expense";
+  const amount = typeof data.amount === "number" ? data.amount : undefined;
+  const category = typeof data.category === "string" ? data.category : undefined;
+  return (
+    <div className="agent-action-card agent-expense-card">
+      <span className="agent-action-icon"><DollarSign size={18} /></span>
+      <div className="agent-expense-body">
+        <span className="agent-expense-store">{store}</span>
+        {category && <span className="agent-expense-category">{category}</span>}
+      </div>
+      {amount !== undefined && (
+        <span className="agent-expense-amount">${amount.toFixed(2)}</span>
+      )}
+    </div>
+  );
+};
+
 const iconFor = (type: string) => {
   switch (type) {
     case "shopping_add": case "shopping_suggestions": return <ShoppingCart size={18} />;
@@ -50,10 +70,14 @@ const AgentResultDisplay: FC<Props> = ({ actions, pending, onConfirm, onCancel }
         </div>
       ))}
       {actions.map((action, i) => (
-        <div className="agent-action-card" key={`${action.type}-${i}`}>
-          <span className="agent-action-icon">{iconFor(action.type)}</span>
-          <span className="agent-action-summary">{action.summary || action.type}</span>
-        </div>
+        action.type === "expense_logged"
+          ? <ExpenseActionCard action={action} key={`expense-${i}`} />
+          : (
+            <div className="agent-action-card" key={`${action.type}-${i}`}>
+              <span className="agent-action-icon">{iconFor(action.type)}</span>
+              <span className="agent-action-summary">{action.summary || action.type}</span>
+            </div>
+          )
       ))}
     </div>
   );
