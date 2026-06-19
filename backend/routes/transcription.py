@@ -56,8 +56,16 @@ async def transcribe_audio(
 
         # Use Deepgram REST API v1 endpoint with nova-3 multilingual model
         url = "https://api.deepgram.com/v1/listen"
+        # Deepgram's pre-recorded API expects the audio as the RAW request body
+        # with a Content-Type header identifying the format. It does NOT accept
+        # multipart/form-data: WebM (web app) happens to survive the multipart
+        # wrapper because its demuxer scans for the EBML signature, but MP4/M4A
+        # (iOS) and WAV require their header at byte 0, so the wrapper corrupts
+        # them and Deepgram hangs/rejects -> backend 502. Sending the raw body
+        # works for every format.
         headers = {
             "Authorization": f"Token {deepgram_api_key}",
+            "Content-Type": audio.content_type or "audio/webm",
         }
         params = {
             "model": "nova-3",  # Deepgram's latest STT model
@@ -67,13 +75,13 @@ async def transcribe_audio(
             "numerals": "true",
         }
 
-        # Send audio to Deepgram API using multipart form data
+        # Send audio to Deepgram API as the raw request body
         async with httpx.AsyncClient(timeout=30.0) as client:
             response = await client.post(
                 url,
                 headers=headers,
                 params=params,
-                files={"audio": (audio.filename or "audio.webm", audio_content, audio.content_type or "audio/webm")}
+                content=audio_content,
             )
             response.raise_for_status()
             result = response.json()
