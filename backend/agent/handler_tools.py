@@ -270,6 +270,8 @@ async def _log_expense(user_id, args, message):
         category=args.get("category", "Other"),
         date=args.get("date"),
         is_recurring=bool(args.get("recurring", False)),
+        recurring_interval=args.get("recurring_interval"),
+        recurring_unit=args.get("recurring_unit"),
     )
     amt = saved.get("amount")
     summary = f"Logged ${amt} at {saved.get('store')}" if amt is not None else f"Logged expense at {saved.get('store')}"
@@ -281,7 +283,10 @@ register(ToolDef("log_expense",
            "items": {"type": "string", "description": "comma-separated item names"},
            "category": {"type": "string"},
            "date": {"type": "string", "description": "YYYY-MM-DD"},
-           "recurring": {"type": "boolean"}},
+           "recurring": {"type": "boolean", "description": "true if this repeats (subscription, rent, etc.)"},
+           "recurring_interval": {"type": "number", "description": "interval count, e.g. 1 or 2 (only if recurring)"},
+           "recurring_unit": {"type": "string", "enum": ["days", "weeks", "months", "years"],
+                              "description": "interval unit (only if recurring)"}},
           ["store", "amount"]),
     _log_expense, policy="threshold", threshold_field="amount", threshold=100.0))
 
