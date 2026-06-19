@@ -92,22 +92,24 @@ def _confirm_summary(name, args):
 
 async def execute_pending(user_id, pending, ids, *, tool_registry=None):
     registry = tool_registry if tool_registry is not None else TOOL_REGISTRY
-    by_id = {p["id"]: p for p in pending}
+    by_id = {p["id"]: p for p in pending if p.get("id")}
     actions: list[Action] = []
     done = []
     for pid in ids:
         p = by_id.get(pid)
         if not p:
             continue
-        tool_def = registry.get(p["tool"])
+        if not p.get("tool"):
+            continue
+        tool_def = registry.get(p.get("tool"))
         if not tool_def:
             continue
         try:
             res = await tool_def.fn(user_id, p.get("args", {}), "")
-            actions.append(Action(type=res.action_type or p["tool"], summary=res.summary, data=res.data))
+            actions.append(Action(type=res.action_type or p.get("tool"), summary=res.summary, data=res.data))
             done.append(res.summary)
         except Exception as e:  # never crash the turn — mirror run_agent's per-tool guard
-            logger.exception("execute_pending: tool %s failed", p["tool"])
-            done.append(f"Couldn't complete '{p.get('summary', p['tool'])}': {e}")
+            logger.exception("execute_pending: tool %s failed", p.get("tool"))
+            done.append(f"Couldn't complete '{p.get('summary', p.get('tool', ''))}': {e}")
     reply = " ".join(done) if done else "Nothing to confirm."
     return AgentResult(reply=reply, actions=actions, pending=[])

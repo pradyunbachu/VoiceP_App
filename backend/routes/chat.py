@@ -79,7 +79,8 @@ async def _classifier_fallback(user_id, message) -> ChatResponse:
 
     if intent == "expense_input":
         return ChatResponse(intent=intent, sub_intent=sub_intent, response_text="",
-                            reply="", data={"route_to_expense": True, "original_message": message})
+                            reply="", data={"route_to_expense": True, "original_message": message},
+                            actions=[], pending=[])
 
     dispatch = {
         "pantry_query": lambda: handle_pantry_query(user_id, sub_intent, entities),
@@ -109,4 +110,5 @@ async def _classifier_fallback(user_id, message) -> ChatResponse:
 
     response_text = generate_response(intent, sub_intent, data, entities)
     return ChatResponse(intent=intent, sub_intent=sub_intent,
-                        response_text=response_text, reply=response_text, data=data)
+                        response_text=response_text, reply=response_text, data=data,
+                        actions=[], pending=[])

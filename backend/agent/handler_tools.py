@@ -6,14 +6,12 @@ from services.expense_persist import persist_expense
 from handlers import (
     handle_pantry_query, handle_expense_query, handle_budget_query,
     handle_reminder_check, handle_recall_past_meal,
-)
-from handlers import (
     handle_pantry_add, handle_pantry_remove, handle_cooking_deduct,
     handle_shopping_list_add, handle_shopping_list_remove,
     handle_meal_suggestion, handle_meal_plan_week, handle_budget_meal,
     handle_suggestion, handle_budget_set, handle_mark_subscription,
+    handle_expense_delete, handle_shopping_clear, handle_share_list,
 )
-from handlers import handle_expense_delete, handle_shopping_clear, handle_share_list
 from agent.tools import ToolDef, ToolResult, register
 
 logger = logging.getLogger(__name__)
@@ -89,7 +87,7 @@ register(ToolDef(
 
 # --- check_reminder ------------------------------------------------------
 async def _check_reminder(user_id, args, message):
-    data = await handle_reminder_check(user_id, args, message or args.get("item", ""))
+    data = await handle_reminder_check(user_id, args, message or args.get("item_name", ""))
     return ToolResult(data=data, summary="Checked reminder")
 
 register(ToolDef(

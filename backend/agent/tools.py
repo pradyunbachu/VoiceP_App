@@ -3,7 +3,7 @@
 Each tool wraps an existing handler. user_id is always passed by the runner
 (server-side), never by the model.
 """
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import Awaitable, Callable, Optional
 
 

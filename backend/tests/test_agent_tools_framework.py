@@ -1,4 +1,3 @@
-import pytest
 from agent.tools import ToolDef, ToolResult, requires_confirmation
 
 

@@ -1,5 +1,4 @@
 # backend/tests/test_agent_confirmation.py
-import json
 import pytest
 
 from agent.tools import ToolDef, ToolResult
