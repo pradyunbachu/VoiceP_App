@@ -123,9 +123,31 @@ register(ToolDef("add_pantry_items",
 
 # --- remove_pantry_items -------------------------------------------------
 async def _remove_pantry_items(user_id, args, message):
-    entities = {"item_name": args.get("items", [])}
-    data = await handle_pantry_remove(user_id, entities, message)
-    return ToolResult(data=data, summary="Removed pantry items", action_type="pantry_remove")
+    items = args.get("items", [])
+    if not items:
+        # Fall back: let the handler parse the item from the message
+        data = await handle_pantry_remove(user_id, {}, message)
+        summary = "Removed pantry item(s)"
+        return ToolResult(data=data, summary=summary, action_type="pantry_remove")
+
+    results = []
+    total_removed = 0
+    has_removed_count = False
+    for item in items:
+        result = await handle_pantry_remove(user_id, {"item_name": item}, message)
+        results.append(result)
+        if isinstance(result, dict) and "removed_count" in result:
+            total_removed += result["removed_count"]
+            has_removed_count = True
+
+    aggregated = {"results": results}
+    if has_removed_count:
+        aggregated["removed_count"] = total_removed
+        summary = f"Removed {total_removed} pantry item(s)"
+    else:
+        summary = f"Removed {len(items)} pantry item(s)"
+
+    return ToolResult(data=aggregated, summary=summary, action_type="pantry_remove")
 
 register(ToolDef("remove_pantry_items",
     _spec("remove_pantry_items", "Remove specific items from the pantry.",
