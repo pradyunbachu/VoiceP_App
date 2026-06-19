@@ -9,6 +9,7 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { Mic, Square, Loader2, Type, Camera, HelpCircle, Zap, X } from "lucide-react";
 import AddToPantryModal from "./AddToPantryModal";
+import AgentResultDisplay from "./AgentResultDisplay";
 import ChatResponseDisplay from "./ChatResponseDisplay";
 import ReceiptScanner from "./ReceiptScanner";
 import ExpenseResult from "./ExpenseResult";
@@ -175,6 +176,15 @@ const VoiceRecorder: React.FC<Props> = ({ showToast, onShowTutorial }) => {
       />
 
       {processor.chatResponse && !processor.extractedExpense && <ChatResponseDisplay chatResponse={processor.chatResponse} />}
+
+      {!processor.extractedExpense && (
+        <AgentResultDisplay
+          actions={processor.actions}
+          pending={processor.pending}
+          onConfirm={processor.confirmPending}
+          onCancel={processor.cancelPending}
+        />
+      )}
 
       {showPantryModal && processor.pendingPantryExpense && (
         <AddToPantryModal
