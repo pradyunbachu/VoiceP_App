@@ -80,6 +80,35 @@ async def test_runner_plain_answer_no_tools(reg):
 
 
 @pytest.mark.asyncio
+async def test_execute_pending_one_failing_tool_does_not_crash(reg):
+    """If one pending tool raises, the call must not crash and a second pending
+    tool in the same batch must still execute and appear in result.actions."""
+    local, _, _ = reg
+
+    async def boom(user_id, args, msg):
+        raise RuntimeError("simulated tool failure")
+
+    local["bad_tool"] = ToolDef(
+        name="bad_tool",
+        spec=_spec("bad_tool"),
+        fn=boom,
+        policy="none",
+    )
+
+    pending = [
+        {"id": "p1", "tool": "bad_tool", "args": {}, "summary": "Do the bad thing"},
+        {"id": "p2", "tool": "add_to_shopping_list", "args": {"items": ["eggs"]}, "summary": "Add eggs"},
+    ]
+
+    # Must not raise
+    result = await execute_pending("u1", pending, ["p1", "p2"], tool_registry=local)
+
+    # The successful action must be present
+    assert any(a.type == "shopping_add" for a in result.actions), \
+        "successful action must appear in result.actions even when a prior tool failed"
+
+
+@pytest.mark.asyncio
 async def test_runner_iteration_cap(reg):
     local, specs, _ = reg
     # Always returns a tool call -> would loop forever without the cap.
