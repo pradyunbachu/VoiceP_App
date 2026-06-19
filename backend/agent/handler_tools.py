@@ -2,6 +2,7 @@
 import logging
 
 from config import supabase
+from services.expense_persist import persist_expense
 from handlers import (
     handle_pantry_query, handle_expense_query, handle_budget_query,
     handle_reminder_check, handle_recall_past_meal,
@@ -258,3 +259,29 @@ register(ToolDef("cook_deduct",
     _spec("cook_deduct", "Deduct a recipe's ingredients from the pantry (user is cooking now).",
           {"recipe": {"type": "string"}}, ["recipe"]),
     _cook_deduct, policy="none"))
+
+
+# --- log_expense ---------------------------------------------------------
+async def _log_expense(user_id, args, message):
+    saved = persist_expense(
+        user_id,
+        store=args.get("store", "Unknown Store"),
+        amount=args.get("amount"),
+        items=args.get("items", ""),
+        category=args.get("category", "Other"),
+        date=args.get("date"),
+        is_recurring=bool(args.get("recurring", False)),
+    )
+    amt = saved.get("amount")
+    summary = f"Logged ${amt} at {saved.get('store')}" if amt is not None else f"Logged expense at {saved.get('store')}"
+    return ToolResult(data=saved, summary=summary, action_type="expense_logged")
+
+register(ToolDef("log_expense",
+    _spec("log_expense", "Log a NEW expense the user reports having spent.",
+          {"store": {"type": "string"}, "amount": {"type": "number"},
+           "items": {"type": "string", "description": "comma-separated item names"},
+           "category": {"type": "string"},
+           "date": {"type": "string", "description": "YYYY-MM-DD"},
+           "recurring": {"type": "boolean"}},
+          ["store", "amount"]),
+    _log_expense, policy="threshold", threshold_field="amount", threshold=100.0))
