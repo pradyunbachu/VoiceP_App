@@ -929,7 +929,7 @@ const QuickRecordPopup = forwardRef<QuickRecordPopupHandle, Props>(({ showToast,
               ) : (
                 <>
                 <div className="chat-response-text">
-                  {chatResponse.response_text.split("\n").map((line, index) => (
+                  {(chatResponse.response_text || "").split("\n").map((line, index) => (
                     <p key={index}>{line}</p>
                   ))}
                 </div>
