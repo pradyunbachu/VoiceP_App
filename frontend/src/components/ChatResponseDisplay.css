@@ -579,3 +579,11 @@
     font-size: 1.25rem;
   }
 }
+
+/* Inline error shown if a store-trip pantry submission fails */
+.store-trip-error {
+  margin-top: 8px;
+  color: #c0392b;
+  font-size: 0.85rem;
+  font-weight: 500;
+}

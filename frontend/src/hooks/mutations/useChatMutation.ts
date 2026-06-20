@@ -10,6 +10,7 @@ import type { QueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { API_BASE_URL } from '../../config/api';
 import { getCsrfHeaders } from '../../lib/csrf';
+import { SessionExpiredError } from '../../lib/authFetch';
 import { queryKeys } from '../queries/queryKeys';
 import { domainsForActions } from '../../lib/agentCacheKeys';
 import type { ChatResponse, ChatTurn, PendingAction } from '../../types';
@@ -26,6 +27,7 @@ export interface ChatConfirmInput {
 }
 
 async function postJSON(path: string, token: string | null, body: unknown): Promise<ChatResponse> {
+  if (!token) throw new SessionExpiredError();
   const response = await fetch(`${API_BASE_URL}${path}`, {
     method: 'POST',
     headers: getCsrfHeaders({

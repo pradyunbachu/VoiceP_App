@@ -16,7 +16,7 @@ stay in sync.
 # ============================================================================
 # EXPENSE CRUD ROUTES
 # ============================================================================
-from fastapi import APIRouter, HTTPException, Depends, Request
+from fastapi import APIRouter, HTTPException, Depends, Request, Query
 from datetime import datetime
 from typing import Optional
 import math
@@ -122,8 +122,8 @@ async def get_expenses(
     sort_by: Optional[str] = "date",
     sort_order: Optional[str] = "desc",
     recurring: Optional[bool] = None,
-    page: int = 1,
-    page_size: int = 20,
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=200),
     export: bool = False
 ):
     """Get expenses for the current user with search, filtering, sorting, and pagination"""

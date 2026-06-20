@@ -82,7 +82,11 @@ async def test_runner_plain_answer_no_tools(reg):
 @pytest.mark.asyncio
 async def test_execute_pending_one_failing_tool_does_not_crash(reg):
     """If one pending tool raises, the call must not crash and a second pending
-    tool in the same batch must still execute and appear in result.actions."""
+    tool in the same batch must still execute and appear in result.actions.
+
+    Both tools use policy='always' so they pass the confirm-gate guard in
+    execute_pending (policy='none' tools are skipped there by design).
+    """
     local, _, _ = reg
 
     async def boom(user_id, args, msg):
@@ -92,7 +96,16 @@ async def test_execute_pending_one_failing_tool_does_not_crash(reg):
         name="bad_tool",
         spec=_spec("bad_tool"),
         fn=boom,
-        policy="none",
+        policy="always",
+    )
+    # Override add_to_shopping_list to require confirmation so it runs in execute_pending
+    async def add_items(user_id, args, message):
+        return ToolResult(data={"added": args.get("items")}, summary="Added items", action_type="shopping_add")
+    local["add_to_shopping_list"] = ToolDef(
+        name="add_to_shopping_list",
+        spec=_spec("add_to_shopping_list", {"items": {"type": "array", "items": {"type": "string"}}}),
+        fn=add_items,
+        policy="always",
     )
 
     pending = [

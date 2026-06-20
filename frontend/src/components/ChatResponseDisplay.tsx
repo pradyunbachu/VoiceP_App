@@ -5,7 +5,7 @@
  * the voice assistant and renders an intent-specific card with tailored
  * data layouts for all supported intents.
  */
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import type { FC, ReactNode } from "react";
 import {
   ShoppingCart, Package, DollarSign, HelpCircle, AlertTriangle,
@@ -40,19 +40,30 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
   const [storeTripAmount, setStoreTripAmount] = useState<string>("");
   const [storeTripConfirmed, setStoreTripConfirmed] = useState(false);
   const [storeTripSubmitting, setStoreTripSubmitting] = useState(false);
+  const [storeTripError, setStoreTripError] = useState<string | null>(null);
+
+  // Reset + initialize store-trip state whenever chatResponse changes (fixes
+  // both the setState-in-render violation and the stale "Added" view on a new trip).
+  useEffect(() => {
+    if (chatResponse?.intent === "store_trip" && chatResponse.data?.pending_items) {
+      const items = (chatResponse.data.pending_items as PendingItem[]).filter(i => i.is_pantry_item);
+      setStoreTripItems(items);
+      setStoreTripAmount(chatResponse.data.expense_amount ? String(chatResponse.data.expense_amount) : "");
+      setStoreTripConfirmed(false);
+      setStoreTripSubmitting(false);
+      setStoreTripError(null);
+    } else {
+      setStoreTripItems(null);
+      setStoreTripAmount("");
+      setStoreTripConfirmed(false);
+      setStoreTripSubmitting(false);
+      setStoreTripError(null);
+    }
+  }, [chatResponse]);
 
   if (!chatResponse) return null;
 
   const { intent, sub_intent, response_text, data } = chatResponse;
-
-  // Initialize store trip items from data on first render
-  if (intent === "store_trip" && data?.pending_items && storeTripItems === null && !storeTripConfirmed) {
-    const items = (data.pending_items as PendingItem[]).filter(i => i.is_pantry_item);
-    setStoreTripItems(items);
-    if (data.expense_amount) {
-      setStoreTripAmount(String(data.expense_amount));
-    }
-  }
 
   // Map intent to its corresponding icon
   const getIcon = (): ReactNode => {
@@ -570,10 +581,11 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
   const handleStoreTripConfirm = async () => {
     if (!storeTripItems || storeTripItems.length === 0) return;
     setStoreTripSubmitting(true);
+    setStoreTripError(null);
     try {
       const token = await getToken();
       const amount = storeTripAmount ? parseFloat(storeTripAmount) : null;
-      await fetch(`${API_BASE_URL}/api/pantry/store-trip`, {
+      const res = await fetch(`${API_BASE_URL}/api/pantry/store-trip`, {
         method: "POST",
         headers: getCsrfHeaders({
           "Content-Type": "application/json",
@@ -591,6 +603,9 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
           amount: amount && amount > 0 ? amount : null,
         }),
       });
+      if (!res.ok) {
+        throw new Error(`Server error ${res.status}`);
+      }
       queryClient.invalidateQueries({ queryKey: queryKeys.pantry.all });
       if (amount && amount > 0) {
         queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all });
@@ -599,6 +614,7 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
       setStoreTripConfirmed(true);
     } catch (err) {
       console.error("Error confirming store trip:", err);
+      setStoreTripError("Couldn't add to pantry — please try again.");
     } finally {
       setStoreTripSubmitting(false);
     }
@@ -688,6 +704,9 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
               <><Check size={16} /> Add {storeTripItems.length} Item{storeTripItems.length !== 1 ? "s" : ""} to Pantry</>
             )}
           </button>
+          {storeTripError && (
+            <p className="store-trip-error">{storeTripError}</p>
+          )}
         </div>
       </div>
     );
@@ -740,7 +759,7 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
         <h3>{getTitle()}</h3>
       </div>
       <div className="chat-response-text">
-        {response_text.split("\n").map((line, index) => (
+        {(response_text || "").split("\n").map((line, index) => (
           <p key={index}>{line}</p>
         ))}
       </div>

@@ -1,4 +1,5 @@
 """The Voxy agent loop: call Groq, run tool calls, chain, reply."""
+import asyncio
 import json
 import logging
 
@@ -57,7 +58,9 @@ async def run_agent(user_id, message, history=None, *, client=None,
     pending: list[PendingAction] = []
 
     for _ in range(max_iters):
-        resp = _create_completion(client, messages, specs)
+        resp = await asyncio.get_running_loop().run_in_executor(
+            None, _create_completion, client, messages, specs
+        )
         msg = resp.choices[0].message
         tool_calls = getattr(msg, "tool_calls", None)
 
@@ -138,6 +141,10 @@ async def execute_pending(user_id, pending, ids, *, tool_registry=None):
             continue
         tool_def = registry.get(p.get("tool"))
         if not tool_def:
+            continue
+        # Only execute tools that actually require confirmation; skip "none"-policy
+        # tools so the /confirm endpoint can't be abused to run safe tools.
+        if tool_def.policy == "none":
             continue
         try:
             res = await tool_def.fn(user_id, p.get("args", {}), "")

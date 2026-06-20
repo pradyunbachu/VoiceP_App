@@ -149,7 +149,10 @@ def detect_intent(message: str) -> dict:
             content = content[:-3]
         content = content.strip()
 
-        return json.loads(content)
+        result = json.loads(content)
+        if not isinstance(result, dict):
+            return simple_intent_detection(message)
+        return result
     except Exception as e:
         logger.error("Intent detection error: %s", e)
         return simple_intent_detection(message)
