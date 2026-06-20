@@ -198,6 +198,9 @@ async def extract_expense_simple_endpoint(
         expense_data = extract_expense_simple(transcript)
         expense_data["items"] = _normalize_items_string(expense_data.get("items", ""))
 
+        if expense_data.get("amount") is None or float(expense_data["amount"]) <= 0:
+            raise HTTPException(status_code=422, detail="Could not extract a valid amount from the transcript")
+
         if supabase is None:
             raise HTTPException(status_code=500, detail="Database not configured")
 
@@ -591,6 +594,9 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
         raise HTTPException(status_code=500, detail="Database not configured")
 
     for expense_data in expenses_data:
+        if expense_data.get("amount") is None or float(expense_data["amount"]) <= 0:
+            logger.warning("Simple fallback: skipping expense with no valid amount")
+            continue
         expense_data["items"] = _normalize_items_string(expense_data.get("items", ""))
         is_recurring = expense_data.get("is_recurring", False)
         recurring_interval = expense_data.get("recurring_interval")
@@ -625,6 +631,9 @@ Today is {today_str}. Remove articles (a, an, the) from items."""
             "recurring_interval": recurring_interval,
             "recurring_unit": recurring_unit
         })
+
+    if not saved_expenses:
+        raise HTTPException(status_code=422, detail="Could not extract a valid expense amount from the transcript")
 
     api_cache.invalidate_prefix(f"analytics:{user_id}")
     api_cache.invalidate_prefix(f"insights:{user_id}")

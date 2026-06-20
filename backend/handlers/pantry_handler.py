@@ -395,7 +395,15 @@ Only include items that are actually in the pantry list above. Be practical abou
             content = content[:-3]
         content = content.strip()
 
-        used_items = json.loads(content)
+        try:
+            used_items = json.loads(content)
+        except (json.JSONDecodeError, ValueError) as parse_err:
+            logger.error("Cooking deduct: LLM returned non-JSON: %s", parse_err)
+            return {
+                "success": False,
+                "message": "Failed to deduct ingredients: could not parse ingredient list.",
+                "query_type": "cooking_deduct"
+            }
 
         deducted = []
         deducted_ids = set()  # Track already-deducted pantry items to prevent double-deduction

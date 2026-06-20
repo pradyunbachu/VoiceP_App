@@ -20,6 +20,7 @@ import re
 import json
 from datetime import datetime
 from typing import Optional
+import groq
 from config import groq_client
 import logging
 
@@ -69,6 +70,7 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
         logger.warning("Groq client not initialized")
         return None
 
+    result_text = ""
     try:
         # Strip data URL prefix if present
         if "," in image_base64:
@@ -120,7 +122,7 @@ def parse_receipt_with_vision(image_base64: str) -> Optional[dict]:
         logger.error("JSON parsing error: %s", e)
         logger.debug("Raw response: %s", result_text)
         return None
-    except TimeoutError:
+    except groq.APITimeoutError:
         logger.error("Groq API request timed out after 30 seconds")
         return None
     except Exception as e:

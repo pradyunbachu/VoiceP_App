@@ -216,7 +216,7 @@ class ChatRequest(BaseModel):
     """User message sent to the Voxal chat assistant."""
     message: str = Field(max_length=2000)
     # Recent conversation turns for context: [{"role": "user"|"assistant", "content": "..."}]
-    history: Optional[List[dict]] = None
+    history: Optional[List[dict]] = Field(default=None, max_length=50)
 
 
 class ChatResponse(BaseModel):
@@ -237,7 +237,7 @@ class ChatResponse(BaseModel):
 class ChatConfirmRequest(BaseModel):
     """Approve previously-proposed pending actions."""
     ids: List[str]
-    pending: List[dict]  # the PendingAction dicts returned by /chat
+    pending: List[dict] = Field(max_length=20)  # the PendingAction dicts returned by /chat
     history: Optional[List[dict]] = None
 
 # ============================================================================
