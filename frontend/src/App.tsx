@@ -29,13 +29,12 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
 import MobileBottomNav from "./components/MobileBottomNav";
 import UpdatePassword from "./components/UpdatePassword";
-import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
 import { PantryProvider, usePantrySelection } from "./context/PantryContext";
 import { X } from "lucide-react";
 import RecipeDetailPanel from "./components/RecipeDetailModal";
-import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems } from "./hooks";
+import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems, usePantryGroups, usePantryStats } from "./hooks";
 import type { AppUser, AppView, Toast as ToastType, ToastAction, RecipeDetail, MealSuggestion, CookMealResponse } from "./types";
 import "./App.css";
 
@@ -70,6 +69,28 @@ function AppContent() {
   const { data: globalPantryData } = usePantryItems({ group_id: selectedPantryGroup ?? undefined });
   const [sessionExpired, setSessionExpired] = useState(false);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
+
+  // First-run pantry default: a genuinely new user (empty personal pantry) with
+  // no stored selection lands on the Demo Pantry; existing users stay on My
+  // Pantry. Captured at first render, before the context persist effect writes,
+  // so an absent key is distinguishable from an explicit "My Pantry" (null).
+  const hadStoredSelectionRef = useRef<boolean>(
+    (() => { try { return localStorage.getItem("voxal_selected_pantry") !== null; } catch { return false; } })()
+  );
+  const firstRunAppliedRef = useRef<boolean>(false);
+  const { data: pantryGroupsForDefault } = usePantryGroups();
+  const { data: personalPantryStats } = usePantryStats(undefined);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (hadStoredSelectionRef.current || firstRunAppliedRef.current) return;
+    if (!pantryGroupsForDefault || !personalPantryStats) return;
+    firstRunAppliedRef.current = true;
+    const demoGroup = pantryGroupsForDefault.find((g) => g.name === "Demo Pantry");
+    if (personalPantryStats.total_items === 0 && demoGroup) {
+      setSelectedPantryGroup(demoGroup.id);
+    }
+  }, [isAuthenticated, pantryGroupsForDefault, personalPantryStats, setSelectedPantryGroup]);
 
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const clearAllMutation = useClearAllExpenses();
@@ -139,21 +160,6 @@ function AppContent() {
       queryClient.invalidateQueries();
     }
   }, [session, sessionExpired, queryClient]);
-
-  // Seed demo pantry for first-time users (fire-and-forget)
-  useEffect(() => {
-    if (isAuthenticated && !localStorage.getItem("voxal_demo_seeded")) {
-      getToken().then((t) => {
-        if (!t) return;
-        fetch(`${API_BASE_URL}/api/pantry/seed-demo`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${t}` },
-        }).then(() => {
-          localStorage.setItem("voxal_demo_seeded", "true");
-        }).catch(() => {});
-      });
-    }
-  }, [isAuthenticated, getToken]);
 
   const handleTutorialClose = useCallback(() => {
     setShowTutorial(false);
