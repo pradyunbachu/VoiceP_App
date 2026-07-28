@@ -35,6 +35,30 @@ def verify_pantry_group_owner(user_id: str, group_id: int) -> bool:
     return bool(response.data)
 
 
+def verify_pantry_access(current_user_id: str, group_id: int | None) -> None:
+    """Gate access to a pantry scope.
+
+    Personal pantry (group_id is None) is always accessible — no-op.
+    For a group, raise HTTP 403 if the caller is not a member.
+    """
+    if group_id is None:
+        return
+    if not verify_pantry_group_membership(current_user_id, group_id):
+        raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+
+
+def scope_pantry_query(query, current_user_id: str, group_id: int | None):
+    """Apply pantry scoping to a supabase query builder.
+
+    Personal = the user's own rows with no group (group_id IS NULL);
+    a group = all rows for that group, regardless of which member created them.
+    Callers must verify access (see verify_pantry_access) before a group read/write.
+    """
+    if group_id is None:
+        return query.eq("user_id", current_user_id).is_("group_id", "null")
+    return query.eq("group_id", group_id)
+
+
 @router.post("/pantry/groups")
 @limiter.limit("10/minute")
 async def create_pantry_group(

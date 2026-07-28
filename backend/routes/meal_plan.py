@@ -19,7 +19,7 @@ import json
 from config import supabase, groq_client
 from auth import get_current_user_dependency
 from rate_limit import limiter
-from routes.pantry_sharing import verify_pantry_group_membership
+from routes.pantry_sharing import verify_pantry_access, scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
@@ -32,23 +32,6 @@ router = APIRouter()
 
 DAYS_OF_WEEK = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
 MEAL_SLOTS = ["breakfast", "lunch", "dinner"]
-
-
-def _resolve_pantry_user_id(current_user_id: str, group_id: int | None) -> str:
-    """Return the user_id whose pantry should be used.
-
-    If group_id is provided, verify membership and return the group owner's id.
-    Otherwise return the current user's id.
-    """
-    if group_id is None:
-        return current_user_id
-    if not verify_pantry_group_membership(current_user_id, group_id):
-        from fastapi import HTTPException
-        raise HTTPException(status_code=403, detail="Not a member of this pantry group")
-    group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
-    if group_resp.data:
-        return group_resp.data[0]["owner_id"]
-    return current_user_id
 
 
 def _get_monday(date_str: str | None = None) -> str:
@@ -173,7 +156,7 @@ async def get_meal_plan(
 
     user_id = current_user["id"]
     monday = _get_monday(week_start)
-    pantry_user_id = _resolve_pantry_user_id(user_id, group_id)
+    verify_pantry_access(user_id, group_id)
 
     # Fetch meals for this week
     resp = (
@@ -186,7 +169,9 @@ async def get_meal_plan(
     meals = resp.data or []
 
     # Fetch pantry items for shopping summary (from the relevant pantry)
-    pantry_resp = supabase.table("pantry_items").select("id, name, stock_status").eq("user_id", pantry_user_id).execute()
+    pantry_resp = scope_pantry_query(
+        supabase.table("pantry_items").select("id, name, stock_status"), user_id, group_id
+    ).execute()
     pantry_items = pantry_resp.data or []
 
     # Mark each ingredient as in_pantry or not
@@ -384,10 +369,12 @@ async def generate_meal_plan(
 
     user_id = current_user["id"]
     monday = _get_monday(body.week_start)
-    pantry_user_id = _resolve_pantry_user_id(user_id, body.group_id)
+    verify_pantry_access(user_id, body.group_id)
 
     # Fetch pantry (from selected group if applicable)
-    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
+    pantry_resp = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, body.group_id
+    ).execute()
     pantry_items = pantry_resp.data or []
 
     if not pantry_items:
@@ -548,7 +535,7 @@ async def replace_meal(
 
     user_id = current_user["id"]
     monday = _get_monday(body.week_start)
-    pantry_user_id = _resolve_pantry_user_id(user_id, body.group_id)
+    verify_pantry_access(user_id, body.group_id)
 
     # Fetch the meal being replaced
     meal_resp = (
@@ -566,7 +553,9 @@ async def replace_meal(
     slot = old_meal["slot"]
 
     # Fetch pantry for context (from selected group if applicable)
-    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
+    pantry_resp = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, body.group_id
+    ).execute()
     pantry_items = pantry_resp.data or []
 
     available = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]
@@ -699,7 +688,7 @@ async def add_to_shopping_list(
 
     user_id = current_user["id"]
     monday = _get_monday(body.week_start)
-    pantry_user_id = _resolve_pantry_user_id(user_id, body.pantry_group_id)
+    verify_pantry_access(user_id, body.pantry_group_id)
 
     # Fetch meals
     meals_resp = (
@@ -712,7 +701,9 @@ async def add_to_shopping_list(
     meals = meals_resp.data or []
 
     # Fetch pantry (from selected group if applicable)
-    pantry_resp = supabase.table("pantry_items").select("id, name, stock_status").eq("user_id", pantry_user_id).execute()
+    pantry_resp = scope_pantry_query(
+        supabase.table("pantry_items").select("id, name, stock_status"), user_id, body.pantry_group_id
+    ).execute()
     pantry_items = pantry_resp.data or []
 
     missing = _compute_shopping_summary(meals, pantry_items)
