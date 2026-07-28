@@ -7,7 +7,7 @@
  * Shared group gears show invite code, invite-by-email, and delete.
  * Footer has Create Pantry + Join Pantry buttons for additional groups.
  */
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Users,
   Plus,
@@ -18,6 +18,7 @@ import {
   Mail,
   ChevronDown,
   Settings,
+  RotateCcw,
 } from "lucide-react";
 import {
   usePantryGroups,
@@ -25,6 +26,7 @@ import {
   useJoinPantryGroup,
   useInviteToPantryGroup,
   useDeletePantryGroup,
+  useResetDemo,
 } from "../hooks";
 import ConfirmDialog from "./ConfirmDialog";
 import { usePantrySelection } from "../context/PantryContext";
@@ -53,14 +55,43 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<number | null>(null);
   const [pendingSwitchTo, setPendingSwitchTo] = useState<{ id: number | null; name: string } | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const { data: groups = [] } = usePantryGroups() as { data: GroupWithMeta[] | undefined };
   const createMutation = useCreatePantryGroup();
   const joinMutation = useJoinPantryGroup();
   const inviteMutation = useInviteToPantryGroup();
   const deleteMutation = useDeletePantryGroup();
+  const resetDemoMutation = useResetDemo();
 
   const selectedGroup = (groups as GroupWithMeta[]).find((g) => g.id === selectedGroupId);
+
+  // The demo pantry is a real group named "Demo Pantry" returned by the fetch.
+  const demoGroup = (groups as GroupWithMeta[]).find((g) => g.name === "Demo Pantry");
+  const isDemoSelected = demoGroup != null && selectedGroupId === demoGroup.id;
+
+  // Close the dropdown when clicking outside (mirrors the nav Finance dropdown).
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const handleResetDemo = async () => {
+    try {
+      await resetDemoMutation.mutateAsync();
+      if (showToast) showToast("Demo pantry reset to sample items", "success");
+    } catch (error: unknown) {
+      if (showToast) showToast((error as Error).message || "Failed to reset demo pantry", "error");
+    }
+    setShowResetConfirm(false);
+  };
 
   // The first owned group is tied to "My Pantry" share toggle
   const ownedGroup = (groups as GroupWithMeta[]).find((g) => g.user_role === "owner");
@@ -169,7 +200,7 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
   };
 
   return (
-    <div className="pantry-group-selector">
+    <div className="pantry-group-selector" ref={rootRef}>
       <div className="group-selector-toggle" onClick={() => setIsOpen(!isOpen)}>
         <div className="group-selector-label">
           <Users size={16} />
@@ -185,6 +216,18 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
 
       {isOpen && (
         <div className="group-dropdown">
+          {/* Reset action — only while the demo pantry is selected */}
+          {isDemoSelected && (
+            <button
+              className="group-action-btn demo-reset-btn"
+              onClick={() => setShowResetConfirm(true)}
+              disabled={resetDemoMutation.isPending}
+            >
+              <RotateCcw size={14} />
+              <span>{resetDemoMutation.isPending ? "Resetting..." : "Reset Demo Pantry"}</span>
+            </button>
+          )}
+
           {/* Personal pantry */}
           <div className="group-option-wrapper">
             <div className="group-option-row">
@@ -404,6 +447,14 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
           danger={false}
           onConfirm={confirmSwitch}
           onCancel={() => setPendingSwitchTo(null)}
+        />
+      )}
+      {showResetConfirm && (
+        <ConfirmDialog
+          message="Reset the demo pantry back to its original sample items? Any changes you made to it will be discarded. Your real pantries are unaffected."
+          confirmLabel="Reset"
+          onConfirm={handleResetDemo}
+          onCancel={() => setShowResetConfirm(false)}
         />
       )}
     </div>

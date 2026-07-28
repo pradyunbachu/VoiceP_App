@@ -47,6 +47,9 @@ export {
 // Chat mutations
 export { useChat, useChatConfirm } from './mutations/useChatMutation';
 
+// Demo pantry reset
+export { useResetDemo } from './mutations/useResetDemo';
+
 // Receipt mutations
 export { useScanReceipt } from './mutations/useReceiptMutation';
 

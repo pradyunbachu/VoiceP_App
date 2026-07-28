@@ -444,6 +444,7 @@ function AppContent() {
             onViewChange={setCurrentView}
             onLogout={handleLogout}
             user={user}
+            showToast={showToast}
           />
           <QuickRecordPopup ref={quickRecordRef} showToast={showToast} onNavigate={setCurrentView} onSelectMeal={handleSelectMeal} />
           <VoxyFAB popupRef={quickRecordRef} />

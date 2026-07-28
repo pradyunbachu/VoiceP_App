@@ -55,7 +55,6 @@ import { isExpired, isExpiringSoon } from "../lib/pantryUtils";
 import { SkeletonStats, SkeletonPantryGrid, SkeletonShelfView } from "./Skeleton";
 import PantryFilters from "./PantryFilters";
 import PantryBulkActions from "./PantryBulkActions";
-import PantryGroupSelector from "./PantryGroupSelector";
 import PantryShelfView from "./PantryShelfView";
 import PantryListView from "./PantryListView";
 import PantrySpreadsheetView from "./PantrySpreadsheetView";
@@ -747,9 +746,6 @@ const Pantry: React.FC<Props> = ({ showToast, onCookExpiring }) => {
           )}
         </div>
       )}
-
-      {/* Group Selector */}
-      <PantryGroupSelector showToast={showToast} />
 
       {/* Add Item Form */}
       {showAddForm && (
