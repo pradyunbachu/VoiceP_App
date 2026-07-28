@@ -20,6 +20,7 @@ import json
 from config import supabase, groq_client, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_CLAIMS_EMAIL
 from auth import get_current_user_dependency
 from rate_limit import limiter
+from routes.pantry_sharing import scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
@@ -300,8 +301,13 @@ async def send_dinner_notifications(
             skipped += len(subs)
             continue
 
-        # Fetch user's pantry
-        pantry_resp = supabase.table("pantry_items").select("name, stock_status, expiration_date").eq("user_id", user_id).execute()
+        # Fetch user's PERSONAL pantry (group_id IS NULL) — scope so demo/shared
+        # group items never leak into personal dinner notifications.
+        # NOTE (deferred): notifying group members about a shared/demo pantry's
+        # expiring items is a larger feature; keeping this personal-only for now.
+        pantry_resp = scope_pantry_query(
+            supabase.table("pantry_items").select("name, stock_status, expiration_date"), user_id, None
+        ).execute()
         pantry_items = pantry_resp.data or []
 
         if not pantry_items:
