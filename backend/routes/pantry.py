@@ -679,26 +679,16 @@ async def get_pantry_stats(
     }
 
 
-@router.post("/pantry/seed-demo")
-@limiter.limit("5/minute")
-async def seed_demo_pantry(
-    request: Request,
-    current_user: dict = Depends(get_current_user_dependency)
-):
-    """Bulk-insert demo pantry items for new users. Idempotent — skips if user already has items."""
-    if supabase is None:
-        raise HTTPException(status_code=500, detail="Database not configured")
+# ============================================================================
+# DEMO PANTRY (a real per-user pantry group, seeded from a sample set)
+# ============================================================================
+DEMO_GROUP_NAME = "Demo Pantry"
 
-    # Check if user already has pantry items — return early if so
-    existing = supabase.table("pantry_items").select("id").eq("user_id", current_user["id"]).limit(1).execute()
-    if existing.data:
-        return {"message": "Pantry already has items, skipping demo seed", "seeded": False}
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    now = datetime.now().isoformat()
-    user_id = current_user["id"]
-
-    demo_items = [
+def _demo_sample_items() -> list[dict]:
+    """The canonical demo seed set. Source of truth for both first-login
+    auto-create and the reset endpoint."""
+    return [
         # Produce — staggered expiration for realistic alerts
         {"name": "Bananas", "quantity": 2, "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")},
         {"name": "Spinach", "quantity": 1, "unit": "bag", "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")},
@@ -727,16 +717,24 @@ async def seed_demo_pantry(
         {"name": "Granola Bars", "quantity": 6, "category": "Snacks"},
     ]
 
-    created_items = []
-    for item in demo_items:
+
+def _seed_demo_items(owner_id: str, group_id: int) -> list[dict]:
+    """Insert the demo sample set into the given demo group.
+
+    Items carry group_id so the personal GET /pantry (group_id IS NULL) never
+    shows them — no notes-based special-casing needed."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now().isoformat()
+    rows = []
+    for item in _demo_sample_items():
         expiration_date = item.get("expiration_date")
         expiration_predicted = False
         if not expiration_date:
             expiration_date = predict_expiration(item["name"], item["category"], today)
             expiration_predicted = expiration_date is not None
-
-        row = {
-            "user_id": user_id,
+        rows.append({
+            "user_id": owner_id,
+            "group_id": group_id,
             "name": item["name"],
             "quantity": item.get("quantity", 1),
             "unit": item.get("unit"),
@@ -748,16 +746,83 @@ async def seed_demo_pantry(
             "expiration_predicted": expiration_predicted,
             "created_at": now,
             "updated_at": now,
-        }
-        response = supabase.table("pantry_items").insert(row).execute()
-        if response.data:
-            created_items.append(response.data[0])
+        })
+    if not rows:
+        return []
+    response = supabase.table("pantry_items").insert(rows).execute()
+    return response.data or []
 
-    return {
-        "message": f"Seeded {len(created_items)} demo pantry items",
-        "seeded": True,
-        "count": len(created_items),
-    }
+
+def ensure_demo_group(user_id: str) -> int:
+    """Return the user's demo group id, creating + seeding it once if absent.
+
+    Idempotent: safe to call on every group-list fetch (first-login gate)."""
+    existing = (
+        supabase.table("pantry_groups")
+        .select("id")
+        .eq("owner_id", user_id)
+        .eq("name", DEMO_GROUP_NAME)
+        .execute()
+    )
+    if existing.data:
+        return existing.data[0]["id"]
+
+    now = datetime.now().isoformat()
+    grp = supabase.table("pantry_groups").insert({
+        "name": DEMO_GROUP_NAME,
+        "owner_id": user_id,
+        "created_at": now,
+        "updated_at": now,
+    }).execute()
+    gid = grp.data[0]["id"]
+
+    supabase.table("pantry_group_members").insert({
+        "group_id": gid,
+        "user_id": user_id,
+        "role": "owner",
+        "joined_at": now,
+    }).execute()
+
+    _seed_demo_items(user_id, gid)
+    return gid
+
+
+def _reset_demo_group(user_id: str) -> list[dict]:
+    """Wipe the caller's demo group's items and re-seed the sample set.
+
+    Scoped by group_id, so it can never touch personal (group_id IS NULL) rows."""
+    gid = ensure_demo_group(user_id)
+    supabase.table("pantry_items").delete().eq("group_id", gid).execute()
+    return _seed_demo_items(user_id, gid)
+
+
+@router.post("/pantry/seed-demo")
+@limiter.limit("5/minute")
+async def seed_demo_pantry(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Ensure the caller's Demo Pantry group exists + is seeded. Idempotent."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    gid = ensure_demo_group(current_user["id"])
+    return {"message": "Demo pantry ready", "seeded": True, "group_id": gid}
+
+
+@router.post("/pantry/demo/reset")
+@limiter.limit("10/minute")
+async def reset_demo_pantry(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Reset the caller's Demo Pantry: wipe its items and re-seed the sample set."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    gid = ensure_demo_group(current_user["id"])
+    items = _reset_demo_group(current_user["id"])
+    return {"message": "Demo pantry reset", "group_id": gid, "items": items}
 
 
 @router.post("/pantry/resync")

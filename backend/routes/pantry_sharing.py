@@ -14,11 +14,14 @@ Ownership transfer is not supported — the owner must delete the group.
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
 from datetime import datetime
+import logging
 
 from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from schemas import PantryGroupCreate, PantryGroupInvite, PantryGroupJoinByCode
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -108,6 +111,15 @@ async def list_pantry_groups(
         raise HTTPException(status_code=500, detail="Database not configured")
 
     user_id = current_user["id"]
+
+    # First-login gate: lazily ensure the user's Demo Pantry group exists + is
+    # seeded, so it appears as a normal option in the switcher. Idempotent.
+    # Lazy import avoids a circular import (routes.pantry imports this module).
+    try:
+        from routes.pantry import ensure_demo_group
+        ensure_demo_group(user_id)
+    except Exception as e:
+        logger.warning("ensure_demo_group failed for %s: %s", user_id, e)
 
     # Get all group IDs the user is a member of
     members_response = supabase.table("pantry_group_members").select("group_id, role").eq("user_id", user_id).execute()
