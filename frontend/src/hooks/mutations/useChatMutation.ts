@@ -8,6 +8,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import type { QueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { usePantrySelection } from '../../context/PantryContext';
 import { API_BASE_URL } from '../../config/api';
 import { getCsrfHeaders } from '../../lib/csrf';
 import { SessionExpiredError } from '../../lib/authFetch';
@@ -83,13 +84,14 @@ function invalidateForResult(queryClient: QueryClient, data: ChatResponse): void
 export const useChat = () => {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedGroupId } = usePantrySelection();
 
   return useMutation<ChatResponse, Error, string | ChatMutationInput>({
     mutationFn: async (input): Promise<ChatResponse> => {
       const token = await getToken();
       const message = typeof input === 'string' ? input : input.message;
       const history = typeof input === 'string' ? [] : (input.history ?? []);
-      return postJSON('/api/chat', token, { message, history });
+      return postJSON('/api/chat', token, { message, history, group_id: selectedGroupId ?? undefined });
     },
     onSuccess: (data) => invalidateForResult(queryClient, data),
   });
@@ -98,11 +100,12 @@ export const useChat = () => {
 export const useChatConfirm = () => {
   const { getToken } = useAuth();
   const queryClient = useQueryClient();
+  const { selectedGroupId } = usePantrySelection();
 
   return useMutation<ChatResponse, Error, ChatConfirmInput>({
     mutationFn: async ({ ids, pending, history }): Promise<ChatResponse> => {
       const token = await getToken();
-      return postJSON('/api/chat/confirm', token, { ids, pending, history: history ?? [] });
+      return postJSON('/api/chat/confirm', token, { ids, pending, history: history ?? [], group_id: selectedGroupId ?? undefined });
     },
     onSuccess: (data) => invalidateForResult(queryClient, data),
   });
