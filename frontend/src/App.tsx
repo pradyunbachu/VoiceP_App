@@ -32,6 +32,7 @@ import UpdatePassword from "./components/UpdatePassword";
 import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { PantryProvider, usePantrySelection } from "./context/PantryContext";
 import { X } from "lucide-react";
 import RecipeDetailPanel from "./components/RecipeDetailModal";
 import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems } from "./hooks";
@@ -59,14 +60,14 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>("landing");
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [selectedPantryGroup, setSelectedPantryGroup] = useState<number | null | "demo">(null);
+  const { selectedGroupId: selectedPantryGroup, setSelectedGroupId: setSelectedPantryGroup } = usePantrySelection();
   const [chefInitialItems, setChefInitialItems] = useState<string[]>([]);
   // Global recipe panel state (slides out on any screen)
   const [globalMeal, setGlobalMeal] = useState<{ name: string; description: string } | null>(null);
   const [globalRecipeCache, setGlobalRecipeCache] = useState<RecipeDetail | null>(null);
   const globalRecipeDetail = useRecipeDetail();
   const globalCookMeal = useCookMeal();
-  const { data: globalPantryData } = usePantryItems({ group_id: (selectedPantryGroup === "demo" ? undefined : selectedPantryGroup ?? undefined) as number | undefined });
+  const { data: globalPantryData } = usePantryItems({ group_id: selectedPantryGroup ?? undefined });
   const [sessionExpired, setSessionExpired] = useState(false);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
 
@@ -198,7 +199,7 @@ function AppContent() {
       {
         recipe_name: recipeName,
         ingredients,
-        group_id: (selectedPantryGroup === "demo" ? undefined : selectedPantryGroup ?? undefined) as number | undefined,
+        group_id: selectedPantryGroup ?? undefined,
         recipe_instructions: recipe?.instructions as string[] | undefined,
         recipe_description: recipe?.description,
         recipe_servings: recipe?.servings,
@@ -377,7 +378,7 @@ function AppContent() {
             <Pantry
               showToast={showToast}
               selectedGroupId={selectedPantryGroup}
-              onSelectGroup={setSelectedPantryGroup}
+              onSelectGroup={(g) => setSelectedPantryGroup(g === "demo" ? null : g)}
               onCookExpiring={(itemNames) => {
                 setChefInitialItems(itemNames);
                 setCurrentView("chef");
@@ -511,7 +512,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <PantryProvider>
+          <AppContent />
+        </PantryProvider>
       </AuthProvider>
     </ThemeProvider>
   );
