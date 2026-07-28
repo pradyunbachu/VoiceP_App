@@ -28,6 +28,7 @@ import re
 from datetime import datetime, timedelta
 
 from config import supabase, groq_client
+from routes.pantry_sharing import scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
@@ -111,12 +112,12 @@ def parse_pantry_items_from_message(message: str) -> list:
     return parsed_items
 
 
-async def handle_pantry_query(user_id: str, sub_intent: str, entities: dict) -> dict:
-    """Handle pantry-related queries."""
+async def handle_pantry_query(user_id: str, sub_intent: str, entities: dict, group_id: int | None = None) -> dict:
+    """Handle pantry-related queries, scoped to the selected pantry."""
     if supabase is None:
         return {"items": [], "message": "Database not configured"}
 
-    query = supabase.table("pantry_items").select("*").eq("user_id", user_id)
+    query = scope_pantry_query(supabase.table("pantry_items").select("*"), user_id, group_id)
 
     if sub_intent == "item_quantity":
         item_name = entities.get("item_name")
@@ -167,7 +168,7 @@ async def handle_pantry_query(user_id: str, sub_intent: str, entities: dict) -> 
         return {"items": items, "count": len(items), "query_type": "list_all"}
 
 
-async def handle_pantry_add(user_id: str, entities: dict, original_message: str) -> dict:
+async def handle_pantry_add(user_id: str, entities: dict, original_message: str, group_id: int | None = None) -> dict:
     """Handle when user wants to add pre-existing items to pantry without creating an expense."""
     if supabase is None:
         return {"added_items": [], "message": "Database not configured"}
@@ -204,6 +205,7 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
         try:
             response = supabase.table("pantry_items").insert({
                 "user_id": user_id,
+                "group_id": group_id,
                 "name": item_name.title(),
                 "quantity": 1,
                 "unit": None,
@@ -236,7 +238,7 @@ async def handle_pantry_add(user_id: str, entities: dict, original_message: str)
     }
 
 
-async def handle_pantry_remove(user_id: str, entities: dict, original_message: str) -> dict:
+async def handle_pantry_remove(user_id: str, entities: dict, original_message: str, group_id: int | None = None) -> dict:
     """Handle removing items from the pantry."""
     if supabase is None:
         return {"message": "Database not configured"}
@@ -264,12 +266,9 @@ async def handle_pantry_remove(user_id: str, entities: dict, original_message: s
         }
 
     try:
-        response = (
-            supabase.table("pantry_items")
-            .select("*")
-            .eq("user_id", user_id)
-            .execute()
-        )
+        response = scope_pantry_query(
+            supabase.table("pantry_items").select("*"), user_id, group_id
+        ).execute()
         items = response.data if response.data else []
         search_lower = item_name.lower().strip()
 
@@ -299,7 +298,9 @@ async def handle_pantry_remove(user_id: str, entities: dict, original_message: s
 
         removed_names = []
         for item in matching:
-            supabase.table("pantry_items").delete().eq("id", item["id"]).eq("user_id", user_id).execute()
+            scope_pantry_query(
+                supabase.table("pantry_items").delete().eq("id", item["id"]), user_id, group_id
+            ).execute()
             removed_names.append(item["name"])
 
         return {
@@ -318,7 +319,7 @@ async def handle_pantry_remove(user_id: str, entities: dict, original_message: s
         }
 
 
-async def handle_cooking_deduct(user_id: str, entities: dict, original_message: str) -> dict:
+async def handle_cooking_deduct(user_id: str, entities: dict, original_message: str, group_id: int | None = None) -> dict:
     """Handle deducting ingredients from pantry when user is cooking a recipe."""
     if supabase is None:
         return {"message": "Database not configured"}
@@ -345,12 +346,9 @@ async def handle_cooking_deduct(user_id: str, entities: dict, original_message: 
         }
 
     try:
-        pantry_response = (
-            supabase.table("pantry_items")
-            .select("*")
-            .eq("user_id", user_id)
-            .execute()
-        )
+        pantry_response = scope_pantry_query(
+            supabase.table("pantry_items").select("*"), user_id, group_id
+        ).execute()
         pantry_items = pantry_response.data if pantry_response.data else []
 
         if not pantry_items:

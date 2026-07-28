@@ -23,6 +23,7 @@ from schemas import (
     ShoppingListItemUpdate,
     BulkShoppingListDeleteRequest
 )
+from routes.pantry_sharing import verify_pantry_access, scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
@@ -351,24 +352,30 @@ Return an empty array [] if there are no matches."""
 @limiter.limit("20/minute")
 async def match_shopping_to_pantry(
     request: Request,
-    current_user: dict = Depends(get_current_user_dependency)
+    current_user: dict = Depends(get_current_user_dependency),
+    group_id: Optional[int] = None
 ):
     """Use AI to semantically match shopping list items to pantry items.
 
     Returns a mapping of shopping_item_id -> pantry_item for items that match.
     This handles cases like "Iceberg Lettuce" matching "Lettuce Iceberg".
+    The pantry side is scoped to the selected pantry (personal or a group).
     """
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
     user_id = current_user["id"]
+    # Gate access to the selected pantry (personal is a no-op)
+    verify_pantry_access(user_id, group_id)
 
     # Get shopping list items
     shopping_response = supabase.table("shopping_list").select("id, name").eq("user_id", user_id).execute()
     shopping_items = shopping_response.data if shopping_response.data else []
 
-    # Get pantry items
-    pantry_response = supabase.table("pantry_items").select("id, name, quantity, unit, stock_status").eq("user_id", user_id).execute()
+    # Get pantry items (scoped to the selected pantry)
+    pantry_response = scope_pantry_query(
+        supabase.table("pantry_items").select("id, name, quantity, unit, stock_status"), user_id, group_id
+    ).execute()
     pantry_items = pantry_response.data if pantry_response.data else []
 
     if not shopping_items or not pantry_items:

@@ -7,8 +7,9 @@ from agent.tools import TOOL_REGISTRY
 @pytest.mark.asyncio
 async def test_read_pantry_calls_handler(monkeypatch):
     seen = {}
-    async def fake_handle(user_id, sub_intent, entities):
+    async def fake_handle(user_id, sub_intent, entities, group_id=None):
         seen["args"] = (user_id, sub_intent, entities)
+        seen["group_id"] = group_id
         return {"items": [{"name": "eggs", "quantity": 12}]}
     monkeypatch.setattr("agent.handler_tools.handle_pantry_query", fake_handle)
 

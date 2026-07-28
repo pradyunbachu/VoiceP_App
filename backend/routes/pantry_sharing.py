@@ -14,11 +14,14 @@ Ownership transfer is not supported — the owner must delete the group.
 # ============================================================================
 from fastapi import APIRouter, HTTPException, Depends, Request
 from datetime import datetime
+import logging
 
 from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from schemas import PantryGroupCreate, PantryGroupInvite, PantryGroupJoinByCode
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
@@ -33,6 +36,30 @@ def verify_pantry_group_owner(user_id: str, group_id: int) -> bool:
     """Check if user is the owner of the pantry group."""
     response = supabase.table("pantry_groups").select("id").eq("id", group_id).eq("owner_id", user_id).execute()
     return bool(response.data)
+
+
+def verify_pantry_access(current_user_id: str, group_id: int | None) -> None:
+    """Gate access to a pantry scope.
+
+    Personal pantry (group_id is None) is always accessible — no-op.
+    For a group, raise HTTP 403 if the caller is not a member.
+    """
+    if group_id is None:
+        return
+    if not verify_pantry_group_membership(current_user_id, group_id):
+        raise HTTPException(status_code=403, detail="Not a member of this pantry group")
+
+
+def scope_pantry_query(query, current_user_id: str, group_id: int | None):
+    """Apply pantry scoping to a supabase query builder.
+
+    Personal = the user's own rows with no group (group_id IS NULL);
+    a group = all rows for that group, regardless of which member created them.
+    Callers must verify access (see verify_pantry_access) before a group read/write.
+    """
+    if group_id is None:
+        return query.eq("user_id", current_user_id).is_("group_id", "null")
+    return query.eq("group_id", group_id)
 
 
 @router.post("/pantry/groups")
@@ -84,6 +111,15 @@ async def list_pantry_groups(
         raise HTTPException(status_code=500, detail="Database not configured")
 
     user_id = current_user["id"]
+
+    # First-login gate: lazily ensure the user's Demo Pantry group exists + is
+    # seeded, so it appears as a normal option in the switcher. Idempotent.
+    # Lazy import avoids a circular import (routes.pantry imports this module).
+    try:
+        from routes.pantry import ensure_demo_group
+        ensure_demo_group(user_id)
+    except Exception as e:
+        logger.warning("ensure_demo_group failed for %s: %s", user_id, e)
 
     # Get all group IDs the user is a member of
     members_response = supabase.table("pantry_group_members").select("group_id, role").eq("user_id", user_id).execute()
