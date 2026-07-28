@@ -7,6 +7,7 @@
 import { useState, useCallback, useRef } from 'react';
 import { Heart, Clock, Users, UtensilsCrossed, Trash2, Loader } from 'lucide-react';
 import { useSavedRecipes, useDeleteSavedRecipe, useRecipeDetail, useCookMeal } from '../hooks';
+import { usePantrySelection } from '../context/PantryContext';
 import RecipeDetailPanel from './RecipeDetailModal';
 import type { SavedRecipe } from '../hooks/mutations/useSavedRecipes';
 import type { RecipeDetail, CookMealResponse, ShowToast } from '../types';
@@ -14,10 +15,10 @@ import './SavedRecipes.css';
 
 interface Props {
   showToast: ShowToast;
-  selectedPantryGroup?: number | null | 'demo';
 }
 
-const SavedRecipes: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
+const SavedRecipes: React.FC<Props> = ({ showToast }) => {
+  const { selectedGroupId } = usePantrySelection();
   const { data, isLoading } = useSavedRecipes();
   const deleteSaved = useDeleteSavedRecipe();
   const recipeDetail = useRecipeDetail();
@@ -26,7 +27,7 @@ const SavedRecipes: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   const [removingId, setRemovingId] = useState<number | null>(null);
   const recipeCacheRef = useRef<Record<string, RecipeDetail>>({});
 
-  const groupId = selectedPantryGroup === 'demo' ? undefined : (selectedPantryGroup ?? undefined) as number | undefined;
+  const groupId = selectedGroupId ?? undefined;
   const recipes = data?.recipes ?? [];
 
   const handleRecipeClick = useCallback((recipe: SavedRecipe) => {

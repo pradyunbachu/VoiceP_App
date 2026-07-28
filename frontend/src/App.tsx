@@ -315,7 +315,6 @@ function AppContent() {
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
               onOpenVoxy={() => quickRecordRef.current?.triggerRecord()}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -377,8 +376,6 @@ function AppContent() {
           <div className="view-container" key="pantry">
             <Pantry
               showToast={showToast}
-              selectedGroupId={selectedPantryGroup}
-              onSelectGroup={(g) => setSelectedPantryGroup(g === "demo" ? null : g)}
               onCookExpiring={(itemNames) => {
                 setChefInitialItems(itemNames);
                 setCurrentView("chef");
@@ -391,14 +388,13 @@ function AppContent() {
           <div className="view-container" key="shopping-list">
             <ShoppingList
               showToast={showToast}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
       case "chef":
         return (
           <div className="view-container" key="chef">
-            <Chef showToast={showToast} selectedGroupId={selectedPantryGroup} initialBowlItemNames={chefInitialItems} onInitialItemsConsumed={() => setChefInitialItems([])} />
+            <Chef showToast={showToast} initialBowlItemNames={chefInitialItems} onInitialItemsConsumed={() => setChefInitialItems([])} />
           </div>
         );
       case "meal-planner":
@@ -406,7 +402,6 @@ function AppContent() {
           <div className="view-container" key="meal-planner">
             <MealPlanner
               showToast={showToast}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -415,7 +410,6 @@ function AppContent() {
           <div className="view-container" key="saved-recipes">
             <SavedRecipes
               showToast={showToast}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -433,7 +427,6 @@ function AppContent() {
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
               onOpenVoxy={() => quickRecordRef.current?.triggerRecord()}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );

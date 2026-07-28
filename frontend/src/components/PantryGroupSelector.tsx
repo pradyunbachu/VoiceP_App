@@ -27,6 +27,7 @@ import {
   useDeletePantryGroup,
 } from "../hooks";
 import ConfirmDialog from "./ConfirmDialog";
+import { usePantrySelection } from "../context/PantryContext";
 import type { ShowToast, PantryGroup } from "../types";
 import "./PantryGroupSelector.css";
 
@@ -36,12 +37,11 @@ interface GroupWithMeta extends PantryGroup {
 }
 
 interface Props {
-  selectedGroupId: number | null | "demo";
-  onSelectGroup: (groupId: number | null | "demo") => void;
   showToast: ShowToast;
 }
 
-const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, showToast }) => {
+const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
+  const { selectedGroupId, setSelectedGroupId: onSelectGroup } = usePantrySelection();
   const [showCreateInput, setShowCreateInput] = useState<boolean>(false);
   const [showJoinInput, setShowJoinInput] = useState<boolean>(false);
   const [showInviteInput, setShowInviteInput] = useState<number | null>(null);
@@ -52,7 +52,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<number | null>(null);
-  const [pendingSwitchTo, setPendingSwitchTo] = useState<{ id: number | null | "demo"; name: string } | null>(null);
+  const [pendingSwitchTo, setPendingSwitchTo] = useState<{ id: number | null; name: string } | null>(null);
 
   const { data: groups = [] } = usePantryGroups() as { data: GroupWithMeta[] | undefined };
   const createMutation = useCreatePantryGroup();
@@ -145,7 +145,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleSwitchPantry = (id: number | null | "demo", name: string) => {
+  const handleSwitchPantry = (id: number | null, name: string) => {
     if (id === selectedGroupId) {
       setIsOpen(false);
       return;
@@ -173,7 +173,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
       <div className="group-selector-toggle" onClick={() => setIsOpen(!isOpen)}>
         <div className="group-selector-label">
           <Users size={16} />
-          <span>{selectedGroupId === "demo" ? "Demo Pantry" : selectedGroup ? selectedGroup.name : "My Pantry"}</span>
+          <span>{selectedGroup ? selectedGroup.name : "My Pantry"}</span>
           {selectedGroup && (
             <span className="group-member-count">
               {selectedGroup.member_count || 0} members
@@ -245,22 +245,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
             )}
           </div>
 
-          {/* Demo pantry — always visible */}
-          <div className="group-option-wrapper">
-            <div className="group-option-row">
-              <button
-                className={`group-option ${selectedGroupId === "demo" ? "active" : ""}`}
-                onClick={() => handleSwitchPantry("demo", "Demo Pantry")}
-              >
-                <div className="group-option-info">
-                  <span>Demo Pantry</span>
-                  <span className="group-meta">Sample items to explore</span>
-                </div>
-              </button>
-            </div>
-          </div>
-
-          {/* Shared groups */}
+          {/* Shared groups (Demo Pantry is a real group returned by the fetch) */}
           {(groups as GroupWithMeta[]).map((group) => (
             <div key={group.id} className="group-option-wrapper">
               <div className="group-option-row">

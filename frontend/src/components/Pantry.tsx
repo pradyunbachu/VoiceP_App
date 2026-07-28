@@ -34,10 +34,10 @@ import {
   useSensors,
 } from "@dnd-kit/core";
 import { PANTRY_CATEGORIES } from "../constants/pantryCategories";
-import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
 import {
   usePantryItems,
   usePantryStats,
+  usePantryGroups,
   useInfinitePantryItems,
   useContainerColumns,
   useCreatePantryItem,
@@ -59,12 +59,11 @@ import PantryGroupSelector from "./PantryGroupSelector";
 import PantryShelfView from "./PantryShelfView";
 import PantryListView from "./PantryListView";
 import PantrySpreadsheetView from "./PantrySpreadsheetView";
+import { usePantrySelection } from "../context/PantryContext";
 import "./Pantry.css";
 
 interface Props {
   showToast: ShowToast;
-  selectedGroupId: number | null | "demo";
-  onSelectGroup: (groupId: number | null | "demo") => void;
   onCookExpiring?: (itemNames: string[]) => void;
 }
 
@@ -93,7 +92,8 @@ interface EditFormData {
   expiration_predicted?: boolean;
 }
 
-const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, onCookExpiring }) => {
+const Pantry: React.FC<Props> = ({ showToast, onCookExpiring }) => {
+  const { selectedGroupId } = usePantrySelection();
 
   // View mode state
   const [viewMode, setViewMode] = useState<ViewMode>("shelf");
@@ -154,8 +154,11 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const isDemoMode = selectedGroupId === "demo";
-  const apiGroupId = isDemoMode ? undefined : (selectedGroupId ?? undefined);
+  const apiGroupId = selectedGroupId ?? undefined;
+  const { data: pantryGroups = [] } = usePantryGroups();
+  const selectedGroupName = selectedGroupId == null
+    ? "My Pantry"
+    : (pantryGroups.find((g) => g.id === selectedGroupId)?.name ?? "My Pantry");
 
   // Shelf view fetches all items at once (no pagination) because
   // dnd-kit requires all draggable items to be in the DOM simultaneously.
@@ -188,25 +191,10 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
   // Flatten all loaded infinite-scroll pages into a single array
   const listItems: PantryItem[] = listInfiniteData?.pages?.flatMap((p: { items: PantryItem[] }) => p.items) ?? [];
 
-  // In demo mode, use hardcoded items with optional client-side filtering
-  const demoFiltered = useMemo<PantryItem[]>(() => {
-    if (!isDemoMode) return [];
-    let result = DEMO_PANTRY_ITEMS;
-    if (categoryFilter) result = result.filter((i) => i.category === categoryFilter);
-    if (statusFilter) result = result.filter((i) => i.stock_status === statusFilter);
-    if (debouncedSearch) {
-      const q = debouncedSearch.toLowerCase();
-      result = result.filter((i) => i.name.toLowerCase().includes(q) || i.category.toLowerCase().includes(q));
-    }
-    return result;
-  }, [isDemoMode, categoryFilter, statusFilter, debouncedSearch]);
-
   // Unify data/loading behind the active view mode so the rest of the
   // component can reference `items` and `loading` without branching.
-  const items: PantryItem[] = isDemoMode
-    ? demoFiltered
-    : (viewMode === 'list' ? listItems : (shelfItems as PantryItem[]));
-  const loading: boolean = isDemoMode ? false : (viewMode === 'list' ? listLoading : shelfLoading);
+  const items: PantryItem[] = viewMode === 'list' ? listItems : (shelfItems as PantryItem[]);
+  const loading: boolean = viewMode === 'list' ? listLoading : shelfLoading;
 
   const { data: stats } = usePantryStats(apiGroupId as number | undefined);
 
@@ -624,9 +612,9 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       {/* Header */}
       <div className="pantry-header">
         <div>
-          <h2><Package size={28} /> {isDemoMode ? "Demo Pantry" : "My Pantry"}</h2>
+          <h2><Package size={28} /> {selectedGroupName}</h2>
           <p className="pantry-subtitle">
-            {isDemoMode ? "Sample items to explore features — switch to My Pantry to manage your own" : "Track your groceries and household items"}
+            Track your groceries and household items
           </p>
         </div>
         <div className="header-actions">
@@ -653,37 +641,33 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
               <Table size={18} />
             </button>
           </div>
-          {!isDemoMode && (
-            <>
-              <button
-                className="export-pantry-button"
-                onClick={() => exportPantryCsv(shelfItems as PantryItem[])}
-                disabled={(shelfItems as PantryItem[]).length === 0}
-                title="Export pantry items to CSV"
-              >
-                <Download size={18} />
-                <span>Export CSV</span>
-              </button>
-              <button
-                className="recategorize-button"
-                onClick={handleResync}
-                disabled={resyncMutation.isPending}
-                title="Resync categories, expiration dates, and deduplicate items"
-              >
-                <RefreshCw size={18} className={resyncMutation.isPending ? "spin" : ""} />
-                <span>{resyncMutation.isPending ? "Syncing..." : "Resync"}</span>
-              </button>
-              <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
-                <Plus size={18} />
-                <span>Add Item</span>
-              </button>
-            </>
-          )}
+          <button
+            className="export-pantry-button"
+            onClick={() => exportPantryCsv(shelfItems as PantryItem[])}
+            disabled={(shelfItems as PantryItem[]).length === 0}
+            title="Export pantry items to CSV"
+          >
+            <Download size={18} />
+            <span>Export CSV</span>
+          </button>
+          <button
+            className="recategorize-button"
+            onClick={handleResync}
+            disabled={resyncMutation.isPending}
+            title="Resync categories, expiration dates, and deduplicate items"
+          >
+            <RefreshCw size={18} className={resyncMutation.isPending ? "spin" : ""} />
+            <span>{resyncMutation.isPending ? "Syncing..." : "Resync"}</span>
+          </button>
+          <button className="add-item-button" onClick={() => setShowAddForm(!showAddForm)}>
+            <Plus size={18} />
+            <span>Add Item</span>
+          </button>
         </div>
       </div>
 
       {/* Stats Cards */}
-      {stats && !isDemoMode && (
+      {stats && (
         <div className="pantry-stats">
           <div className="stat-card">
             <div className="stat-icon" style={{ background: 'var(--stat-blue)' }}>
@@ -736,7 +720,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       )}
 
       {/* Kitchen Action Banners */}
-      {!isDemoMode && (lowStockItems.length > 0 || expiringItems.length > 0) && (
+      {(lowStockItems.length > 0 || expiringItems.length > 0) && (
         <div className="pantry-action-banners">
           {lowStockItems.length > 0 && (
             <button
@@ -765,14 +749,10 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       )}
 
       {/* Group Selector */}
-      <PantryGroupSelector
-        selectedGroupId={selectedGroupId}
-        onSelectGroup={onSelectGroup}
-        showToast={showToast}
-      />
+      <PantryGroupSelector showToast={showToast} />
 
       {/* Add Item Form */}
-      {showAddForm && !isDemoMode && (
+      {showAddForm && (
         <form className="pantry-form" onSubmit={handleCreate}>
           <h3>Add New Item</h3>
           <div className="form-row">
@@ -885,7 +865,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       />
 
       {/* Bulk controls */}
-      {!isDemoMode && <PantryBulkActions
+      <PantryBulkActions
         isSelectMode={isSelectMode}
         selectedCount={selectedItems.size}
         onEnterSelect={() => setIsSelectMode(true)}
@@ -896,10 +876,10 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
         outOfStockCount={outOfStockItems.length}
         isDiscarding={bulkDeleteMutation.isPending}
         isDeleting={bulkDeleteMutation.isPending}
-      />}
+      />
 
       {/* Quick-Add Inline Row */}
-      {!isDemoMode && !showAddForm && (
+      {!showAddForm && (
         <div className="pantry-quick-add">
           <Plus size={18} className="quick-add-icon" />
           <input
@@ -927,7 +907,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       {/* Items Display */}
       {loading ? (
         <div className="loading-state" style={{ padding: 0, textAlign: "left" }}>
-          {!isDemoMode && <SkeletonStats count={4} />}
+          <SkeletonStats count={4} />
           {viewMode === "shelf" ? <SkeletonShelfView shelves={3} /> : viewMode === "spreadsheet" ? <SkeletonPantryGrid count={6} /> : <SkeletonPantryGrid count={6} />}
         </div>
       ) : items.length === 0 ? (
@@ -994,7 +974,7 @@ const Pantry: React.FC<Props> = ({ showToast, selectedGroupId, onSelectGroup, on
       )}
 
       {/* Edit Modal for Shelf View */}
-      {viewMode === 'shelf' && editingId && !isDemoMode && (
+      {viewMode === 'shelf' && editingId && (
         <div className="shelf-edit-modal" onClick={() => setEditingId(null)}>
           <div className="shelf-edit-content" onClick={(e: React.MouseEvent<HTMLDivElement>) => e.stopPropagation()}>
             <h3>Edit Item</h3>
