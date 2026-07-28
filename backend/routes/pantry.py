@@ -98,20 +98,17 @@ def _normalize_item_name(name: str, unit: Optional[str] = None) -> tuple[str, Op
     return trimmed, unit, None
 
 
-def _can_access_item(current_user_id: str, item_owner_id: str) -> bool:
-    """Check if current user can access an item: either they own it,
-    or they are a member of a pantry group owned by the item's owner."""
-    if current_user_id == item_owner_id:
-        return True
-    # Check if the item owner has a pantry group that current_user is a member of
-    owner_groups = supabase.table("pantry_groups").select("id").eq("owner_id", item_owner_id).execute()
-    if not owner_groups.data:
-        return False
-    group_ids = [g["id"] for g in owner_groups.data]
-    for gid in group_ids:
-        if verify_pantry_group_membership(current_user_id, gid):
-            return True
-    return False
+def _can_access_pantry_item(current_user_id: str, item_row: dict) -> bool:
+    """Decide access by the item's group_id (the group_id-column model):
+    - Group item (group_id set): allow iff the caller is a member of that group.
+    - Personal item (group_id NULL): allow iff the caller owns the row.
+    This avoids the old owner-indirection, which both over-granted (a group
+    member could edit the owner's personal items) and under-granted (the owner
+    could not edit a member's group item)."""
+    group_id = item_row.get("group_id")
+    if group_id is not None:
+        return verify_pantry_group_membership(current_user_id, group_id)
+    return item_row.get("user_id") == current_user_id
 
 
 def _find_existing_pantry_item(user_id: str, item_name: str, group_id: int | None = None):
@@ -514,11 +511,12 @@ async def update_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    # Verify the user owns the item or is a group member of the owner's pantry
-    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    # Verify access by the item's group_id (personal item → owner only; group
+    # item → any member).
+    check_response = supabase.table("pantry_items").select("id, user_id, group_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+    if not _can_access_pantry_item(current_user["id"], check_response.data[0]):
         raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = {}
@@ -568,10 +566,10 @@ async def update_pantry_item_status(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    check_response = supabase.table("pantry_items").select("id, user_id, group_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+    if not _can_access_pantry_item(current_user["id"], check_response.data[0]):
         raise HTTPException(status_code=403, detail="Access denied")
 
     supabase.table("pantry_items").update({
@@ -615,10 +613,10 @@ async def delete_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    check_response = supabase.table("pantry_items").select("id, user_id, group_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+    if not _can_access_pantry_item(current_user["id"], check_response.data[0]):
         raise HTTPException(status_code=403, detail="Access denied")
 
     response = supabase.table("pantry_items").delete().eq("id", item_id).execute()

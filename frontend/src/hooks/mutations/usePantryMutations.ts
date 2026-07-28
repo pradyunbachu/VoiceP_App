@@ -237,6 +237,7 @@ export const useDeletePantryItem = () => {
 export const useBulkDeletePantryItems = () => {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
+  const { selectedGroupId } = usePantrySelection();
 
   return useMutation<{ message: string }, Error, number[]>({
     mutationFn: async (itemIds: number[]): Promise<{ message: string }> => {
@@ -248,7 +249,7 @@ export const useBulkDeletePantryItems = () => {
           Authorization: `Bearer ${token}`,
         }),
         credentials: 'include',
-        body: JSON.stringify({ item_ids: itemIds }),
+        body: JSON.stringify({ item_ids: itemIds, group_id: selectedGroupId ?? undefined }),
       });
 
       if (!response.ok) {
@@ -266,11 +267,14 @@ export const useBulkDeletePantryItems = () => {
 export const useResyncPantry = () => {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
+  const { selectedGroupId } = usePantrySelection();
 
   return useMutation<{ message: string; recategorized: number; merged: number; purchase_filled: number; expiration_filled: number; expiration_cleared: number }, Error, void>({
     mutationFn: async () => {
       const token = await getToken();
-      const response = await fetch(`${API_BASE_URL}/api/pantry/resync`, {
+      // resync takes group_id as a query param (bare scalar on the endpoint), not a body field.
+      const qs = selectedGroupId != null ? `?group_id=${selectedGroupId}` : '';
+      const response = await fetch(`${API_BASE_URL}/api/pantry/resync${qs}`, {
         method: 'POST',
         headers: getCsrfHeaders({ Authorization: `Bearer ${token}` }),
         credentials: 'include',
@@ -291,6 +295,7 @@ export const useResyncPantry = () => {
 export const useAddFromExpense = () => {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
+  const { selectedGroupId } = usePantrySelection();
 
   return useMutation<PantryItem[], Error, AddFromExpenseVariables>({
     mutationFn: async ({ expenseId, items }: AddFromExpenseVariables): Promise<PantryItem[]> => {
@@ -302,7 +307,7 @@ export const useAddFromExpense = () => {
           Authorization: `Bearer ${token}`,
         }),
         credentials: 'include',
-        body: JSON.stringify({ expense_id: expenseId, items }),
+        body: JSON.stringify({ expense_id: expenseId, items, group_id: selectedGroupId ?? undefined }),
       });
 
       if (!response.ok) {

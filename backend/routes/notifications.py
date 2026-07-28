@@ -20,7 +20,6 @@ import json
 from config import supabase, groq_client, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_CLAIMS_EMAIL
 from auth import get_current_user_dependency
 from rate_limit import limiter
-from routes.pantry_sharing import scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
@@ -301,14 +300,35 @@ async def send_dinner_notifications(
             skipped += len(subs)
             continue
 
-        # Fetch user's PERSONAL pantry (group_id IS NULL) — scope so demo/shared
-        # group items never leak into personal dinner notifications.
-        # NOTE (deferred): notifying group members about a shared/demo pantry's
-        # expiring items is a larger feature; keeping this personal-only for now.
-        pantry_resp = scope_pantry_query(
-            supabase.table("pantry_items").select("name, stock_status, expiration_date"), user_id, None
-        ).execute()
+        # Gather the user's accessible pantries for dinner notifications:
+        # their personal pantry (group_id IS NULL) plus any real shared groups
+        # they belong to, EXCLUDING the demo pantry (we never notify about demo
+        # items). Without this, users whose items were moved into a group by the
+        # backfill migration would silently stop getting expiry notifications.
+        from routes.pantry import DEMO_GROUP_NAME
+
+        member_resp = supabase.table("pantry_group_members").select("group_id").eq("user_id", user_id).execute()
+        member_group_ids = [m["group_id"] for m in (member_resp.data or [])]
+        non_demo_group_ids: list[int] = []
+        if member_group_ids:
+            groups_resp = supabase.table("pantry_groups").select("id, name").in_("id", member_group_ids).execute()
+            non_demo_group_ids = [g["id"] for g in (groups_resp.data or []) if g.get("name") != DEMO_GROUP_NAME]
+
+        pantry_resp = (
+            supabase.table("pantry_items")
+            .select("name, stock_status, expiration_date")
+            .eq("user_id", user_id).is_("group_id", "null")
+            .execute()
+        )
         pantry_items = pantry_resp.data or []
+        if non_demo_group_ids:
+            group_resp = (
+                supabase.table("pantry_items")
+                .select("name, stock_status, expiration_date")
+                .in_("group_id", non_demo_group_ids)
+                .execute()
+            )
+            pantry_items = pantry_items + (group_resp.data or [])
 
         if not pantry_items:
             skipped += len(subs)

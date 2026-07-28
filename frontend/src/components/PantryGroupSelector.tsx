@@ -93,8 +93,12 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
     setShowResetConfirm(false);
   };
 
-  // The first owned group is tied to "My Pantry" share toggle
-  const ownedGroup = (groups as GroupWithMeta[]).find((g) => g.user_role === "owner");
+  // The first owned group is tied to "My Pantry" share toggle. Exclude the demo
+  // pantry — it is a real owned group, but must never bind to the personal
+  // sharing toggle (disabling sharing would delete the user's demo pantry).
+  const ownedGroup = (groups as GroupWithMeta[]).find(
+    (g) => g.user_role === "owner" && g.name !== "Demo Pantry"
+  );
   const isSharingEnabled = !!ownedGroup;
 
   const handleEnableSharing = async () => {
@@ -288,8 +292,27 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
             )}
           </div>
 
-          {/* Shared groups (Demo Pantry is a real group returned by the fetch) */}
-          {(groups as GroupWithMeta[]).map((group) => (
+          {/* Demo pantry — selectable, but WITHOUT owner-management controls
+              (no invite/delete gear): it is a personal sandbox, not a shareable
+              group. Reset lives at the top of the dropdown when it's selected. */}
+          {demoGroup && (
+            <div className="group-option-wrapper">
+              <div className="group-option-row">
+                <button
+                  className={`group-option ${selectedGroupId === demoGroup.id ? "active" : ""}`}
+                  onClick={() => handleSwitchPantry(demoGroup.id, demoGroup.name)}
+                >
+                  <div className="group-option-info">
+                    <span>{demoGroup.name}</span>
+                    <span className="group-meta">Sandbox</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Shared groups — exclude the demo pantry (rendered above without a gear) */}
+          {(groups as GroupWithMeta[]).filter((group) => group.name !== "Demo Pantry").map((group) => (
             <div key={group.id} className="group-option-wrapper">
               <div className="group-option-row">
                 <button

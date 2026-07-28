@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import type { ChatResponse } from "../types";
 import { useAuth } from "../context/AuthContext";
+import { usePantrySelection } from "../context/PantryContext";
 import { API_BASE_URL } from "../config/api";
 import { getCsrfHeaders } from "../lib/csrf";
 import { useQueryClient } from "@tanstack/react-query";
@@ -35,6 +36,7 @@ interface Props {
 
 const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
   const { getToken } = useAuth();
+  const { selectedGroupId } = usePantrySelection();
   const queryClient = useQueryClient();
   const [storeTripItems, setStoreTripItems] = useState<PendingItem[] | null>(null);
   const [storeTripAmount, setStoreTripAmount] = useState<string>("");
@@ -601,6 +603,7 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
           })),
           store: data?.store || "Store",
           amount: amount && amount > 0 ? amount : null,
+          group_id: selectedGroupId ?? undefined,
         }),
       });
       if (!res.ok) {
