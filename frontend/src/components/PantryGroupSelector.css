@@ -279,6 +279,19 @@
   cursor: not-allowed;
 }
 
+.pantry-group-selector .demo-reset-btn {
+  width: calc(100% - 2rem);
+  justify-content: center;
+  margin: 0.6rem 1rem;
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.pantry-group-selector .demo-reset-btn:hover:not(:disabled) {
+  background: var(--accent-primary);
+  color: #fff;
+}
+
 .pantry-group-selector .group-footer-actions {
   display: flex;
   gap: 0.5rem;

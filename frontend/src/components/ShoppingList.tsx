@@ -33,16 +33,16 @@ import { useOnlineStatus } from "../hooks/queries/useShoppingList";
 import ShoppingListGroupSelector from "./ShoppingListGroupSelector";
 import { SkeletonShoppingList } from "./Skeleton";
 import SwipeableRow from "./SwipeableRow";
-import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
+import { usePantrySelection } from "../context/PantryContext";
 import type { ShowToast, ShoppingListItem, PantryItem, PantryMatch, GroceryItem, StockStatus } from "../types";
 import "./ShoppingList.css";
 
 interface Props {
   showToast: ShowToast;
-  selectedPantryGroup?: number | null | "demo";
 }
 
-const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
+const ShoppingList: React.FC<Props> = ({ showToast }) => {
+  const { selectedGroupId: selectedPantryGroup } = usePantrySelection();
   const [newItemText, setNewItemText] = useState<string>("");
   const [suggestions, setSuggestions] = useState<GroceryItem[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -57,10 +57,8 @@ const ShoppingList: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   const { data: shoppingItems = [], isLoading: loading } = useShoppingList(
     selectedGroupId ? { group_id: selectedGroupId } : {}
   );
-  const isDemoMode = selectedPantryGroup === "demo";
-  const pantryGroupId = isDemoMode ? undefined : (selectedPantryGroup ?? undefined);
-  const { data: apiPantryItems = [] as PantryItem[] } = usePantryItems({ group_id: pantryGroupId as number | undefined });
-  const pantryItems = isDemoMode ? DEMO_PANTRY_ITEMS : apiPantryItems;
+  const pantryGroupId = selectedPantryGroup ?? undefined;
+  const { data: pantryItems = [] as PantryItem[] } = usePantryItems({ group_id: pantryGroupId });
 
   // AI-powered semantic matching: maps each shopping item to its closest
   // pantry counterpart (e.g. "2% milk" matches pantry's "Milk").

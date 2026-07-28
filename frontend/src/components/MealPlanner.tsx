@@ -33,6 +33,7 @@ import {
   useRecipeDetail,
   useCookMeal,
 } from '../hooks';
+import { usePantrySelection } from '../context/PantryContext';
 import RecipeDetailPanel from './RecipeDetailModal';
 import MixingBowlLoader from './MixingBowlLoader';
 import type {
@@ -98,7 +99,6 @@ function isToday(monday: Date, day: DayOfWeek): boolean {
 
 interface Props {
   showToast: ShowToast;
-  selectedPantryGroup?: number | null | 'demo';
 }
 
 interface AddMealForm {
@@ -106,7 +106,8 @@ interface AddMealForm {
   slot: MealSlot;
 }
 
-const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
+const MealPlanner: React.FC<Props> = ({ showToast }) => {
+  const { selectedGroupId: selectedPantryGroup } = usePantrySelection();
   const [weekOffset, setWeekOffset] = useState(0);
   const [addForm, setAddForm] = useState<AddMealForm | null>(null);
   const [recipeName, setRecipeName] = useState('');
@@ -129,7 +130,7 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   }, [weekOffset]);
 
   const weekStart = formatDate(monday);
-  const groupId = selectedPantryGroup === 'demo' ? undefined : (selectedPantryGroup ?? undefined) as number | undefined;
+  const groupId = selectedPantryGroup ?? undefined;
 
   // ── Data ──────────────────────────────────────────
   const { data: plan, isLoading } = useMealPlan(weekStart, groupId);
@@ -197,7 +198,7 @@ const MealPlanner: React.FC<Props> = ({ showToast, selectedPantryGroup }) => {
   }, [generatePlan, weekStart, groupId, showToast]);
 
   const handleAddToShoppingList = useCallback(async () => {
-    const shoppingGroupId = selectedPantryGroup === 'demo' ? null : (selectedPantryGroup ?? null);
+    const shoppingGroupId = selectedPantryGroup ?? null;
     try {
       const result = await addToShopping.mutateAsync({ week_start: weekStart, group_id: shoppingGroupId, pantry_group_id: groupId });
       showToast(`${result.added_count} item${result.added_count !== 1 ? 's' : ''} added to shopping list`, 'success');

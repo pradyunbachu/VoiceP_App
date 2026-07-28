@@ -8,6 +8,7 @@
  */
 import { useMutation, useQueryClient, type InfiniteData } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { usePantrySelection } from '../../context/PantryContext';
 import { API_BASE_URL } from '../../config/api';
 import { queryKeys } from '../queries/queryKeys';
 import { getCsrfHeaders } from '../../lib/csrf';
@@ -40,10 +41,15 @@ interface OptimisticContext {
 export const useCreatePantryItem = () => {
   const queryClient = useQueryClient();
   const { getToken } = useAuth();
+  const { selectedGroupId } = usePantrySelection();
 
   return useMutation<PantryItem, Error, CreatePantryItemData>({
     mutationFn: async (itemData: CreatePantryItemData): Promise<PantryItem> => {
       const token = await getToken();
+      // Scope the write to the selected pantry. An explicit group_id on the
+      // payload wins; otherwise fall back to the current context selection
+      // (null/undefined => personal pantry).
+      const body = { group_id: selectedGroupId ?? undefined, ...itemData };
       const response = await fetch(`${API_BASE_URL}/api/pantry`, {
         method: 'POST',
         headers: getCsrfHeaders({
@@ -51,7 +57,7 @@ export const useCreatePantryItem = () => {
           Authorization: `Bearer ${token}`,
         }),
         credentials: 'include',
-        body: JSON.stringify(itemData),
+        body: JSON.stringify(body),
       });
 
       if (!response.ok) {

@@ -285,3 +285,35 @@
     height: 28px;
   }
 }
+
+/* Top-right pantry switcher: float the dropdown so it overlays content
+   instead of stretching the nav bar height. */
+.nav-pantry-switcher {
+  position: relative;
+}
+
+.nav-pantry-switcher .pantry-group-selector {
+  min-width: 150px;
+  max-width: 220px;
+}
+
+.nav-pantry-switcher .pantry-group-selector .group-dropdown {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 1000;
+  width: 280px;
+  max-width: min(280px, calc(100vw - 24px));
+  max-height: min(70vh, 480px);
+  overflow-y: auto;
+}
+
+@media (max-width: 640px) {
+  .nav-pantry-switcher .pantry-group-selector {
+    min-width: 120px;
+    max-width: 150px;
+  }
+  .nav-pantry-switcher .pantry-group-selector .group-member-count {
+    display: none;
+  }
+}

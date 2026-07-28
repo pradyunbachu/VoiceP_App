@@ -29,12 +29,12 @@ import ConfirmDialog from "./components/ConfirmDialog";
 import ErrorBoundary from "./components/ErrorBoundary";
 import MobileBottomNav from "./components/MobileBottomNav";
 import UpdatePassword from "./components/UpdatePassword";
-import { API_BASE_URL } from "./config/api";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ThemeProvider } from "./context/ThemeContext";
+import { PantryProvider, usePantrySelection } from "./context/PantryContext";
 import { X } from "lucide-react";
 import RecipeDetailPanel from "./components/RecipeDetailModal";
-import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems } from "./hooks";
+import { useAnalytics, useClearAllExpenses, useRecipeDetail, useCookMeal, usePantryItems, usePantryGroups, usePantryStats } from "./hooks";
 import type { AppUser, AppView, Toast as ToastType, ToastAction, RecipeDetail, MealSuggestion, CookMealResponse } from "./types";
 import "./App.css";
 
@@ -59,16 +59,38 @@ function AppContent() {
   const [currentView, setCurrentView] = useState<AppView>("landing");
   const [toasts, setToasts] = useState<ToastType[]>([]);
   const [showTutorial, setShowTutorial] = useState(false);
-  const [selectedPantryGroup, setSelectedPantryGroup] = useState<number | null | "demo">(null);
+  const { selectedGroupId: selectedPantryGroup, setSelectedGroupId: setSelectedPantryGroup } = usePantrySelection();
   const [chefInitialItems, setChefInitialItems] = useState<string[]>([]);
   // Global recipe panel state (slides out on any screen)
   const [globalMeal, setGlobalMeal] = useState<{ name: string; description: string } | null>(null);
   const [globalRecipeCache, setGlobalRecipeCache] = useState<RecipeDetail | null>(null);
   const globalRecipeDetail = useRecipeDetail();
   const globalCookMeal = useCookMeal();
-  const { data: globalPantryData } = usePantryItems({ group_id: (selectedPantryGroup === "demo" ? undefined : selectedPantryGroup ?? undefined) as number | undefined });
+  const { data: globalPantryData } = usePantryItems({ group_id: selectedPantryGroup ?? undefined });
   const [sessionExpired, setSessionExpired] = useState(false);
   const quickRecordRef = useRef<QuickRecordPopupHandle>(null);
+
+  // First-run pantry default: a genuinely new user (empty personal pantry) with
+  // no stored selection lands on the Demo Pantry; existing users stay on My
+  // Pantry. Captured at first render, before the context persist effect writes,
+  // so an absent key is distinguishable from an explicit "My Pantry" (null).
+  const hadStoredSelectionRef = useRef<boolean>(
+    (() => { try { return localStorage.getItem("voxal_selected_pantry") !== null; } catch { return false; } })()
+  );
+  const firstRunAppliedRef = useRef<boolean>(false);
+  const { data: pantryGroupsForDefault } = usePantryGroups();
+  const { data: personalPantryStats } = usePantryStats(undefined);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (hadStoredSelectionRef.current || firstRunAppliedRef.current) return;
+    if (!pantryGroupsForDefault || !personalPantryStats) return;
+    firstRunAppliedRef.current = true;
+    const demoGroup = pantryGroupsForDefault.find((g) => g.name === "Demo Pantry");
+    if (personalPantryStats.total_items === 0 && demoGroup) {
+      setSelectedPantryGroup(demoGroup.id);
+    }
+  }, [isAuthenticated, pantryGroupsForDefault, personalPantryStats, setSelectedPantryGroup]);
 
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const clearAllMutation = useClearAllExpenses();
@@ -139,21 +161,6 @@ function AppContent() {
     }
   }, [session, sessionExpired, queryClient]);
 
-  // Seed demo pantry for first-time users (fire-and-forget)
-  useEffect(() => {
-    if (isAuthenticated && !localStorage.getItem("voxal_demo_seeded")) {
-      getToken().then((t) => {
-        if (!t) return;
-        fetch(`${API_BASE_URL}/api/pantry/seed-demo`, {
-          method: "POST",
-          headers: { Authorization: `Bearer ${t}` },
-        }).then(() => {
-          localStorage.setItem("voxal_demo_seeded", "true");
-        }).catch(() => {});
-      });
-    }
-  }, [isAuthenticated, getToken]);
-
   const handleTutorialClose = useCallback(() => {
     setShowTutorial(false);
     localStorage.setItem("voxal_tutorial_seen", "true");
@@ -198,7 +205,7 @@ function AppContent() {
       {
         recipe_name: recipeName,
         ingredients,
-        group_id: (selectedPantryGroup === "demo" ? undefined : selectedPantryGroup ?? undefined) as number | undefined,
+        group_id: selectedPantryGroup ?? undefined,
         recipe_instructions: recipe?.instructions as string[] | undefined,
         recipe_description: recipe?.description,
         recipe_servings: recipe?.servings,
@@ -314,7 +321,6 @@ function AppContent() {
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
               onOpenVoxy={() => quickRecordRef.current?.triggerRecord()}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -376,8 +382,6 @@ function AppContent() {
           <div className="view-container" key="pantry">
             <Pantry
               showToast={showToast}
-              selectedGroupId={selectedPantryGroup}
-              onSelectGroup={setSelectedPantryGroup}
               onCookExpiring={(itemNames) => {
                 setChefInitialItems(itemNames);
                 setCurrentView("chef");
@@ -390,14 +394,13 @@ function AppContent() {
           <div className="view-container" key="shopping-list">
             <ShoppingList
               showToast={showToast}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
       case "chef":
         return (
           <div className="view-container" key="chef">
-            <Chef showToast={showToast} selectedGroupId={selectedPantryGroup} initialBowlItemNames={chefInitialItems} onInitialItemsConsumed={() => setChefInitialItems([])} />
+            <Chef showToast={showToast} initialBowlItemNames={chefInitialItems} onInitialItemsConsumed={() => setChefInitialItems([])} />
           </div>
         );
       case "meal-planner":
@@ -405,7 +408,6 @@ function AppContent() {
           <div className="view-container" key="meal-planner">
             <MealPlanner
               showToast={showToast}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -414,7 +416,6 @@ function AppContent() {
           <div className="view-container" key="saved-recipes">
             <SavedRecipes
               showToast={showToast}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -432,7 +433,6 @@ function AppContent() {
               onNavigate={setCurrentView}
               onShowTutorial={() => setShowTutorial(true)}
               onOpenVoxy={() => quickRecordRef.current?.triggerRecord()}
-              selectedPantryGroup={selectedPantryGroup}
             />
           </div>
         );
@@ -450,6 +450,7 @@ function AppContent() {
             onViewChange={setCurrentView}
             onLogout={handleLogout}
             user={user}
+            showToast={showToast}
           />
           <QuickRecordPopup ref={quickRecordRef} showToast={showToast} onNavigate={setCurrentView} onSelectMeal={handleSelectMeal} />
           <VoxyFAB popupRef={quickRecordRef} />
@@ -511,7 +512,9 @@ function App() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <AppContent />
+        <PantryProvider>
+          <AppContent />
+        </PantryProvider>
       </AuthProvider>
     </ThemeProvider>
   );
