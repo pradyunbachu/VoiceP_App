@@ -24,9 +24,9 @@ Pantry scope is inconsistent across the app. A user "switches" pantries (e.g. to
 
 ## Non-goals
 
-- No new `pantries` table / `pantry_id`-on-every-row migration. Reuse the existing group model.
+- No new `pantries` table / `pantry_id`-on-every-row migration. Reuse the existing `pantry_groups` + the existing (currently unused) `pantry_items.group_id` column.
 - No cleanup of existing users' previously-seeded personal demo items (see Migration).
-- No change to how shopping-list sharing works (separate `group_id`-column mechanism, left as-is).
+- No change to how shopping-list sharing works (it already uses the `group_id`-column model — we align pantry TO it).
 
 ## Core architecture
 
@@ -39,7 +39,13 @@ This eliminates the client-only `"demo"` sentinel. All pantries flow through the
 
 **One shared state.** A `PantryContext` provider in `App.tsx` holds the selected pantry (`number | null`) and setter, hydrated from `localStorage` on load. Every read hook, write hook, and the voice/chat calls consume the selected group id from this context instead of a drilled prop. Flipping it once updates the whole app, Voxy included.
 
-**Owner-indirection (unchanged mechanism).** Shared/demo pantry access continues to resolve `group_id → owner's user_id` and operate on that owner's rows. We do NOT start populating the dead `pantry_items.group_id` column; we make **writes** consistent with the existing **read** indirection instead.
+**`group_id`-column scoping (CORRECTED — supersedes the earlier owner-indirection plan).** Owner-indirection cannot represent two pantries owned by the same user: a demo pantry owned by you resolves to your own `user_id`, colliding with your personal pantry. So we address pantries via the `pantry_items.group_id` column instead — exactly how `shopping_list` already works:
+
+- Personal pantry → rows where `user_id = me AND group_id IS NULL`.
+- Demo / any group → rows where `group_id = <group id>` (after membership verification), regardless of which member created them.
+- Writes set `group_id` (nullable) and `user_id = creator`. Reads filter by `group_id`.
+
+The `pantry_items.group_id` column and its RLS policies already exist (`supabase_schema.sql:280, 330–356`) but were unused; we now use them. This also unifies the pantry and shopping-list sharing models (previously divergent).
 
 ## Demo pantry lifecycle
 
@@ -50,13 +56,21 @@ This eliminates the client-only `"demo"` sentinel. All pantries flow through the
 
 ## Backend changes
 
-- **Group-aware writes.** Add `group_id` to `PantryItemCreate`. Introduce a shared `resolve_pantry_user_id(group_id, current_user)` helper (mirroring the read-side owner-indirection, with membership verification). Route every write path through it:
-  `POST /pantry`, `POST /pantry/from-expense`, `POST /pantry/store-trip`, `DELETE /pantry/bulk`, `POST /pantry/resync`, `POST /pantry/seed-demo`.
-- **Pantry-aware voice/chat.** `/api/chat` and `/api/chat/confirm` accept `group_id`; thread it into `handlers/pantry_handler.py` and `handlers/suggestion_handler.py` so Voxy reads/writes the selected pantry.
-- **Group-aware ancillaries.** `shopping-list/match-pantry` (`routes/shopping_list.py`) and expiry notifications (`routes/notifications.py`) resolve the pantry via the same helper.
+- **`group_id`-column scoping helpers.** Add `group_id` to `PantryItemCreate`. Introduce two shared helpers in `routes/pantry_sharing.py`:
+  - `verify_pantry_access(current_user_id, group_id)` — `True`/no-op for `None`; raises `403` if not a member of `group_id` (reuses existing `verify_pantry_group_membership`).
+  - `scope_pantry_query(query, current_user_id, group_id)` — applies `.eq("group_id", group_id)` for a group, or `.eq("user_id", current_user_id).is_("group_id", "null")` for personal.
+- **Group-aware reads.** `GET /pantry`, `/pantry/stats`, `/daily-recs`, meal-plan reads, and chat reads filter via `scope_pantry_query` (replacing the current owner-indirection). Personal reads gain the `group_id IS NULL` filter they lack today.
+- **Group-aware writes.** Every write sets `group_id` on the row: `POST /pantry`, `from-expense`, `store-trip`, `bulk delete`, `resync`, demo seed. `verify_pantry_access` gates non-null group writes.
+- **Pantry-aware voice/chat.** `/api/chat` and `/api/chat/confirm` accept `group_id`; thread it into `handlers/pantry_handler.py` and `handlers/suggestion_handler.py`.
+- **Group-aware ancillaries.** `shopping-list/match-pantry` (`routes/shopping_list.py`) and expiry notifications (`routes/notifications.py`) use the same scoping.
 - **New/changed endpoints:**
   - `POST /pantry/demo/reset` — wipe + re-seed the caller's demo group.
   - Demo group auto-creation on first login (server-side gate).
+
+## Migration
+
+- **Backfill existing shared groups.** A one-time migration stamps each existing shared pantry group's items with its `group_id` so current shared pantries keep their contents under the new scoping. For each `pantry_groups` row (excluding demo), set `group_id` on the owner's pantry items that logically belong to that shared pantry. Because today ALL `pantry_items.group_id` are NULL and shared groups currently surface the owner's *personal* rows, the migration's exact selection rule (which of the owner's items belong to the shared group) must be decided during implementation — if it can't be determined unambiguously, prefer leaving items personal (safe) and note it in the PR. Demo groups are created fresh (not backfilled).
+- **Existing personal demo items** (old `seed-demo` into personal) remain `group_id IS NULL` → they stay in "My Pantry". Not deleted.
 
 ### Request/response contract (pinned — shared by both agents)
 
