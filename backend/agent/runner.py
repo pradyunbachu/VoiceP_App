@@ -1,5 +1,6 @@
 """The Voxy agent loop: call Groq, run tool calls, chain, reply."""
 import asyncio
+import inspect
 import json
 import logging
 
@@ -9,6 +10,22 @@ from agent.results import Action, PendingAction, AgentResult
 from agent.prompt import build_messages
 
 logger = logging.getLogger(__name__)
+
+
+def _accepts_group_id(fn) -> bool:
+    """Whether a tool fn declares a group_id parameter (pantry-aware tools do)."""
+    try:
+        return "group_id" in inspect.signature(fn).parameters
+    except (TypeError, ValueError):
+        return False
+
+
+async def _invoke_tool(tool_def, user_id, args, message, group_id):
+    """Call a tool fn, passing group_id only to fns that accept it (keeps legacy
+    3-arg tool fns — and their tests — working unchanged)."""
+    if _accepts_group_id(tool_def.fn):
+        return await tool_def.fn(user_id, args, message, group_id=group_id)
+    return await tool_def.fn(user_id, args, message)
 
 # gpt-oss-120b reliably formats tool calls on Groq; llama-3.3-70b-versatile
 # frequently fails with 400 tool_use_failed (malformed <function=...> syntax),
@@ -48,7 +65,7 @@ def _create_completion(client, messages, specs):
 
 
 async def run_agent(user_id, message, history=None, *, client=None,
-                    tool_registry=None, tool_specs=None, max_iters=5):
+                    tool_registry=None, tool_specs=None, max_iters=5, group_id=None):
     client = client or groq_client
     registry = tool_registry if tool_registry is not None else TOOL_REGISTRY
     specs = tool_specs if tool_specs is not None else TOOL_SPECS
@@ -99,7 +116,7 @@ async def run_agent(user_id, message, history=None, *, client=None,
                 tool_content = json.dumps({"status": "needs_confirmation", "summary": summary})
             else:
                 try:
-                    res = await tool_def.fn(user_id, args, message)
+                    res = await _invoke_tool(tool_def, user_id, args, message, group_id)
                     if res.action_type:
                         actions.append(Action(type=res.action_type, summary=res.summary, data=res.data))
                     tool_content = json.dumps({"status": "ok", "summary": res.summary, "data": res.data})
@@ -128,7 +145,7 @@ def _confirm_summary(name, args):
     return f"Confirm {name}?"
 
 
-async def execute_pending(user_id, pending, ids, *, tool_registry=None):
+async def execute_pending(user_id, pending, ids, *, tool_registry=None, group_id=None):
     registry = tool_registry if tool_registry is not None else TOOL_REGISTRY
     by_id = {p["id"]: p for p in pending if p.get("id")}
     actions: list[Action] = []
@@ -147,7 +164,7 @@ async def execute_pending(user_id, pending, ids, *, tool_registry=None):
         if tool_def.policy == "none":
             continue
         try:
-            res = await tool_def.fn(user_id, p.get("args", {}), "")
+            res = await _invoke_tool(tool_def, user_id, p.get("args", {}), "", group_id)
             actions.append(Action(type=res.action_type or p.get("tool"), summary=res.summary, data=res.data))
             done.append(res.summary)
         except Exception as e:  # never crash the turn — mirror run_agent's per-tool guard

@@ -220,6 +220,7 @@ class ChatRequest(BaseModel):
     message: str = Field(max_length=2000)
     # Recent conversation turns for context: [{"role": "user"|"assistant", "content": "..."}]
     history: Optional[List[dict]] = Field(default=None, max_length=50)
+    group_id: Optional[int] = None  # Selected pantry scope: None = personal, else a group
 
 
 class ChatResponse(BaseModel):
@@ -242,6 +243,7 @@ class ChatConfirmRequest(BaseModel):
     ids: List[str]
     pending: List[dict] = Field(max_length=20)  # the PendingAction dicts returned by /chat
     history: Optional[List[dict]] = None
+    group_id: Optional[int] = None  # Selected pantry scope: None = personal, else a group
 
 # ============================================================================
 # INSIGHTS MODELS

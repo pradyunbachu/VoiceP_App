@@ -20,12 +20,13 @@ from datetime import datetime, timedelta
 import json
 
 from config import supabase, groq_client
+from routes.pantry_sharing import scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
 
 
-async def handle_suggestion(user_id: str, sub_intent: str, entities: dict) -> dict:
+async def handle_suggestion(user_id: str, sub_intent: str, entities: dict, group_id: int | None = None) -> dict:
     """Generate shopping suggestions based on shopping list and pantry status."""
     if supabase is None:
         return {"shopping_list_items": [], "pantry_items": [], "message": "Database not configured"}
@@ -45,7 +46,9 @@ async def handle_suggestion(user_id: str, sub_intent: str, entities: dict) -> di
             "source": "shopping_list"
         })
 
-    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_response = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, group_id
+    ).execute()
     pantry_items = pantry_response.data if pantry_response.data else []
 
     pantry_suggestions = []
@@ -169,12 +172,14 @@ async def handle_recall_past_meal(user_id: str, sub_intent: str, entities: dict,
     }
 
 
-async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict, message: str = None) -> dict:
+async def handle_meal_suggestion(user_id: str, sub_intent: str, entities: dict, message: str = None, group_id: int | None = None) -> dict:
     """Generate meal suggestions based on pantry contents and user preferences."""
     if supabase is None:
         return {"meals": [], "message": "Database not configured"}
 
-    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_response = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, group_id
+    ).execute()
     pantry_items = pantry_response.data if pantry_response.data else []
 
     if not pantry_items:
@@ -311,7 +316,7 @@ Prioritize meals that use expiring ingredients. Keep it practical."""
         }
 
 
-async def handle_reminder_check(user_id: str, entities: dict, original_message: str) -> dict:
+async def handle_reminder_check(user_id: str, entities: dict, original_message: str, group_id: int | None = None) -> dict:
     """Check on a specific item's expiration or stock status in the pantry."""
     if supabase is None:
         return {"message": "Database not configured"}
@@ -340,9 +345,7 @@ async def handle_reminder_check(user_id: str, entities: dict, original_message: 
 
     try:
         response = (
-            supabase.table("pantry_items")
-            .select("*")
-            .eq("user_id", user_id)
+            scope_pantry_query(supabase.table("pantry_items").select("*"), user_id, group_id)
             .execute()
         )
         items = response.data if response.data else []
@@ -388,12 +391,14 @@ async def handle_reminder_check(user_id: str, entities: dict, original_message: 
         }
 
 
-async def handle_meal_plan_week(user_id: str, entities: dict) -> dict:
+async def handle_meal_plan_week(user_id: str, entities: dict, group_id: int | None = None) -> dict:
     """Generate a 7-day meal plan based on pantry contents."""
     if supabase is None:
         return {"message": "Database not configured"}
 
-    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_response = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, group_id
+    ).execute()
     pantry_items = pantry_response.data if pantry_response.data else []
 
     full_items = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]
@@ -475,7 +480,7 @@ Keep meals practical, varied, and use up expiring items early in the week."""
         }
 
 
-async def handle_budget_meal(user_id: str, entities: dict, original_message: str) -> dict:
+async def handle_budget_meal(user_id: str, entities: dict, original_message: str, group_id: int | None = None) -> dict:
     """Suggest meals under a given price limit, considering pantry items."""
     if supabase is None:
         return {"message": "Database not configured"}
@@ -492,7 +497,9 @@ async def handle_budget_meal(user_id: str, entities: dict, original_message: str
     if not price_limit:
         price_limit = 10.0
 
-    pantry_response = supabase.table("pantry_items").select("*").eq("user_id", user_id).execute()
+    pantry_response = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, group_id
+    ).execute()
     pantry_items = pantry_response.data if pantry_response.data else []
 
     full_items = [i for i in pantry_items if i.get("stock_status") != "out_of_stock"]

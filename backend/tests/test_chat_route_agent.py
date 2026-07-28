@@ -17,7 +17,7 @@ def client(monkeypatch):
 
 
 def test_chat_returns_agent_fields_and_legacy(client, monkeypatch):
-    async def fake_run(user_id, message, history=None):
+    async def fake_run(user_id, message, history=None, group_id=None):
         return AgentResult(reply="Added milk.",
                            actions=[Action(type="shopping_add", summary="Added milk", data={})])
     monkeypatch.setattr("routes.chat.run_agent", fake_run)
@@ -32,7 +32,7 @@ def test_chat_returns_agent_fields_and_legacy(client, monkeypatch):
 
 
 def test_chat_falls_back_to_classifier_on_agent_error(client, monkeypatch):
-    async def boom(user_id, message, history=None):
+    async def boom(user_id, message, history=None, group_id=None):
         raise RuntimeError("groq down")
     monkeypatch.setattr("routes.chat.run_agent", boom)
     # Make the classifier path deterministic.
@@ -47,7 +47,7 @@ def test_chat_falls_back_to_classifier_on_agent_error(client, monkeypatch):
 
 
 def test_chat_confirm_executes_pending(client, monkeypatch):
-    async def fake_exec(user_id, pending, ids):
+    async def fake_exec(user_id, pending, ids, group_id=None):
         from agent.results import AgentResult, Action
         return AgentResult(reply="Deleted it.",
                            actions=[Action(type="expense_deleted", summary="Deleted", data={})])
