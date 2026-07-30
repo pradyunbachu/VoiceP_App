@@ -54,7 +54,7 @@
 .hd-hero-label {
   font-size: 0.7rem;
   font-weight: 700;
-  color: #d4a24e;
+  color: var(--accent-primary);
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
@@ -81,7 +81,7 @@
 }
 
 .hd-hero-meal:hover .hd-hero-meal-name {
-  color: #d4a24e;
+  color: var(--accent-primary);
 }
 
 .hd-hero-meal-time {
@@ -122,21 +122,11 @@
 
 .hd-stat-card:hover { border-color: var(--border-hover); }
 
-/* Warm-tinted cards (Pantry, Shopping) */
-.hd-stat-card--warm {
-  background: rgba(212, 162, 78, 0.08);
-  border-color: rgba(212, 162, 78, 0.18);
-}
-
-.hd-stat-card--warm:hover { border-color: rgba(212, 162, 78, 0.3); }
-
 .hd-stat-label {
   font-size: 0.72rem;
   font-weight: 600;
   color: var(--text-muted);
 }
-
-.hd-stat-card--warm .hd-stat-label { color: #d4a24e; }
 
 .hd-stat-num {
   font-size: 1.8rem;
@@ -174,18 +164,17 @@
 .hd-mini-bar {
   width: 10px;
   min-height: 3px;
-  background: rgba(212, 162, 78, 0.5);
+  background: var(--accent-primary-dark);
   border-radius: 3px 3px 1px 1px;
   transition: height 0.3s ease;
 }
 
 .hd-mini-bar:first-child {
-  background: rgba(212, 162, 78, 0.8);
+  background: var(--accent-primary);
 }
 
 .hd-stat-icon {
-  color: var(--text-muted);
-  opacity: 0.25;
+  color: var(--border-hover);
   flex-shrink: 0;
 }
 
@@ -193,7 +182,7 @@
 .hd-section-title {
   font-size: 0.68rem;
   font-weight: 700;
-  color: #d4a24e;
+  color: var(--accent-primary);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   margin: 0 0 var(--space-2) var(--space-1);
@@ -286,8 +275,8 @@
 .hd-pill {
   font-size: 0.6rem;
   font-weight: 700;
-  color: #d4a24e;
-  background: rgba(212, 162, 78, 0.18);
+  color: var(--on-accent);
+  background: var(--accent-primary);
   padding: 2px 8px;
   border-radius: 6px;
   letter-spacing: 0.02em;

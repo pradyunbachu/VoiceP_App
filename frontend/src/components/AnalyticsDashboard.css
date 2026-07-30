@@ -345,7 +345,7 @@
 .chart-detail-modal {
   background: var(--bg-secondary);
   border: 1px solid var(--border-primary);
-  border-radius: var(--radius-xl, 16px);
+  border-radius: var(--radius-xl);
   padding: var(--space-8);
   width: 100%;
   max-width: 720px;

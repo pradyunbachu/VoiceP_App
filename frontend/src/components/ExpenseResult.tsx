@@ -101,7 +101,7 @@ const ExpenseResult: React.FC<Props> = ({ extractedExpense, pendingPantryExpense
                 />
                 <button
                   onClick={() => handleEditSave(expense)}
-                  style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--accent-green, #4ade80)" }}
+                  style={{ background: "none", border: "none", cursor: "pointer", padding: "2px", color: "var(--accent-success)" }}
                   title="Save"
                 >
                   <Check size={16} />

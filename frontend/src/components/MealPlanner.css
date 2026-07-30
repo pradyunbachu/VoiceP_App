@@ -81,13 +81,13 @@
 }
 
 .mp-action-btn--shopping {
-  border-color: var(--accent-purple-border);
-  color: var(--accent-purple);
+  border-color: var(--accent-secondary-border);
+  color: var(--accent-secondary);
 }
 
 .mp-action-btn--shopping:hover:not(:disabled) {
-  background: var(--accent-purple-bg);
-  border-color: var(--accent-purple);
+  background: var(--accent-secondary-bg);
+  border-color: var(--accent-secondary);
 }
 
 /* ── Week Navigation ─────────────────────────────────────────────── */
@@ -394,7 +394,7 @@
 }
 
 .mp-meal-status.ready {
-  background: rgba(106, 175, 123, 0.12);
+  background: var(--accent-success-bg);
   color: var(--color-success);
 }
 
@@ -450,7 +450,7 @@
 
 .mp-add-confirm {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .mp-add-confirm:hover:not(:disabled) {
@@ -463,12 +463,12 @@
 }
 
 .mp-add-cancel {
-  background: rgba(200, 191, 178, 0.08);
+  background: var(--bg-tertiary);
   color: var(--text-muted);
 }
 
 .mp-add-cancel:hover {
-  background: rgba(200, 191, 178, 0.15);
+  background: var(--bg-card-hover);
   color: var(--text-secondary);
 }
 

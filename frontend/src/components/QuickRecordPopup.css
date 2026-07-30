@@ -219,7 +219,7 @@
 .confirm-btn {
   flex: 1;
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .confirm-btn:hover {
@@ -451,13 +451,13 @@
 }
 
 .idle-dropdown-icon--mic {
-  background: linear-gradient(135deg, var(--accent-danger) 0%, var(--accent-danger-dark, #c0392b) 100%);
+  background: linear-gradient(135deg, var(--accent-danger) 0%, var(--accent-danger-dark) 100%);
   color: white;
 }
 
 .idle-dropdown-icon--type {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .idle-dropdown-icon--scan {
@@ -562,16 +562,16 @@
   align-items: center;
   gap: 8px;
   padding: 8px 10px;
-  background: var(--bg-input, rgba(255,255,255,0.05));
+  background: var(--bg-input);
   border-radius: 8px;
-  border: 1px solid var(--border-secondary, rgba(255,255,255,0.1));
+  border: 1px solid var(--border-secondary);
 }
 
 .qr-store-trip-name {
   flex: 1;
   background: transparent;
   border: none;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
   font-size: 0.9rem;
   font-weight: 500;
   padding: 0;
@@ -592,15 +592,15 @@
   width: 22px;
   height: 22px;
   border-radius: 5px;
-  border: 1px solid var(--border-secondary, rgba(255,255,255,0.15));
-  background: var(--bg-card, rgba(255,255,255,0.05));
-  color: var(--text-secondary, #aaa);
+  border: 1px solid var(--border-secondary);
+  background: var(--bg-card);
+  color: var(--text-secondary);
   cursor: pointer;
   padding: 0;
 }
 
 .qr-store-trip-qty-btn:active {
-  background: var(--bg-hover, rgba(255,255,255,0.1));
+  background: var(--bg-hover);
 }
 
 .qr-store-trip-qty-val {
@@ -608,7 +608,7 @@
   text-align: center;
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .qr-store-trip-remove {
@@ -619,12 +619,12 @@
   border: none;
   cursor: pointer;
   padding: 2px;
-  color: var(--text-muted, #666);
+  color: var(--text-muted);
   border-radius: 4px;
 }
 
 .qr-store-trip-remove:active {
-  color: var(--accent-danger, #ef4444);
+  color: var(--accent-danger);
 }
 
 .qr-store-trip-amount {
@@ -633,15 +633,15 @@
   justify-content: space-between;
   padding: 10px 12px;
   margin-bottom: 0.75rem;
-  background: var(--bg-input, rgba(255,255,255,0.05));
+  background: var(--bg-input);
   border-radius: 8px;
-  border: 1px solid var(--border-secondary, rgba(255,255,255,0.1));
+  border: 1px solid var(--border-secondary);
 }
 
 .qr-store-trip-amount-label {
   font-size: 0.85rem;
   font-weight: 500;
-  color: var(--text-secondary, #aaa);
+  color: var(--text-secondary);
 }
 
 .qr-store-trip-amount-input {
@@ -650,15 +650,15 @@
   gap: 2px;
   font-size: 1rem;
   font-weight: 600;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .qr-store-trip-amount-input input {
   width: 70px;
   background: transparent;
   border: none;
-  border-bottom: 1px solid var(--border-secondary, rgba(255,255,255,0.15));
-  color: var(--text-primary, #fff);
+  border-bottom: 1px solid var(--border-secondary);
+  color: var(--text-primary);
   font-size: 1rem;
   font-weight: 600;
   text-align: right;
@@ -667,10 +667,10 @@
 }
 
 .qr-store-trip-amount-input input::placeholder {
-  color: var(--text-muted, #555);
+  color: var(--text-muted);
   font-weight: 400;
 }
 
 .qr-store-trip-amount-input input:focus {
-  border-bottom-color: var(--accent-primary, #d4a76a);
+  border-bottom-color: var(--accent-primary);
 }

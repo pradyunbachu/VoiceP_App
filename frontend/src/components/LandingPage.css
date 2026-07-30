@@ -536,8 +536,8 @@
 }
 
 .result-card-icon.purple {
-  background: var(--accent-purple-bg);
-  color: var(--accent-purple);
+  background: var(--accent-secondary-bg);
+  color: var(--accent-secondary);
 }
 
 .result-card-icon.amber {
@@ -618,8 +618,8 @@
 }
 
 .feature-icon.purple {
-  color: var(--accent-purple);
-  background: var(--accent-purple-bg);
+  color: var(--accent-secondary);
+  background: var(--accent-secondary-bg);
 }
 
 .feature-icon.amber {

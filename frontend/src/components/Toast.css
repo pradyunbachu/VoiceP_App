@@ -39,19 +39,19 @@
 
 .toast-warning {
   background: var(--accent-warning-bg);
-  border: 1px solid rgba(251, 191, 36, 0.2);
+  border: 1px solid var(--accent-warning-border);
   color: var(--accent-warning);
 }
 
 .toast-info {
   background: var(--accent-info-bg);
-  border: 1px solid rgba(96, 165, 250, 0.2);
+  border: 1px solid var(--accent-info-border);
   color: var(--accent-info);
 }
 
 .toast-celebration {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15), rgba(168, 85, 247, 0.15));
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: var(--accent-warning-bg);
+  border: 1px solid var(--accent-warning);
   color: var(--accent-warning);
   animation: celebrationPop 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
   overflow: hidden;
@@ -69,25 +69,25 @@
 }
 
 .toast-celebration::before {
-  background: rgba(251, 191, 36, 0.8);
+  background: var(--accent-primary);
   top: 6px;
   left: 15%;
   animation-delay: 0.1s;
   box-shadow:
-    20px 2px 0 rgba(168, 85, 247, 0.7),
-    45px -4px 0 rgba(52, 211, 153, 0.7),
-    70px 3px 0 rgba(251, 146, 60, 0.7);
+    20px 2px 0 var(--accent-primary-light),
+    45px -4px 0 var(--color-success),
+    70px 3px 0 var(--accent-warning);
 }
 
 .toast-celebration::after {
-  background: rgba(168, 85, 247, 0.8);
+  background: var(--accent-primary-light);
   top: 6px;
   right: 20%;
   animation-delay: 0.25s;
   box-shadow:
-    -15px -2px 0 rgba(251, 191, 36, 0.7),
-    -40px 4px 0 rgba(96, 165, 250, 0.7),
-    -65px -3px 0 rgba(52, 211, 153, 0.7);
+    -15px -2px 0 var(--accent-primary),
+    -40px 4px 0 var(--accent-warning),
+    -65px -3px 0 var(--color-success);
 }
 
 .toast-celebration .toast-icon {
@@ -160,7 +160,7 @@
 
 .toast-action:hover {
   opacity: 1;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-tertiary);
 }
 
 .toast-close {

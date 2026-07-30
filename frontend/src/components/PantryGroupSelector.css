@@ -88,7 +88,7 @@
 }
 
 .pantry-group-selector .group-option.active {
-  background: rgba(59, 130, 246, 0.08);
+  background: var(--accent-primary-bg);
   color: var(--accent-primary);
   font-weight: 500;
 }
@@ -299,7 +299,7 @@
 
 .pantry-group-selector .demo-reset-btn:hover:not(:disabled) {
   background: var(--accent-primary);
-  color: #fff;
+  color: var(--on-accent);
 }
 
 .pantry-group-selector .group-footer-actions {
@@ -355,7 +355,7 @@
 .pantry-group-selector .inline-input button {
   padding: 0.45rem 0.75rem;
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   border: none;
   border-radius: 6px;
   cursor: pointer;

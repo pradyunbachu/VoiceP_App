@@ -90,7 +90,7 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background: rgba(59, 130, 246, 0.12);
+  background: var(--accent-primary-bg);
   color: var(--accent-primary);
   margin-bottom: var(--space-3);
 }
@@ -174,7 +174,7 @@
 }
 
 .tutorial-dot.completed {
-  background: var(--accent-success, #22c55e);
+  background: var(--accent-success);
 }
 
 /* Nav buttons */
@@ -200,7 +200,7 @@
 
 .tutorial-btn-primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .tutorial-btn-primary:hover {

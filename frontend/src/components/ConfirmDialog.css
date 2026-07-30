@@ -23,7 +23,7 @@
 }
 
 .confirm-icon {
-  color: var(--accent-danger, #ef4444);
+  color: var(--accent-danger);
   margin-bottom: 1rem;
 }
 
@@ -68,11 +68,11 @@
 
 .confirm-action-btn {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .confirm-action-btn.danger {
-  background: var(--accent-danger, #ef4444);
+  background: var(--accent-danger);
 }
 
 .confirm-action-btn:hover {

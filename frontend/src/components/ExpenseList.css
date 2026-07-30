@@ -83,22 +83,22 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-2) var(--space-4);
-  background: var(--accent-purple-bg);
-  border: 1px solid var(--accent-purple-border);
+  background: var(--accent-secondary-bg);
+  border: 1px solid var(--accent-secondary-border);
   border-radius: var(--radius-md);
   margin-bottom: var(--space-4);
-  color: var(--accent-purple);
+  color: var(--accent-secondary);
   font-size: 0.875rem;
 }
 
 .active-filter strong {
-  color: var(--accent-purple);
+  color: var(--accent-secondary);
 }
 
 .active-filter button {
   background: transparent;
   border: none;
-  color: var(--accent-purple);
+  color: var(--accent-secondary);
   cursor: pointer;
   padding: var(--space-1);
   border-radius: var(--radius-sm);
@@ -292,7 +292,7 @@
 }
 
 .expense-category.active {
-  color: var(--accent-purple);
+  color: var(--accent-secondary);
 }
 
 .expense-footer {
@@ -418,7 +418,7 @@
 
 .save-button {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .save-button:hover {
