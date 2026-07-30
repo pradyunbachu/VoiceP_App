@@ -166,34 +166,84 @@ def clean_item_name(item: str, store: str = "") -> str:
 
     return item
 
-def categorize_item(item: str, store: str) -> str:
-    """Categorize a single item"""
+# Item-keyword → category. Order matters: a specific item (e.g. "laptop")
+# should win over a store-based guess. "water" is intentionally NOT a Utilities
+# keyword — as a purchased item it's bottled water (groceries), and letting it
+# read as Utilities mis-tagged grocery baskets.
+_CATEGORY_KEYWORDS = {
+    "Electronics": ["laptop", "computer", "macbook", "iphone", "ipad", "phone", "tablet", "tv", "headphone", "charger", "monitor"],
+    "Groceries": [
+        "groceries", "grocery", "milk", "bread", "egg", "food", "banana", "candy", "apple",
+        "chip", "croissant", "cauliflower", "mint", "cheeto", "potato", "snack", "produce",
+        "vegetable", "fruit", "cereal", "yogurt", "cheese", "chicken", "rice", "pasta",
+        "juice", "soda", "cookie", "chocolate", "strawberr", "pineapple", "lettuce", "tomato",
+        "onion", "carrot", "broccoli", "meat", "seafood", "butter", "sauce", "water bottle",
+    ],
+    "Clothing": ["shirt", "pants", "jacket", "shoes", "dress", "socks", "hoodie"],
+    "Transportation": ["gas", "gasoline", "fuel", "uber", "lyft", "parking"],
+    "Dining": ["restaurant", "cafe", "coffee", "lunch", "dinner", "takeout"],
+    "Entertainment": ["movie", "game", "book", "concert"],
+    "Health": ["pharmacy", "medicine", "vitamin", "prescription"],
+    "Home": ["furniture", "bed", "chair", "rent", "rental", "apartment", "house", "mortgage", "housing"],
+    "Utilities": ["electric", "internet", "water bill", "wifi"],
+}
+
+# Store-name → category (fallback when no item keyword matches). Tokens are
+# specific enough to avoid false positives (e.g. "sam's club", not "sam").
+_GROCERY_STORES = [
+    "walmart", "target", "kroger", "costco", "sam's club", "sams club", "trader joe",
+    "whole foods", "safeway", "aldi", "publix", "wegmans", "h-e-b", "sprouts", "ralphs",
+    "vons", "albertsons", "food lion", "meijer", "winco", "shoprite", "stop & shop",
+    "grocery", "supermarket",
+]
+_ELECTRONICS_STORES = ["apple store", "best buy", "microcenter", "micro center"]
+
+
+def _keyword_category(item: str) -> str | None:
+    """Return the category implied by a single item's keywords, or None."""
     item_lower = item.lower()
-    store_lower = store.lower() if store != "Unknown Store" else ""
+    for cat, keywords in _CATEGORY_KEYWORDS.items():
+        if any(kw in item_lower for kw in keywords):
+            return cat
+    return None
 
-    category_keywords = {
-        "Electronics": ["laptop", "computer", "macbook", "iphone", "ipad", "phone", "tablet", "tv"],
-        "Groceries": ["groceries", "milk", "bread", "eggs", "food", "banana", "candy", "apple"],
-        "Clothing": ["shirt", "pants", "jacket", "shoes"],
-        "Transportation": ["gas", "gasoline", "fuel"],
-        "Dining": ["restaurant", "cafe", "coffee", "lunch", "dinner"],
-        "Entertainment": ["movie", "game", "book"],
-        "Health": ["pharmacy", "medicine"],
-        "Home": ["furniture", "bed", "chair", "rent", "rental", "apartment", "house", "mortgage", "housing"],
-        "Utilities": ["electric", "water", "internet"],
-    }
 
-    for cat, keywords in category_keywords.items():
-        for keyword in keywords:
-            if keyword in item_lower:
-                return cat
-
-    if any(word in store_lower for word in ["walmart", "target", "kroger"]):
+def _store_category(store: str) -> str | None:
+    """Return the category implied by the store name, or None."""
+    if not store or store == "Unknown Store":
+        return None
+    s = store.lower()
+    if any(w in s for w in _GROCERY_STORES):
         return "Groceries"
-    elif any(word in store_lower for word in ["apple", "best buy"]):
+    if any(w in s for w in _ELECTRONICS_STORES):
         return "Electronics"
+    return None
 
-    return "Other"
+
+def categorize_item(item: str, store: str) -> str:
+    """Categorize a single item (keyword first, then store, else Other)."""
+    return _keyword_category(item) or _store_category(store) or "Other"
+
+
+def categorize_items(items: str, store: str) -> str:
+    """Categorize an expense from its comma-separated items + store.
+
+    A specific non-grocery item (laptop, gas, …) wins immediately. Otherwise,
+    if any item reads as groceries — or the store is a grocery store — it's
+    Groceries. Falls back to the store category, then "Other"."""
+    grocery_seen = False
+    for raw in (items or "").split(","):
+        part = raw.strip()
+        if not part:
+            continue
+        cat = _keyword_category(part)
+        if cat == "Groceries":
+            grocery_seen = True
+        elif cat:  # a specific non-grocery category — trust it
+            return cat
+    if grocery_seen:
+        return "Groceries"
+    return _store_category(store) or "Other"
 
 def detect_recurring(transcript: str) -> dict:
     """Detect if expense is recurring and extract interval/unit"""
