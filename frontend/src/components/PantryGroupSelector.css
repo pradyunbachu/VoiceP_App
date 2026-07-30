@@ -23,6 +23,7 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
+  min-width: 0; /* allow the name to shrink/truncate instead of wrapping */
   font-family: inherit;
   font-size: 0.95rem;
   font-weight: 500;
@@ -30,10 +31,19 @@
 }
 
 .pantry-group-selector .group-selector-label svg {
+  flex-shrink: 0;
   color: var(--accent-primary);
 }
 
+.pantry-group-selector .group-selector-name {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .pantry-group-selector .group-member-count {
+  flex-shrink: 0;
+  white-space: nowrap;
   font-size: 0.75rem;
   color: var(--text-tertiary);
   font-weight: 400;
