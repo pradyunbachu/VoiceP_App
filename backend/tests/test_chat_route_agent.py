@@ -46,6 +46,34 @@ def test_chat_falls_back_to_classifier_on_agent_error(client, monkeypatch):
     assert body["intent"] == "general"
 
 
+def test_chat_expense_input_short_circuits_to_route_to_expense(client, monkeypatch):
+    # An expense report must route to the dedicated extraction flow (which shows
+    # the itemized card + "Add to Pantry" UI) instead of the conversational agent.
+    called = {"agent": False}
+
+    async def fake_run(user_id, message, history=None, group_id=None):
+        called["agent"] = True
+        return AgentResult(reply="should not be used", actions=[])
+    monkeypatch.setattr("routes.chat.run_agent", fake_run)
+
+    r = client.post("/api/chat", json={"message": "I spent $30 at Costco on chips and milk"})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["intent"] == "expense_input"
+    assert body["data"]["route_to_expense"] is True
+    assert called["agent"] is False, "agent must be bypassed for expense inputs"
+
+
+def test_chat_non_expense_still_uses_agent(client, monkeypatch):
+    async def fake_run(user_id, message, history=None, group_id=None):
+        return AgentResult(reply="You could make pasta.", actions=[])
+    monkeypatch.setattr("routes.chat.run_agent", fake_run)
+
+    r = client.post("/api/chat", json={"message": "what can I cook for dinner?"})
+    assert r.status_code == 200
+    assert r.json()["reply"] == "You could make pasta."
+
+
 def test_chat_confirm_executes_pending(client, monkeypatch):
     async def fake_exec(user_id, pending, ids, group_id=None):
         from agent.results import AgentResult, Action
