@@ -34,7 +34,7 @@
   gap: var(--space-2);
   padding: var(--space-3) var(--space-5);
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--radius-md);
   cursor: pointer;
@@ -199,13 +199,13 @@
 
 .pantry-action-banner--chef {
   background: var(--accent-warning-bg);
-  border-color: rgba(212, 160, 53, 0.2);
+  border-color: var(--accent-warning-border);
   color: var(--accent-warning);
 }
 
 .pantry-action-banner--chef:hover:not(:disabled) {
-  background: rgba(212, 160, 53, 0.12);
-  border-color: rgba(212, 160, 53, 0.3);
+  background: var(--accent-warning-bg);
+  border-color: var(--accent-warning);
 }
 
 /* Form Styles */
@@ -287,7 +287,7 @@
 
 .save-button {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .save-button:hover {
@@ -399,7 +399,7 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background: transparent;
-  border: 1px solid var(--accent-danger-border, rgba(248, 113, 113, 0.3));
+  border: 1px solid var(--accent-danger-border);
   border-radius: var(--radius-md);
   color: var(--accent-danger);
   font-size: 0.875rem;
@@ -408,7 +408,7 @@
 }
 
 .discard-oos-button:hover:not(:disabled) {
-  background: var(--accent-danger-bg, rgba(248, 113, 113, 0.1));
+  background: var(--accent-danger-bg);
 }
 
 .discard-oos-button:disabled {
@@ -446,7 +446,7 @@
   gap: var(--space-2);
   padding: var(--space-2) var(--space-4);
   background: transparent;
-  border: 1px solid var(--accent-danger-border, rgba(248, 113, 113, 0.3));
+  border: 1px solid var(--accent-danger-border);
   border-radius: var(--radius-md);
   color: var(--accent-danger);
   font-size: 0.875rem;
@@ -455,7 +455,7 @@
 }
 
 .select-expired-button:hover {
-  background: var(--accent-danger-bg, rgba(248, 113, 113, 0.1));
+  background: var(--accent-danger-bg);
 }
 
 .bulk-delete-button {
@@ -543,7 +543,7 @@
 .quick-add-btn {
   padding: var(--space-2) var(--space-4);
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--radius-md);
   font-size: 0.85rem;
@@ -616,9 +616,9 @@
 }
 
 .pantry-card.expiring-soon {
-  border-top-color: rgba(251, 191, 36, 0.3);
-  border-right-color: rgba(251, 191, 36, 0.3);
-  border-bottom-color: rgba(251, 191, 36, 0.3);
+  border-top-color: var(--accent-warning-border);
+  border-right-color: var(--accent-warning-border);
+  border-bottom-color: var(--accent-warning-border);
 }
 
 .checkbox-button {
@@ -681,8 +681,8 @@
   width: 16px;
   height: 16px;
   padding: 0;
-  background: rgba(200, 191, 178, 0.08);
-  border: 1px solid rgba(200, 191, 178, 0.15);
+  background: var(--bg-tertiary);
+  border: 1px solid var(--border-primary);
   border-radius: 3px;
   color: var(--text-muted);
   cursor: pointer;
@@ -691,7 +691,7 @@
 }
 
 .qty-btn:hover:not(:disabled) {
-  background: rgba(200, 191, 178, 0.18);
+  background: var(--bg-card-hover);
   color: var(--text-primary);
   border-color: var(--accent-primary-border);
 }
@@ -776,7 +776,7 @@
 
 .status-button.low.active {
   background: var(--accent-warning-bg);
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: var(--accent-warning);
   color: var(--accent-warning);
 }
 
@@ -901,7 +901,7 @@
 
 .save-btn {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .save-btn:hover {
@@ -958,7 +958,7 @@
   margin-top: var(--space-5);
   padding: var(--space-3) var(--space-5);
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   border: none;
   border-radius: var(--radius-md);
   font-size: 0.9rem;
@@ -1030,7 +1030,7 @@
 
 .view-toggle-btn.active {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .view-toggle-btn:not(:last-child) {
@@ -1122,15 +1122,15 @@
 }
 
 .spreadsheet-row-editing {
-  background: color-mix(in srgb, var(--accent-primary) 8%, transparent);
+  background: var(--accent-primary-bg);
 }
 
 .spreadsheet-row-expired {
-  background: color-mix(in srgb, var(--status-error) 6%, transparent);
+  background: var(--status-error-bg);
 }
 
 .spreadsheet-row-expiring {
-  background: color-mix(in srgb, var(--status-warning) 6%, transparent);
+  background: var(--status-warning-bg);
 }
 
 .spreadsheet-td-name {
@@ -1150,7 +1150,7 @@
   display: inline-block;
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  background: color-mix(in srgb, var(--accent-primary) 12%, transparent);
+  background: var(--accent-primary-bg-hover);
   color: var(--accent-primary);
   font-size: 0.75rem;
   font-weight: 500;
@@ -1185,7 +1185,7 @@
 
 .spreadsheet-qty-btn:hover {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   border-color: var(--accent-primary);
 }
 
@@ -1211,17 +1211,17 @@
 }
 
 .spreadsheet-status-full {
-  background: color-mix(in srgb, var(--status-success) 15%, transparent);
+  background: var(--status-success-bg);
   color: var(--status-success);
 }
 
 .spreadsheet-status-low {
-  background: color-mix(in srgb, var(--status-warning) 15%, transparent);
+  background: var(--status-warning-bg);
   color: var(--status-warning);
 }
 
 .spreadsheet-status-out_of_stock {
-  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  background: var(--status-error-bg);
   color: var(--status-error);
 }
 
@@ -1273,7 +1273,7 @@
 }
 
 .spreadsheet-input:focus {
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-primary) 25%, transparent);
+  box-shadow: 0 0 0 2px var(--accent-primary);
 }
 
 .spreadsheet-input-qty {
@@ -1326,17 +1326,17 @@
 }
 
 .spreadsheet-save-btn:hover {
-  background: color-mix(in srgb, var(--status-success) 15%, transparent);
+  background: var(--status-success-bg);
   color: var(--status-success);
 }
 
 .spreadsheet-cancel-btn:hover {
-  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  background: var(--status-error-bg);
   color: var(--status-error);
 }
 
 .spreadsheet-delete-btn:hover {
-  background: color-mix(in srgb, var(--status-error) 15%, transparent);
+  background: var(--status-error-bg);
   color: var(--status-error);
 }
 
@@ -1404,11 +1404,11 @@
 /* The actual shelf surface */
 .shelf-surface {
   position: relative;
-  background: linear-gradient(180deg, #D4C4A1, #C9B896 40%, #BEA985);
+  background: #C9B896;
   border-radius: var(--radius-md);
   padding: var(--space-4) var(--space-5) var(--space-5);
   min-height: 85px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06), inset 0 1px 2px rgba(255, 255, 255, 0.3);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
   transition: box-shadow 0.2s ease;
 }
 
@@ -1419,7 +1419,7 @@
   left: 0;
   right: 0;
   height: 6px;
-  background: linear-gradient(180deg, #B8A785, #A89878);
+  background: #A89878;
   border-radius: 0 0 var(--radius-md) var(--radius-md);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -1461,10 +1461,8 @@
   flex-direction: column;
   align-items: center;
   padding: var(--space-3) var(--space-3) var(--space-2);
-  background: rgba(255, 255, 255, 0.95);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #FFFFFF;
+  border: 1px solid #E7DFD1;
   border-radius: var(--radius-md);
   width: 140px;
   height: 120px;
@@ -1490,21 +1488,21 @@
 
 .shelf-item.low {
   border-bottom: 2px solid var(--accent-warning);
-  background: rgba(255, 251, 235, 0.95);
+  background: #FDF7E7;
 }
 
 .shelf-item.out_of_stock {
   border-bottom: 2px solid var(--accent-danger);
-  background: rgba(254, 242, 242, 0.95);
+  background: #FCEEEE;
   opacity: 0.7;
 }
 
 .shelf-item.expiring-soon {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 0 0 1.5px rgba(251, 191, 36, 0.4);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 0 0 1.5px var(--accent-warning);
 }
 
 .shelf-item.expired {
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 0 0 1.5px rgba(248, 113, 113, 0.5);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05), 0 0 0 1.5px var(--accent-danger);
 }
 
 /* Shelf Item Status Buttons */
@@ -1553,7 +1551,7 @@
 .shelf-status-btn.low:hover,
 .shelf-status-btn.low.active {
   background: var(--accent-warning-bg);
-  border-color: rgba(251, 191, 36, 0.3);
+  border-color: var(--accent-warning);
   color: var(--accent-warning);
 }
 
@@ -1629,7 +1627,7 @@
 }
 
 .shelf-item-badge.expired {
-  background: rgba(248, 113, 113, 0.9);
+  background: var(--accent-danger);
   color: white;
 }
 
@@ -1683,7 +1681,7 @@
 }
 
 .shelf-empty-hint {
-  color: rgba(80, 65, 50, 0.4);
+  color: #8A7A66;
   font-size: 0.75rem;
   font-weight: 400;
   padding: var(--space-3) var(--space-4);
@@ -1692,7 +1690,7 @@
 }
 
 [data-theme="dark"] .shelf-empty-hint {
-  color: rgba(150, 142, 130, 0.5);
+  color: #7A736A;
 }
 
 [data-theme="dark"] .shelf.drag-over .shelf-surface {
@@ -1768,12 +1766,12 @@
 
 /* Dark mode shelf adjustments */
 [data-theme="dark"] .shelf-surface {
-  background: linear-gradient(180deg, #3D3228, #342B22 40%, #2C2418);
-  box-shadow: 0 4px 12px rgba(10, 8, 4, 0.2), inset 0 1px 2px rgba(200, 191, 178, 0.05);
+  background: #342B22;
+  box-shadow: 0 4px 12px rgba(10, 8, 4, 0.2);
 }
 
 [data-theme="dark"] .shelf-surface::after {
-  background: linear-gradient(180deg, #2C2418, #241E14);
+  background: #241E14;
 }
 
 [data-theme="dark"] .shelf-bracket {
@@ -1781,8 +1779,8 @@
 }
 
 [data-theme="dark"] .shelf-item {
-  background: rgba(30, 26, 22, 0.95);
-  border-color: rgba(200, 191, 178, 0.06);
+  background: #1E1A16;
+  border-color: #2A251F;
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
 }
@@ -1796,11 +1794,11 @@
 }
 
 [data-theme="dark"] .shelf-item.low {
-  background: rgba(40, 34, 22, 0.95);
+  background: #282216;
 }
 
 [data-theme="dark"] .shelf-item.out_of_stock {
-  background: rgba(42, 28, 26, 0.95);
+  background: #2A1C1A;
 }
 
 /* Pantry list scroll container (infinite scroll) */

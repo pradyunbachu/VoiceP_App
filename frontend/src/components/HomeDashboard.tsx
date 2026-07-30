@@ -246,7 +246,7 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
             <Flame size={42} className="hd-stat-icon" />
           </div>
         </button>
-        <button className="hd-stat-card hd-stat-card--warm" onClick={() => navigate("pantry")}>
+        <button className="hd-stat-card" onClick={() => navigate("pantry")}>
           <div className="hd-stat-top">
             <div>
               <span className="hd-stat-label">Pantry</span>
@@ -286,7 +286,7 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
 
       {/* ── Shopping + Spending (secondary) ─────────────────── */}
       <motion.div className="hd-stats" variants={fadeUp}>
-        <button className="hd-stat-card hd-stat-card--warm" onClick={() => navigate("shopping-list")}>
+        <button className="hd-stat-card" onClick={() => navigate("shopping-list")}>
           <div className="hd-stat-top">
             <div>
               <span className="hd-stat-label">Shopping</span>

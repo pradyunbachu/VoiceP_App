@@ -451,14 +451,14 @@ const ShoppingList: React.FC<Props> = ({ showToast }) => {
                           icon: <Package size={18} />,
                           label: "Pantry",
                           color: "white",
-                          bg: "var(--accent-primary, #C4A265)",
+                          bg: "var(--accent-primary)",
                           onClick: () => handleAddToPantry(item),
                         },
                         {
                           icon: <Trash2 size={18} />,
                           label: "Delete",
                           color: "white",
-                          bg: "var(--accent-danger, #E06B6B)",
+                          bg: "var(--accent-danger)",
                           onClick: () => handleDelete(item.id),
                         },
                       ]}

@@ -6,7 +6,7 @@
   position: fixed;
   inset: 0;
   z-index: 1100;
-  background: var(--bg-primary, #0f0f14);
+  background: var(--bg-primary);
   display: flex;
   flex-direction: column;
   animation: cooking-mode-enter 0.3s ease;
@@ -23,7 +23,7 @@
   align-items: center;
   justify-content: space-between;
   padding: 12px 20px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-bottom: 1px solid var(--border-primary);
   flex-shrink: 0;
 }
 
@@ -51,9 +51,9 @@
   justify-content: center;
   width: 36px;
   height: 36px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: var(--radius-sm, 6px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-sm);
   color: var(--text-muted);
   cursor: pointer;
   transition: all 0.15s ease;
@@ -62,7 +62,7 @@
 
 .cooking-exit-btn:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-tertiary);
 }
 
 /* Main content area */
@@ -119,16 +119,16 @@
   width: 52px;
   height: 52px;
   border-radius: 50%;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--border-hover);
+  background: var(--bg-secondary);
   color: var(--text-primary);
   cursor: pointer;
   transition: all 0.15s ease;
 }
 
 .cooking-nav-btn:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.12);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: var(--bg-card-hover);
+  border-color: var(--border-hover);
 }
 
 .cooking-nav-btn:disabled {
@@ -146,7 +146,7 @@
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.15);
+  background: var(--bg-card-hover);
   transition: all 0.2s ease;
 }
 
@@ -157,7 +157,7 @@
 }
 
 .cooking-dot.completed {
-  background: var(--accent-success, #22c55e);
+  background: var(--accent-success);
 }
 
 /* Timer section */
@@ -167,9 +167,9 @@
   align-items: center;
   gap: 12px;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: var(--radius-md, 8px);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
 }
 
 .cooking-timer-display {
@@ -181,7 +181,7 @@
 }
 
 .cooking-timer-display.alert {
-  color: var(--accent-danger, #f87171);
+  color: var(--accent-danger);
   animation: timer-pulse 0.5s ease-in-out infinite alternate;
 }
 
@@ -201,9 +201,9 @@
   justify-content: center;
   gap: 6px;
   padding: 8px 16px;
-  border-radius: var(--radius-sm, 6px);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  background: rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-hover);
+  background: var(--bg-secondary);
   color: var(--text-secondary);
   font-size: 0.8rem;
   font-weight: 500;
@@ -214,14 +214,14 @@
 }
 
 .cooking-timer-btn:hover {
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--bg-tertiary);
   color: var(--text-primary);
 }
 
 .cooking-timer-btn.primary {
-  background: var(--accent-primary, #3b82f6);
-  border-color: var(--accent-primary, #3b82f6);
-  color: #fff;
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: var(--on-accent);
 }
 
 .cooking-timer-btn.primary:hover {
@@ -235,8 +235,8 @@
 
 .cooking-preset-btn {
   padding: 4px 10px;
-  border-radius: var(--radius-full, 999px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-primary);
   background: none;
   color: var(--text-muted);
   font-size: 0.7rem;
@@ -247,7 +247,7 @@
 }
 
 .cooking-preset-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary);
   color: var(--text-secondary);
 }
 
@@ -258,9 +258,9 @@
   justify-content: center;
   gap: 8px;
   padding: 10px 16px;
-  border-radius: var(--radius-md, 8px);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--radius-md);
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-primary);
 }
 
 .cooking-voice-dot {
@@ -271,7 +271,7 @@
 }
 
 .cooking-voice-dot.listening {
-  background: var(--accent-success, #22c55e);
+  background: var(--accent-success);
   animation: voice-pulse 1.5s ease-in-out infinite;
 }
 
@@ -291,8 +291,8 @@
   align-items: center;
   gap: 4px;
   padding: 4px 10px;
-  border-radius: var(--radius-sm, 6px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-primary);
   background: none;
   color: var(--text-muted);
   font-size: 0.7rem;
@@ -302,7 +302,7 @@
 }
 
 .cooking-voice-btn:hover {
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary);
 }
 
 /* Feedback toast for commands */
@@ -313,8 +313,8 @@
   transform: translateX(-50%);
   padding: 10px 20px;
   background: rgba(0, 0, 0, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: var(--radius-md, 8px);
+  border: 1px solid var(--border-hover);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: 0.9rem;
   font-weight: 500;
@@ -333,7 +333,7 @@
 /* Done button */
 .cooking-done-area {
   padding: 16px 0 8px;
-  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  border-top: 1px solid var(--border-primary);
 }
 
 .cooking-done-btn {
@@ -344,9 +344,9 @@
   gap: 8px;
   padding: 14px 16px;
   border: none;
-  border-radius: var(--radius-md, 8px);
-  background: linear-gradient(135deg, var(--accent-warning, #d4a017) 0%, var(--accent-primary, #9b7dbd) 100%);
-  color: #fff;
+  border-radius: var(--radius-md);
+  background: var(--accent-primary);
+  color: var(--on-accent);
   font-size: 0.95rem;
   font-weight: 700;
   font-family: inherit;
@@ -356,7 +356,7 @@
 
 .cooking-done-btn:hover:not(:disabled) {
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(200, 170, 110, 0.3);
+  background: var(--accent-primary-hover);
 }
 
 .cooking-done-btn:disabled {
@@ -370,10 +370,10 @@
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
-  background: rgba(251, 191, 36, 0.08);
-  border: 1px solid rgba(251, 191, 36, 0.2);
-  border-radius: var(--radius-sm, 6px);
-  color: var(--accent-warning, #fbbf24);
+  background: var(--accent-warning-bg);
+  border: 1px solid var(--accent-warning-border);
+  border-radius: var(--radius-sm);
+  color: var(--accent-warning);
   font-size: 0.75rem;
 }
 
@@ -391,9 +391,9 @@
 }
 
 .cooking-confirm-panel {
-  background: var(--bg-primary, #0f0f14);
-  border: 1px solid var(--border-primary, rgba(255,255,255,0.1));
-  border-radius: var(--radius-lg, 10px);
+  background: var(--bg-primary);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-lg);
   padding: 1.5rem;
   width: 100%;
   max-width: 380px;
@@ -405,13 +405,13 @@
   margin: 0 0 0.25rem;
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .cooking-confirm-desc {
   margin: 0 0 1rem;
   font-size: 0.8rem;
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
 }
 
 .cooking-confirm-list {
@@ -426,8 +426,8 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0.6rem;
-  border-radius: var(--radius-sm, 6px);
-  background: rgba(255, 255, 255, 0.04);
+  border-radius: var(--radius-sm);
+  background: var(--bg-secondary);
   cursor: pointer;
   transition: opacity 0.15s ease;
 }
@@ -440,19 +440,19 @@
 .cooking-confirm-item input[type="checkbox"] {
   width: 16px;
   height: 16px;
-  accent-color: var(--accent-primary, #3b82f6);
+  accent-color: var(--accent-primary);
   cursor: pointer;
 }
 
 .cooking-confirm-name {
   flex: 1;
   font-size: 0.85rem;
-  color: var(--text-primary, #fff);
+  color: var(--text-primary);
 }
 
 .cooking-confirm-amount {
   font-size: 0.75rem;
-  color: var(--text-muted, #888);
+  color: var(--text-muted);
   flex-shrink: 0;
 }
 
@@ -465,9 +465,9 @@
   flex: 1;
   padding: 0.6rem;
   background: transparent;
-  border: 1px solid var(--border-primary, rgba(255,255,255,0.1));
-  border-radius: var(--radius-md, 8px);
-  color: var(--text-muted, #888);
+  border: 1px solid var(--border-primary);
+  border-radius: var(--radius-md);
+  color: var(--text-muted);
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
@@ -487,10 +487,10 @@
   justify-content: center;
   gap: 0.4rem;
   padding: 0.6rem;
-  background: var(--accent-primary, #3b82f6);
+  background: var(--accent-primary);
   border: none;
-  border-radius: var(--radius-md, 8px);
-  color: #fff;
+  border-radius: var(--radius-md);
+  color: var(--on-accent);
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;

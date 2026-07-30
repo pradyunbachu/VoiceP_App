@@ -90,7 +90,7 @@
   width: 36px;
   height: 36px;
   border-radius: var(--radius-md);
-  background: rgba(59, 130, 246, 0.12);
+  background: var(--accent-primary-bg);
   color: var(--accent-primary);
   margin-bottom: var(--space-3);
 }
@@ -174,7 +174,7 @@
 }
 
 .tutorial-dot.completed {
-  background: var(--accent-success, #22c55e);
+  background: var(--accent-success);
 }
 
 /* Nav buttons */
@@ -200,7 +200,7 @@
 
 .tutorial-btn-primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .tutorial-btn-primary:hover {
@@ -221,7 +221,7 @@
 /* Floating interaction hint bar */
 .tutorial-interaction-hint {
   position: fixed;
-  bottom: 100px;
+  top: 24px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10004;
@@ -229,10 +229,10 @@
   align-items: center;
   gap: var(--space-3);
   background: var(--bg-card);
-  border: 1px solid var(--border-primary);
+  border: 1.5px solid var(--accent-primary);
   border-radius: var(--radius-xl);
-  padding: var(--space-3) var(--space-5);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.4);
+  padding: var(--space-4) var(--space-6);
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.5);
   animation: tutorialHintSlideUp 0.2s ease-out;
   white-space: nowrap;
 }
@@ -296,7 +296,7 @@
 
   /* Move interaction hint above mobile bottom nav + voxy bar */
   .tutorial-interaction-hint {
-    bottom: 150px;
+    top: 72px;
     left: 16px;
     right: 16px;
     transform: none;

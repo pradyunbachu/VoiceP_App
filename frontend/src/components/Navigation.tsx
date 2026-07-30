@@ -67,7 +67,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user, show
         <button
           className={`nav-tab ${currentView === "pantry" ? "active" : ""}`}
           onClick={() => onViewChange("pantry")}
-          data-tutorial="kitchen-tab"
+          data-tutorial="pantry-tab"
         >
           <Package size={18} />
           <span className="nav-label-full">Pantry</span>
@@ -77,6 +77,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user, show
         <button
           className={`nav-tab ${currentView === "shopping-list" ? "active" : ""}`}
           onClick={() => onViewChange("shopping-list")}
+          data-tutorial="shopping-tab"
         >
           <ShoppingCart size={18} />
           <span className="nav-label-full">Shopping</span>
@@ -86,6 +87,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user, show
         <button
           className={`nav-tab ${currentView === "chef" ? "active" : ""}`}
           onClick={() => onViewChange("chef")}
+          data-tutorial="chef-tab"
         >
           <ChefHat size={18} />
           <span className="nav-label-full">Chef</span>
@@ -95,6 +97,7 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user, show
         <button
           className={`nav-tab ${currentView === "meal-planner" ? "active" : ""}`}
           onClick={() => onViewChange("meal-planner")}
+          data-tutorial="planner-tab"
         >
           <CalendarDays size={18} />
           <span className="nav-label-full">Planner</span>

@@ -84,7 +84,7 @@
   border: none;
   border-radius: 8px;
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
   cursor: pointer;
   transition: all 0.3s ease;
   box-shadow: var(--shadow-accent);
@@ -114,10 +114,10 @@
 
 .login-form .success-message {
   padding: 0.75rem;
-  background: var(--accent-success-bg, rgba(34, 197, 94, 0.1));
-  border: 1px solid var(--accent-success-border, rgba(34, 197, 94, 0.3));
+  background: var(--accent-success-bg);
+  border: 1px solid var(--accent-success-border);
   border-radius: 8px;
-  color: var(--accent-success, #22c55e);
+  color: var(--accent-success);
   font-size: 0.9rem;
   text-align: center;
 }

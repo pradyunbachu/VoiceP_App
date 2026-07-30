@@ -3,21 +3,21 @@
 .agent-action-card {
   display: flex; align-items: center; gap: 10px;
   padding: 12px 14px; border-radius: 12px;
-  background: var(--card-bg, #faf7f2); border: 1px solid var(--border, #e7e0d4);
+  background: var(--bg-card); border: 1px solid var(--border-primary);
 }
-.agent-action-icon { color: var(--success, #2e7d32); display: flex; }
+.agent-action-icon { color: var(--accent-success); display: flex; }
 .agent-action-summary { font-size: 0.95rem; }
 .agent-expense-body { display: flex; flex-direction: column; flex: 1; }
 .agent-expense-store { font-weight: 600; font-size: 0.95rem; }
 .agent-expense-category { font-size: 0.8rem; opacity: 0.7; }
-.agent-expense-amount { font-weight: 700; color: var(--accent, #b58a4a); }
+.agent-expense-amount { font-weight: 700; color: var(--accent-primary); }
 .agent-confirm-card {
   padding: 12px 14px; border-radius: 12px;
-  background: var(--card-bg, #faf7f2); border: 1px solid var(--accent, #b58a4a);
+  background: var(--bg-card); border: 1px solid var(--accent-primary);
   display: flex; flex-direction: column; gap: 10px;
 }
 .agent-confirm-head { display: flex; align-items: center; gap: 8px; font-weight: 600; }
 .agent-confirm-actions { display: flex; gap: 8px; }
 .agent-confirm-actions button { flex: 1; padding: 9px 0; border-radius: 10px; font-weight: 600; cursor: pointer; }
-.agent-cancel-btn { background: transparent; border: 1px solid var(--border, #e7e0d4); }
-.agent-confirm-btn { background: var(--accent, #b58a4a); color: #fff; border: none; }
+.agent-cancel-btn { background: transparent; border: 1px solid var(--border-primary); }
+.agent-confirm-btn { background: var(--accent-primary); color: var(--on-accent); border: none; }
