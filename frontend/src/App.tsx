@@ -92,6 +92,18 @@ function AppContent() {
     }
   }, [isAuthenticated, pantryGroupsForDefault, personalPantryStats, setSelectedPantryGroup]);
 
+  // Guard against a stale pantry selection: if the persisted group isn't one the
+  // current user belongs to (e.g. left over from a previous account/session in
+  // the same browser), fall back to My Pantry — otherwise every group-scoped
+  // request 403s and the app looks broken.
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    if (selectedPantryGroup == null) return;        // "My Pantry" is always valid
+    if (!pantryGroupsForDefault) return;             // wait for the groups list
+    const belongs = pantryGroupsForDefault.some((g) => g.id === selectedPantryGroup);
+    if (!belongs) setSelectedPantryGroup(null);
+  }, [isAuthenticated, selectedPantryGroup, pantryGroupsForDefault, setSelectedPantryGroup]);
+
   const { data: analytics, isLoading: analyticsLoading } = useAnalytics();
   const clearAllMutation = useClearAllExpenses();
 
