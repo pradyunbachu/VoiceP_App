@@ -185,6 +185,9 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
       setIsOpen(false);
       return;
     }
+    // Close the dropdown so the confirm dialog isn't obscured by it (the nav
+    // creates a stacking context that can trap the fixed-position modal).
+    setIsOpen(false);
     setPendingSwitchTo({ id, name });
   };
 
@@ -208,10 +211,12 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
       <div className="group-selector-toggle" onClick={() => setIsOpen(!isOpen)}>
         <div className="group-selector-label">
           <Users size={16} />
-          <span>{selectedGroup ? selectedGroup.name : "My Pantry"}</span>
-          {selectedGroup && (
+          <span className="group-selector-name">{selectedGroup ? selectedGroup.name : "My Pantry"}</span>
+          {/* Member count is only meaningful for real shared groups — not the
+              demo sandbox (single-user) or the personal pantry. */}
+          {selectedGroup && !isDemoSelected && (
             <span className="group-member-count">
-              {selectedGroup.member_count || 0} members
+              {selectedGroup.member_count || 1} member{(selectedGroup.member_count || 1) === 1 ? "" : "s"}
             </span>
           )}
         </div>
@@ -224,7 +229,7 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
           {isDemoSelected && (
             <button
               className="group-action-btn demo-reset-btn"
-              onClick={() => setShowResetConfirm(true)}
+              onClick={() => { setIsOpen(false); setShowResetConfirm(true); }}
               disabled={resetDemoMutation.isPending}
             >
               <RotateCcw size={14} />
@@ -322,7 +327,7 @@ const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
                   <div className="group-option-info">
                     <span>{group.name}</span>
                     <span className="group-meta">
-                      {group.member_count || 0} members
+                      {group.member_count || 1} member{(group.member_count || 1) === 1 ? "" : "s"}
                       {group.user_role === "owner" ? " \u00B7 Owner" : ""}
                     </span>
                   </div>
