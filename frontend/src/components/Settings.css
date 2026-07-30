@@ -134,7 +134,7 @@
   background: var(--accent-primary);
   border: none;
   border-radius: var(--radius-md);
-  color: white;
+  color: var(--on-accent);
   font-size: 0.875rem;
   font-weight: 600;
   font-family: inherit;

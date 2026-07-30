@@ -142,7 +142,7 @@
 
 /* Comparison Sentences */
 .sentences-section {
-  background: linear-gradient(135deg, var(--accent-primary-bg), var(--accent-purple-bg));
+  background: var(--bg-card);
   border: 1px solid var(--accent-primary-border);
   border-radius: var(--radius-lg);
   padding: var(--space-6);
@@ -175,7 +175,7 @@
   align-items: center;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-secondary);
   border-radius: var(--radius-md);
 }
 
@@ -359,11 +359,11 @@
 }
 
 .dual-bar-fill.current {
-  background: linear-gradient(90deg, var(--accent-primary), var(--accent-primary-hover));
+  background: var(--accent-primary);
 }
 
 .dual-bar-fill.compare {
-  background: linear-gradient(90deg, var(--stat-gray), var(--text-muted));
+  background: var(--stat-gray);
 }
 
 .dual-bar-amount {

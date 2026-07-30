@@ -510,7 +510,7 @@ const ChatResponseDisplay: FC<Props> = ({ chatResponse }) => {
                   width: `${Math.min(pct, 100)}%`,
                   height: "100%",
                   borderRadius: "3px",
-                  background: isOver ? "var(--accent-danger, #ef4444)" : pct > 80 ? "var(--accent-warning, #f59e0b)" : "var(--accent-success, #22c55e)",
+                  background: isOver ? "var(--accent-danger)" : pct > 80 ? "var(--accent-warning)" : "var(--accent-success)",
                 }} />
               </div>
               <span className="item-details">

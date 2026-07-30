@@ -43,7 +43,7 @@
 .clear-all-btn:hover:not(:disabled) {
   border-color: var(--accent-danger);
   color: var(--accent-danger);
-  background: rgba(239, 68, 68, 0.05);
+  background: var(--accent-danger-bg);
 }
 
 .clear-all-btn:disabled {
@@ -268,7 +268,7 @@
 
 .item-delete:hover {
   color: var(--accent-danger);
-  background: rgba(239, 68, 68, 0.1);
+  background: var(--accent-danger-bg);
 }
 
 .item-add-to-pantry:disabled,
@@ -330,7 +330,7 @@
 
 .pantry-chip:hover:not(:disabled) {
   border-color: var(--accent-primary);
-  background: rgba(59, 130, 246, 0.05);
+  background: var(--accent-primary-bg);
 }
 
 .pantry-chip:disabled {
@@ -338,7 +338,7 @@
 }
 
 .pantry-chip.added {
-  background: rgba(59, 130, 246, 0.1);
+  background: var(--accent-primary-bg);
   border-color: var(--accent-primary);
   color: var(--accent-primary);
 }
@@ -373,10 +373,10 @@
   gap: 0.5rem;
   padding: 0.6rem 1rem;
   margin-bottom: 1rem;
-  background: rgba(245, 158, 11, 0.1);
-  border: 1px solid rgba(245, 158, 11, 0.25);
+  background: var(--accent-warning-bg);
+  border: 1px solid var(--accent-warning-border);
   border-radius: 10px;
-  color: var(--accent-warning, #f59e0b);
+  color: var(--accent-warning);
   font-size: 0.85rem;
   font-weight: 500;
 }
@@ -410,7 +410,7 @@
 
 .suggestion-item:hover,
 .suggestion-item.selected {
-  background: var(--accent-primary-bg, rgba(59, 130, 246, 0.08));
+  background: var(--accent-primary-bg);
 }
 
 .suggestion-name {

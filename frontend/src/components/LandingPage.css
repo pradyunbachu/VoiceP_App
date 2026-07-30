@@ -300,7 +300,7 @@
   background: #232328;
   box-shadow:
     0 24px 60px rgba(0, 0, 0, 0.4),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+    inset 0 0 0 1px #33333A;
 }
 
 .phone-screen {
@@ -536,8 +536,8 @@
 }
 
 .result-card-icon.purple {
-  background: var(--accent-purple-bg);
-  color: var(--accent-purple);
+  background: var(--accent-secondary-bg);
+  color: var(--accent-secondary);
 }
 
 .result-card-icon.amber {
@@ -618,8 +618,8 @@
 }
 
 .feature-icon.purple {
-  color: var(--accent-purple);
-  background: var(--accent-purple-bg);
+  color: var(--accent-secondary);
+  background: var(--accent-secondary-bg);
 }
 
 .feature-icon.amber {

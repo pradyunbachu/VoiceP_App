@@ -21,10 +21,10 @@
   align-items: center;
   gap: var(--space-1);
   padding: var(--space-1) var(--space-3);
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: #FFFFFF;
+  border: 1px solid #FFFFFF;
   border-radius: var(--radius-full);
-  color: #fff;
+  color: var(--accent-danger-dark);
   font-family: inherit;
   font-size: 0.8rem;
   font-weight: 600;
@@ -33,7 +33,7 @@
 }
 
 .session-banner-btn:hover {
-  background: rgba(255, 255, 255, 0.35);
+  background: #F0EAEA;
 }
 
 @keyframes session-slide-in {

@@ -306,7 +306,7 @@
 
 .preview-button.primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .preview-button.primary:hover:not(:disabled) {
@@ -458,7 +458,7 @@
 
 .result-button.primary {
   background: var(--accent-primary);
-  color: white;
+  color: var(--on-accent);
 }
 
 .result-button.primary:hover {
