@@ -25,8 +25,9 @@ RUN pip install --no-cache-dir --upgrade pip && \
 # Create non-root user
 RUN addgroup --system appgroup && adduser --system --ingroup appgroup appuser
 
-# Copy application code
-COPY . .
+# Copy application code (chown so the non-root user can read files copied
+# from a host where they may be mode 600 / owner-only)
+COPY --chown=appuser:appgroup . .
 
 # Switch to non-root user
 USER appuser
