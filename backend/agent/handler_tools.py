@@ -3,6 +3,7 @@ import logging
 
 from config import supabase
 from services.expense_persist import persist_expense
+from services.text_processing import categorize_items
 from handlers import (
     handle_pantry_query, handle_expense_query, handle_budget_query,
     handle_reminder_check, handle_recall_past_meal,
@@ -268,7 +269,9 @@ async def _log_expense(user_id, args, message):
         store=args.get("store", "Unknown Store"),
         amount=args.get("amount"),
         items=args.get("items", ""),
-        category=args.get("category", "Other"),
+        # Prefer the LLM's category; if it omitted one, derive it from the
+        # items/store rather than silently dumping to "Other".
+        category=args.get("category") or categorize_items(args.get("items", ""), args.get("store", "")),
         date=args.get("date"),
         is_recurring=bool(args.get("recurring", False)),
         recurring_interval=args.get("recurring_interval"),
@@ -282,7 +285,13 @@ register(ToolDef("log_expense",
     _spec("log_expense", "Log a NEW expense the user reports having spent.",
           {"store": {"type": "string"}, "amount": {"type": "number"},
            "items": {"type": "string", "description": "comma-separated item names"},
-           "category": {"type": "string"},
+           "category": {"type": "string",
+                        "enum": ["Groceries", "Dining", "Transportation", "Entertainment",
+                                 "Health", "Clothing", "Electronics", "Home", "Utilities", "Other"],
+                        "description": "Best-fitting spending category for the purchase. "
+                                       "Use Groceries for supermarket/warehouse food runs "
+                                       "(produce, snacks, drinks, etc.). Always classify; "
+                                       "only use Other when nothing else fits."},
            "date": {"type": "string", "description": "YYYY-MM-DD"},
            "recurring": {"type": "boolean", "description": "true if this repeats (subscription, rent, etc.)"},
            "recurring_interval": {"type": "number", "description": "interval count, e.g. 1 or 2 (only if recurring)"},
