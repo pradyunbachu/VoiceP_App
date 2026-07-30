@@ -92,7 +92,7 @@ const TUTORIAL_STEPS: TutorialStep[] = [
     target: '[data-tutorial="voxy-fab"]',
     title: "Log an Expense",
     description:
-      "Try it now: tap the mic and say “I spent $12 at Trader Joe’s on groceries.” Voxal pulls out the store, amount, and category — then offers to add those items straight to your pantry.",
+      "Try it now: tap the mic and rattle off a whole trip — like “I got $4 of lettuce, 4 lbs of peanuts, and chicken for $7.” Voxal splits out each item with its amount and category, then offers to add them straight to your pantry.",
     action: "Try it now",
     icon: <DollarSign size={20} />,
     waitForInteraction: true,
@@ -369,7 +369,7 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
       {/* Floating hint when user is interacting */}
       {overlayInteractive && (
         <div className="tutorial-interaction-hint">
-          <span>Go ahead — try it! Then tap here when done.</span>
+          <span>Go ahead — try logging that expense, then tap Done.</span>
           <button className="tutorial-btn tutorial-btn-primary" onClick={goNext}>
             Done
           </button>
