@@ -6,6 +6,7 @@
  * The `danger` prop styles the confirm button red for destructive actions.
  */
 import type { FC } from "react";
+import { createPortal } from "react-dom";
 import { motion } from "framer-motion";
 import { AlertTriangle } from "lucide-react";
 import "./ConfirmDialog.css";
@@ -19,7 +20,11 @@ interface Props {
 }
 
 const ConfirmDialog: FC<Props> = ({ message, onConfirm, onCancel, confirmLabel = "Delete", danger = true }) => {
-  return (
+  // Render through a portal to <body> so `position: fixed` anchors to the
+  // viewport. Mounted inside the nav (which has a backdrop-filter/transform),
+  // a fixed overlay would otherwise be trapped by the nav's containing block —
+  // rendering clipped at the top instead of centered full-screen.
+  return createPortal(
     <motion.div
       className="confirm-overlay"
       onClick={onCancel}
@@ -53,7 +58,8 @@ const ConfirmDialog: FC<Props> = ({ message, onConfirm, onCancel, confirmLabel =
           </button>
         </div>
       </motion.div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
 
