@@ -1,17 +1,13 @@
 /*
  * TutorialOverlay.tsx
- * Interactive onboarding that guides users through their first expense
- * and first pantry add. Uses spotlight cutouts to highlight UI elements
- * and walks through actionable steps rather than a passive tour.
- *
- * Phase 1: Welcome (1 step)
- * Phase 2: Guided first expense via voice/type (2 steps)
- * Phase 3: Guided first pantry add (2 steps)
- * Phase 4: Dashboard & feature overview (4 steps)
+ * Interactive first-run onboarding. Uses spotlight cutouts to highlight UI
+ * elements and walks the user through the app: the home dashboard first
+ * (voice bar, Tonight's Pick, stats, Demo Pantry), then a hands-on expense,
+ * then the feature tabs (Pantry, Shopping, Chef, Planner).
  */
 import { useState, useEffect, useCallback } from "react";
 import type { FC, CSSProperties } from "react";
-import { X, ChevronLeft, ChevronRight, Package, DollarSign, UtensilsCrossed, ChefHat, Flame, LayoutDashboard } from "lucide-react";
+import { X, ChevronLeft, ChevronRight, Package, DollarSign, UtensilsCrossed, ChefHat, Flame, Mic, ShoppingCart, CalendarDays, FlaskConical, Sparkles } from "lucide-react";
 import "./TutorialOverlay.css";
 
 interface TutorialStep {
@@ -48,83 +44,101 @@ const findVisibleTarget = (target: string | string[] | null): Element | null => 
 };
 
 const TUTORIAL_STEPS: TutorialStep[] = [
-  // ── Phase 1: Welcome ──────────────────────────────────────────────
+  // Welcome
   {
     id: "welcome",
     target: null,
     title: "Welcome to Voxal!",
     description:
-      "Your voice-powered kitchen & finance assistant. Just talk \u2014 Voxal tracks expenses, manages your pantry, and suggests meals. Let\u2019s get you started in under a minute.",
-    icon: <UtensilsCrossed size={20} />,
+      "Your voice-powered kitchen & finance assistant. Just talk — Voxal logs expenses, stocks your pantry, and suggests meals. Here’s a quick 60-second tour.",
+    icon: <Sparkles size={20} />,
   },
-  // ── Phase 2: First Expense ─────────────────────────────────────────
+  // Home dashboard first
   {
-    id: "expense-intro",
+    id: "speak",
     target: '[data-tutorial="voxy-fab"]',
-    title: "Log Your First Expense",
+    title: "Just Speak",
     description:
-      'Tap the mic and say something like "I spent $12 at Trader Joe\u2019s on groceries" \u2014 or tap Type if you prefer. Voxal extracts the store, amount, and category automatically.',
-    action: "Try it now",
-    icon: <DollarSign size={20} />,
-    waitForInteraction: true,
+      "This is how you do almost everything in Voxal. Tap the mic and talk, hold the spacebar to quick-record from any page, or tap the keyboard to type it out.",
+    icon: <Mic size={20} />,
   },
-  {
-    id: "expense-done",
-    target: null,
-    title: "Nice! Expense Logged",
-    description:
-      "One sentence and it\u2019s tracked. You can also scan receipts with your camera. Everything flows into your budgets and spending insights automatically.",
-  },
-  // ── Phase 3: First Pantry Add ──────────────────────────────────────
-  {
-    id: "pantry-intro",
-    target: '[data-tutorial="voxy-fab"]',
-    title: "Stock Your Pantry",
-    description:
-      'Now tell Voxal what\u2019s in your kitchen. Tap the mic and say "I have eggs, milk, and butter" \u2014 or type it out. Each item gets added to your pantry inventory.',
-    action: "Try it now",
-    icon: <Package size={20} />,
-    waitForInteraction: true,
-  },
-  {
-    id: "pantry-done",
-    target: null,
-    title: "Pantry Stocked!",
-    description:
-      "Voxal now tracks what\u2019s in your kitchen \u2014 expiration dates, stock levels, and all. It\u2019ll suggest meals based on what you have and nudge you before things expire.",
-  },
-  // ── Phase 4: Feature overview ──────────────────────────────────────
   {
     id: "hero-meal",
     target: '[data-tutorial="hero-meal"]',
-    title: "Tonight\u2019s Pick",
+    title: "Tonight’s Pick",
     description:
-      "Your dashboard shows a personalized meal suggestion based on what\u2019s in your pantry. It prioritizes ingredients that are expiring soon to help reduce waste. Tap it to see the full recipe.",
-    icon: <ChefHat size={20} />,
+      "Your home screen suggests a meal based on what’s in your pantry, prioritizing ingredients about to expire so nothing goes to waste. Tap it any time for the full recipe.",
+    icon: <UtensilsCrossed size={20} />,
   },
   {
     id: "cooking-stats",
     target: '[data-tutorial="cooking-stats"]',
     title: "Your Stats at a Glance",
     description:
-      "Track your cooking streak, pantry stock levels, shopping list, and budget \u2014 all from the home screen. Tap any card to dive deeper.",
+      "Right below, keep an eye on your cooking streak, pantry stock, shopping list, and budget — all from home. Tap any card to jump straight in.",
     icon: <Flame size={20} />,
   },
   {
-    id: "nav-overview",
-    target: ['[data-tutorial="nav-tabs"]', '[data-tutorial="mobile-nav"]'],
-    title: "Explore the App",
+    id: "demo-pantry",
+    target: '[data-tutorial="pantry-switcher"]',
+    title: "Play in the Demo Pantry",
     description:
-      "Pantry manages your inventory. Shopping List tracks what to buy. Chef lets you drag ingredients into a bowl to generate recipes. Planner organizes your week. Saved Recipes keeps your favorites.",
-    icon: <LayoutDashboard size={20} />,
+      "New here? Use this switcher to hop into the Demo Pantry — a safe sandbox pre-loaded with sample items. Experiment freely; nothing touches your real data, and you can reset it anytime. Switch to My Pantry when you’re ready.",
+    icon: <FlaskConical size={20} />,
   },
+  // Hands-on expense
+  {
+    id: "expense",
+    target: '[data-tutorial="voxy-fab"]',
+    title: "Log an Expense",
+    description:
+      "Try it now: tap the mic and say “I spent $12 at Trader Joe’s on groceries.” Voxal pulls out the store, amount, and category — then offers to add those items straight to your pantry.",
+    action: "Try it now",
+    icon: <DollarSign size={20} />,
+    waitForInteraction: true,
+  },
+  // Feature walk-through
+  {
+    id: "pantry",
+    target: ['[data-tutorial="pantry-tab"]', '[data-tutorial="mobile-nav"]'],
+    title: "Your Pantry",
+    description:
+      "The Pantry tracks everything in your kitchen — quantities, stock levels, and expiration dates. Add items by voice (“I have eggs and milk”) or drag them between shelves.",
+    icon: <Package size={20} />,
+  },
+  {
+    id: "shopping",
+    target: ['[data-tutorial="shopping-tab"]', '[data-tutorial="mobile-nav"]'],
+    title: "Shopping List",
+    description:
+      "Keep track of what you need to buy. Add items by voice, check them off as you shop, and tap to move bought items straight into your pantry.",
+    icon: <ShoppingCart size={20} />,
+  },
+  {
+    id: "chef",
+    target: ['[data-tutorial="chef-tab"]', '[data-tutorial="mobile-nav"]'],
+    title: "Chef",
+    description:
+      "Turn what you have into dinner. Drag ingredients into the bowl to generate recipes, or just ask Voxal “what can I make?”",
+    icon: <ChefHat size={20} />,
+  },
+  {
+    id: "planner",
+    target: ['[data-tutorial="planner-tab"]', '[data-tutorial="mobile-nav"]'],
+    title: "Meal Planner",
+    description:
+      "Plan your meals for the week and let Voxal auto-build a shopping list from your plan. Saved Recipes keeps your favorites one tap away.",
+    icon: <CalendarDays size={20} />,
+  },
+  // Finish
   {
     id: "finish",
     target: null,
-    title: "You\u2019re All Set!",
+    title: "You’re All Set!",
     description:
-      "You\u2019ve logged an expense, stocked your pantry, and explored the dashboard. The voice bar works from every page \u2014 and you can hold spacebar to quick-record anytime. Voxal gets smarter the more you use it. Enjoy!",
+      "Remember — just talk. The voice bar works on every page, and holding the spacebar quick-records anywhere. Start in the Demo Pantry to play around, then switch to My Pantry when you’re ready. Enjoy Voxal!",
     action: "Get Started",
+    icon: <Sparkles size={20} />,
   },
 ];
 
@@ -238,7 +252,7 @@ const TutorialOverlay: FC<Props> = ({ isOpen, onClose }) => {
   };
 
   const handleSkipAction = (): void => {
-    // Skip the "try it" step and move to the "done" step
+    // Skip the "try it" step and move to the next step
     setWaitingForUser(false);
     setCurrentStep((s) => s + 1);
   };
