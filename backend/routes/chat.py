@@ -18,6 +18,7 @@ from agent.runner import run_agent, execute_pending
 
 # Fallback (legacy classifier) — imported lazily-safe at module load.
 from handlers import detect_intent, generate_response
+from handlers.intent import simple_intent_detection
 from handlers import (
     handle_pantry_query, handle_pantry_add, handle_pantry_remove, handle_cooking_deduct,
     handle_expense_query, handle_expense_delete, handle_store_trip, handle_mark_subscription,
@@ -29,6 +30,15 @@ from handlers import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
+
+
+def _route_to_expense_response(message: str) -> ChatResponse:
+    """Tell the frontend to run the dedicated expense-extraction flow, which
+    shows the itemized expense card + "Add to Pantry" grocery UI. The agent's
+    log_expense tool would log the expense conversationally and skip that UX."""
+    return ChatResponse(intent="expense_input", sub_intent=None, response_text="",
+                        reply="", data={"route_to_expense": True, "original_message": message},
+                        actions=[], pending=[])
 
 
 def _result_to_response(result) -> ChatResponse:
@@ -55,6 +65,13 @@ async def chat(request: Request, chat_request: ChatRequest,
     group_id = chat_request.group_id
     # Gate access to the selected pantry (personal is a no-op)
     verify_pantry_access(user_id, group_id)
+
+    # Expense reports ("I spent $30 at Costco on chips, milk") route to the
+    # dedicated extraction flow so the frontend shows the itemized card + the
+    # "Add to Pantry" grocery UI. Uses the cheap regex classifier (no extra LLM
+    # call); the agent handles everything else.
+    if simple_intent_detection(message).get("intent") == "expense_input":
+        return _route_to_expense_response(message)
 
     try:
         result = await run_agent(user_id, message, chat_request.history, group_id=group_id)
@@ -86,9 +103,7 @@ async def _classifier_fallback(user_id, message, group_id=None) -> ChatResponse:
     data = {}
 
     if intent == "expense_input":
-        return ChatResponse(intent=intent, sub_intent=sub_intent, response_text="",
-                            reply="", data={"route_to_expense": True, "original_message": message},
-                            actions=[], pending=[])
+        return _route_to_expense_response(message)
 
     dispatch = {
         "pantry_query": lambda: handle_pantry_query(user_id, sub_intent, entities, group_id=group_id),
