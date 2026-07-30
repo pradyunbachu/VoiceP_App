@@ -57,7 +57,7 @@
   width: 80px;
   height: 80px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-danger) 0%, var(--accent-danger-dark) 100%);
+  background: var(--accent-danger);
   color: white;
   animation: pulse 1.5s ease-in-out infinite;
   margin-bottom: 1rem;
@@ -258,7 +258,7 @@
   left: 50%;
   transform: translateX(-50%);
   font-size: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: var(--text-muted);
   white-space: nowrap;
 }
 
@@ -451,7 +451,7 @@
 }
 
 .idle-dropdown-icon--mic {
-  background: linear-gradient(135deg, var(--accent-danger) 0%, var(--accent-danger-dark) 100%);
+  background: var(--accent-danger);
   color: white;
 }
 

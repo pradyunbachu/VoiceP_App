@@ -15,8 +15,8 @@ import MixingBowlLoader from './MixingBowlLoader'
 import type { Analytics, Budget, ShowToast } from '../types'
 import './AnalyticsDashboard.css'
 
-const COLORS_DARK = ['#C4A265', '#D4A035', '#B898C8', '#D4726B', '#D48A45', '#6AAF7B', '#D4B87A', '#9470A8']
-const COLORS_LIGHT = ['#8B7355', '#5B5E8B', '#7B5E8B', '#8B5E7B', '#B8860B', '#5A8A6A', '#C45B5B', '#5A7A7A']
+const COLORS_DARK = ['#C4A265', '#D4A035', '#8E97A8', '#D4726B', '#D48A45', '#6AAF7B', '#D4B87A', '#6F7A8A']
+const COLORS_LIGHT = ['#8B7355', '#B8860B', '#6F7A8A', '#C45B5B', '#B87333', '#5A8A6A', '#A08B6D', '#55606E']
 
 type ExpandedChart = 'time' | 'stores' | 'categories' | null;
 
@@ -36,12 +36,12 @@ const AnalyticsDashboard: React.FC<Props> = ({ analytics, onClearAll, showToast 
   const isLight = theme === 'light'
   const COLORS = isLight ? COLORS_LIGHT : COLORS_DARK
   const chartAxis = isLight ? '#6B6B6B' : '#968E82'
-  const chartGrid = isLight ? 'rgba(139, 115, 85, 0.1)' : 'rgba(200, 191, 178, 0.1)'
-  const tooltipBg = isLight ? 'rgba(255, 255, 255, 0.98)' : 'rgba(30, 26, 22, 0.95)'
-  const tooltipBorder = isLight ? 'rgba(139, 115, 85, 0.2)' : 'rgba(200, 191, 178, 0.15)'
+  const chartGrid = isLight ? '#EDE7DE' : '#1F1F1F'
+  const tooltipBg = isLight ? '#FFFFFF' : '#171717'
+  const tooltipBorder = isLight ? '#E4DCD0' : '#242424'
   const tooltipColor = isLight ? '#3D3D3D' : '#F0EBE3'
   const lineColor = isLight ? '#8B7355' : '#C4A265'
-  const cursorFill = isLight ? 'rgba(139, 115, 85, 0.1)' : 'rgba(196, 162, 101, 0.1)'
+  const cursorFill = isLight ? '#F2ECE3' : '#1A1710'
 
   const [budgetMonth, setBudgetMonth] = useState<number>(new Date().getMonth() + 1)
   const [budgetYear, setBudgetYear] = useState<number>(new Date().getFullYear())
