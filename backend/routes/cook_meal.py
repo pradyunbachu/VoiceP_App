@@ -21,7 +21,7 @@ from config import supabase
 from auth import get_current_user_dependency
 from rate_limit import limiter
 from cache import api_cache, make_cache_key
-from routes.pantry_sharing import verify_pantry_group_membership
+from routes.pantry_sharing import verify_pantry_access, scope_pantry_query
 
 import logging
 logger = logging.getLogger(__name__)
@@ -146,17 +146,14 @@ async def cook_meal(
 
     user_id = current_user["id"]
 
-    # Resolve pantry owner when a group is selected
-    pantry_user_id = user_id
-    if body.group_id is not None:
-        if not verify_pantry_group_membership(user_id, body.group_id):
-            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
-        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", body.group_id).execute()
-        if group_resp.data:
-            pantry_user_id = group_resp.data[0]["owner_id"]
+    # Scope the pantry to the selected group via the group_id column (personal =
+    # group_id IS NULL). verify_pantry_access raises 403 for non-members.
+    verify_pantry_access(user_id, body.group_id)
 
     # Fetch pantry (from selected group if applicable)
-    pantry_resp = supabase.table("pantry_items").select("*").eq("user_id", pantry_user_id).execute()
+    pantry_resp = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), user_id, body.group_id
+    ).execute()
     pantry_items = pantry_resp.data or []
 
     if not pantry_items:
@@ -273,8 +270,6 @@ async def cook_meal(
     api_cache.invalidate_prefix(make_cache_key(user_id, "daily_recs"))
     api_cache.invalidate_prefix(make_cache_key(user_id, "cook_stats"))
     api_cache.invalidate_prefix(make_cache_key(user_id, "pantry"))
-    if pantry_user_id != user_id:
-        api_cache.invalidate_prefix(make_cache_key(pantry_user_id, "pantry"))
 
     return {
         "success": True,

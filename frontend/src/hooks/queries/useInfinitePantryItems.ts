@@ -36,7 +36,7 @@ export const useInfinitePantryItems = (filters: InfinitePantryFilters = {}) => {
     page_size = 20,
   } = filters;
 
-  const queryFilters: InfinitePantryFilters = { category, stock_status, search, sort_by, sort_order, page_size };
+  const queryFilters: InfinitePantryFilters = { category, stock_status, search, sort_by, sort_order, page_size, group_id: filters.group_id };
 
   return useInfiniteQuery<InfinitePantryPage>({
     queryKey: queryKeys.pantry.infinite(queryFilters),

@@ -109,6 +109,7 @@ class PantryItemCreate(BaseModel):
     stock_status: Optional[str] = Field(default="full", max_length=20)
     notes: Optional[str] = Field(default=None, max_length=500)
     expiration_predicted: Optional[bool] = None
+    group_id: Optional[int] = Field(default=None)  # Pantry scope: None = personal, else a group
 
     @field_validator("expiration_date", "purchase_date")
     @classmethod
@@ -147,10 +148,12 @@ class PantryItemUpdate(BaseModel):
 
 class BulkPantryDeleteRequest(BaseModel):
     item_ids: List[int]
+    group_id: Optional[int] = None  # Pantry scope: None = personal, else a group
 
 class AutoPopulatePantryRequest(BaseModel):
     expense_id: int
     items: List[dict]
+    group_id: Optional[int] = None  # Pantry scope: None = personal, else a group
 
 # ============================================================================
 # SHOPPING LIST MODELS
@@ -217,6 +220,7 @@ class ChatRequest(BaseModel):
     message: str = Field(max_length=2000)
     # Recent conversation turns for context: [{"role": "user"|"assistant", "content": "..."}]
     history: Optional[List[dict]] = Field(default=None, max_length=50)
+    group_id: Optional[int] = None  # Selected pantry scope: None = personal, else a group
 
 
 class ChatResponse(BaseModel):
@@ -239,6 +243,7 @@ class ChatConfirmRequest(BaseModel):
     ids: List[str]
     pending: List[dict] = Field(max_length=20)  # the PendingAction dicts returned by /chat
     history: Optional[List[dict]] = None
+    group_id: Optional[int] = None  # Selected pantry scope: None = personal, else a group
 
 # ============================================================================
 # INSIGHTS MODELS

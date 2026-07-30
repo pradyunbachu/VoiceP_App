@@ -9,6 +9,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useEffect, useCallback, useSyncExternalStore } from 'react';
 import { useAuth } from '../../context/AuthContext';
+import { usePantrySelection } from '../../context/PantryContext';
 import { API_BASE_URL } from '../../config/api';
 import { authFetch } from '../../lib/authFetch';
 import { queryKeys } from './queryKeys';
@@ -93,15 +94,18 @@ export const useShoppingPantryMatches = (
 ) => {
   const { session } = useAuth();
   const isOnline = useOnlineStatus();
+  const { selectedGroupId } = usePantrySelection();
 
   const hasShoppingItems = shoppingItems.length > 0;
   const hasPantryItems = pantryItems.length > 0;
 
   return useQuery<Record<string, PantryMatch>>({
-    // Include item counts in query key to trigger refetch when lists change
-    queryKey: [...queryKeys.shoppingList.pantryMatches(), shoppingItems.length, pantryItems.length],
+    // Include item counts + selected pantry in the key so it refetches on change
+    queryKey: [...queryKeys.shoppingList.pantryMatches(), shoppingItems.length, pantryItems.length, selectedGroupId],
     queryFn: async (): Promise<Record<string, PantryMatch>> => {
-      const response = await authFetch(`${API_BASE_URL}/api/shopping-list/match-pantry`, {
+      // match-pantry scopes the pantry side by group_id (query param on the endpoint).
+      const qs = selectedGroupId != null ? `?group_id=${selectedGroupId}` : '';
+      const response = await authFetch(`${API_BASE_URL}/api/shopping-list/match-pantry${qs}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

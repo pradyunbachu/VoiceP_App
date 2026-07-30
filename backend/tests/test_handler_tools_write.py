@@ -21,7 +21,7 @@ async def test_add_to_shopping_list_passes_items(monkeypatch):
 @pytest.mark.asyncio
 async def test_remove_pantry_items_calls_handler_once_per_string(monkeypatch):
     calls = []
-    async def fake_remove(user_id, entities, message):
+    async def fake_remove(user_id, entities, message, group_id=None):
         calls.append(entities["item_name"])
         return {"removed_count": 1, "item_name": entities["item_name"]}
     monkeypatch.setattr("agent.handler_tools.handle_pantry_remove", fake_remove)

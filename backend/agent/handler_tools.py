@@ -26,9 +26,9 @@ def _spec(name, description, properties=None, required=None):
 
 
 # --- read_pantry ---------------------------------------------------------
-async def _read_pantry(user_id, args, message):
+async def _read_pantry(user_id, args, message, group_id=None):
     sub = args.get("filter") or "list_all"
-    data = await handle_pantry_query(user_id, sub, args)
+    data = await handle_pantry_query(user_id, sub, args, group_id=group_id)
     return ToolResult(data=data, summary="Read pantry")
 
 register(ToolDef(
@@ -86,8 +86,8 @@ register(ToolDef(
 
 
 # --- check_reminder ------------------------------------------------------
-async def _check_reminder(user_id, args, message):
-    data = await handle_reminder_check(user_id, args, message or args.get("item_name", ""))
+async def _check_reminder(user_id, args, message, group_id=None):
+    data = await handle_reminder_check(user_id, args, message or args.get("item_name", ""), group_id=group_id)
     return ToolResult(data=data, summary="Checked reminder")
 
 register(ToolDef(
@@ -110,9 +110,9 @@ register(ToolDef(
 
 
 # --- add_pantry_items ----------------------------------------------------
-async def _add_pantry_items(user_id, args, message):
+async def _add_pantry_items(user_id, args, message, group_id=None):
     entities = {"pantry_items": args.get("items", [])}
-    data = await handle_pantry_add(user_id, entities, message)
+    data = await handle_pantry_add(user_id, entities, message, group_id=group_id)
     return ToolResult(data=data, summary="Added pantry items", action_type="pantry_add")
 
 register(ToolDef("add_pantry_items",
@@ -122,11 +122,11 @@ register(ToolDef("add_pantry_items",
 
 
 # --- remove_pantry_items -------------------------------------------------
-async def _remove_pantry_items(user_id, args, message):
+async def _remove_pantry_items(user_id, args, message, group_id=None):
     items = args.get("items", [])
     if not items:
         # Fall back: let the handler parse the item from the message
-        data = await handle_pantry_remove(user_id, {}, message)
+        data = await handle_pantry_remove(user_id, {}, message, group_id=group_id)
         summary = "Removed pantry item(s)"
         return ToolResult(data=data, summary=summary, action_type="pantry_remove")
 
@@ -134,7 +134,7 @@ async def _remove_pantry_items(user_id, args, message):
     total_removed = 0
     has_removed_count = False
     for item in items:
-        result = await handle_pantry_remove(user_id, {"item_name": item}, message)
+        result = await handle_pantry_remove(user_id, {"item_name": item}, message, group_id=group_id)
         results.append(result)
         if isinstance(result, dict) and "removed_count" in result:
             total_removed += result["removed_count"]
@@ -180,9 +180,9 @@ register(ToolDef("remove_from_shopping_list",
 
 
 # --- suggest_meals -------------------------------------------------------
-async def _suggest_meals(user_id, args, message):
+async def _suggest_meals(user_id, args, message, group_id=None):
     entities = {"meal_type": args.get("meal_type")}
-    data = await handle_meal_suggestion(user_id, "quick_meals", entities, message)
+    data = await handle_meal_suggestion(user_id, "quick_meals", entities, message, group_id=group_id)
     return ToolResult(data=data, summary="Suggested meals", action_type="meal_suggestions")
 
 register(ToolDef("suggest_meals",
@@ -193,8 +193,8 @@ register(ToolDef("suggest_meals",
 
 
 # --- meal_plan_week ------------------------------------------------------
-async def _meal_plan_week(user_id, args, message):
-    data = await handle_meal_plan_week(user_id, args)
+async def _meal_plan_week(user_id, args, message, group_id=None):
+    data = await handle_meal_plan_week(user_id, args, group_id=group_id)
     return ToolResult(data=data, summary="Built a weekly meal plan", action_type="meal_plan")
 
 register(ToolDef("meal_plan_week",
@@ -203,9 +203,9 @@ register(ToolDef("meal_plan_week",
 
 
 # --- budget_meal ---------------------------------------------------------
-async def _budget_meal(user_id, args, message):
+async def _budget_meal(user_id, args, message, group_id=None):
     entities = {"price_limit": args.get("price_limit")}
-    data = await handle_budget_meal(user_id, entities, message)
+    data = await handle_budget_meal(user_id, entities, message, group_id=group_id)
     return ToolResult(data=data, summary="Suggested budget meals", action_type="meal_suggestions")
 
 register(ToolDef("budget_meal",
@@ -215,8 +215,8 @@ register(ToolDef("budget_meal",
 
 
 # --- suggest_shopping ----------------------------------------------------
-async def _suggest_shopping(user_id, args, message):
-    data = await handle_suggestion(user_id, "shopping_list", args)
+async def _suggest_shopping(user_id, args, message, group_id=None):
+    data = await handle_suggestion(user_id, "shopping_list", args, group_id=group_id)
     return ToolResult(data=data, summary="Suggested shopping items", action_type="shopping_suggestions")
 
 register(ToolDef("suggest_shopping",
@@ -250,9 +250,9 @@ register(ToolDef("mark_recurring",
 
 
 # --- cook_deduct ---------------------------------------------------------
-async def _cook_deduct(user_id, args, message):
+async def _cook_deduct(user_id, args, message, group_id=None):
     entities = {"recipe_name": args.get("recipe")}
-    data = await handle_cooking_deduct(user_id, entities, message)
+    data = await handle_cooking_deduct(user_id, entities, message, group_id=group_id)
     return ToolResult(data=data, summary="Deducted recipe ingredients", action_type="cook_deduct")
 
 register(ToolDef("cook_deduct",

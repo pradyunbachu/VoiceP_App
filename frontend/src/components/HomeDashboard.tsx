@@ -14,7 +14,7 @@ import {
   useRecipeDetail,
   useCookMeal,
 } from "../hooks";
-import { DEMO_PANTRY_ITEMS } from "../constants/demoPantry";
+import { usePantrySelection } from "../context/PantryContext";
 import type { AppView, ShowToast, PantryItem, Expense, MealSuggestion, RecipeDetail, CookMealResponse } from "../types";
 import MixingBowlLoader from "./MixingBowlLoader";
 import RecipeDetailPanel from "./RecipeDetailModal";
@@ -25,7 +25,6 @@ interface Props {
   onNavigate: (view: AppView) => void;
   onShowTutorial?: () => void;
   onOpenVoxy?: () => void;
-  selectedPantryGroup?: number | null | "demo";
 }
 
 const getGreeting = (): string => {
@@ -35,8 +34,9 @@ const getGreeting = (): string => {
   return "Good Evening";
 };
 
-const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpenVoxy, selectedPantryGroup }) => {
+const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpenVoxy }) => {
   const { user } = useAuth();
+  const { selectedGroupId: selectedPantryGroup } = usePantrySelection();
   const firstName =
     user?.user_metadata?.first_name ||
     (user?.user_metadata?.full_name || user?.user_metadata?.name || "").toString().split(" ")[0] ||
@@ -45,17 +45,15 @@ const HomeDashboard: FC<Props> = ({ showToast, onNavigate, onShowTutorial, onOpe
     "there";
 
   const { data: expenseData } = useExpenses({ pageSize: 50, sortBy: "date", sortOrder: "desc" });
-  const isDemoPantry = selectedPantryGroup === "demo";
-  const pantryGroupId = isDemoPantry ? undefined : (selectedPantryGroup ?? undefined);
-  const { data: pantryStats } = usePantryStats(pantryGroupId as number | undefined);
-  const { data: apiAllPantryData } = usePantryItems({ group_id: pantryGroupId as number | undefined });
-  const allPantryData = isDemoPantry ? DEMO_PANTRY_ITEMS : apiAllPantryData;
+  const pantryGroupId = selectedPantryGroup ?? undefined;
+  const { data: pantryStats } = usePantryStats(pantryGroupId);
+  const { data: allPantryData } = usePantryItems({ group_id: pantryGroupId });
   const { data: shoppingItems } = useShoppingList({ group_id: pantryGroupId });
   const { data: cookStats } = useCookStats();
   const now = new Date();
   const { data: budgets } = useBudgets({ month: now.getMonth() + 1, year: now.getFullYear() });
   const preference = localStorage.getItem("voxal_dietary_preference") || "";
-  const { data: dailyRecsData, isLoading: recsLoading } = useDailyRecs(preference, pantryGroupId as number | undefined);
+  const { data: dailyRecsData, isLoading: recsLoading } = useDailyRecs(preference, pantryGroupId);
   const recipeDetail = useRecipeDetail();
   const cookMeal = useCookMeal();
 

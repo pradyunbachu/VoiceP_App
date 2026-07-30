@@ -36,7 +36,11 @@ from schemas import (
 )
 from shelf_life import predict_expiration
 from spell_check import correct_item_name
-from routes.pantry_sharing import verify_pantry_group_membership
+from routes.pantry_sharing import (
+    verify_pantry_group_membership,
+    verify_pantry_access,
+    scope_pantry_query,
+)
 
 router = APIRouter()
 
@@ -94,29 +98,26 @@ def _normalize_item_name(name: str, unit: Optional[str] = None) -> tuple[str, Op
     return trimmed, unit, None
 
 
-def _can_access_item(current_user_id: str, item_owner_id: str) -> bool:
-    """Check if current user can access an item: either they own it,
-    or they are a member of a pantry group owned by the item's owner."""
-    if current_user_id == item_owner_id:
-        return True
-    # Check if the item owner has a pantry group that current_user is a member of
-    owner_groups = supabase.table("pantry_groups").select("id").eq("owner_id", item_owner_id).execute()
-    if not owner_groups.data:
-        return False
-    group_ids = [g["id"] for g in owner_groups.data]
-    for gid in group_ids:
-        if verify_pantry_group_membership(current_user_id, gid):
-            return True
-    return False
+def _can_access_pantry_item(current_user_id: str, item_row: dict) -> bool:
+    """Decide access by the item's group_id (the group_id-column model):
+    - Group item (group_id set): allow iff the caller is a member of that group.
+    - Personal item (group_id NULL): allow iff the caller owns the row.
+    This avoids the old owner-indirection, which both over-granted (a group
+    member could edit the owner's personal items) and under-granted (the owner
+    could not edit a member's group item)."""
+    group_id = item_row.get("group_id")
+    if group_id is not None:
+        return verify_pantry_group_membership(current_user_id, group_id)
+    return item_row.get("user_id") == current_user_id
 
 
-def _find_existing_pantry_item(user_id: str, item_name: str):
-    """Find an existing pantry item by name (case-insensitive) for the user."""
-    response = supabase.table("pantry_items").select("*")\
-        .eq("user_id", user_id)\
-        .ilike("name", item_name.strip())\
-        .limit(1)\
-        .execute()
+def _find_existing_pantry_item(user_id: str, item_name: str, group_id: int | None = None):
+    """Find an existing pantry item by name (case-insensitive) within a pantry scope.
+
+    Personal (group_id None) matches the user's own group-less rows; a group scope
+    matches any member's row in that group (so merges land in the right pantry)."""
+    query = scope_pantry_query(supabase.table("pantry_items").select("*"), user_id, group_id)
+    response = query.ilike("name", item_name.strip()).limit(1).execute()
     return response.data[0] if response.data else None
 
 
@@ -160,22 +161,15 @@ async def get_pantry_items(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    # When group_id is provided, verify membership and show the group owner's items
-    target_user_id = current_user["id"]
-    if group_id is not None:
-        if not verify_pantry_group_membership(current_user["id"], group_id):
-            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
-        # Fetch the group owner's user_id — members see the owner's pantry
-        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
-        if group_resp.data:
-            target_user_id = group_resp.data[0]["owner_id"]
+    # Scope by pantry: personal (group_id IS NULL) or a group (after membership check)
+    verify_pantry_access(current_user["id"], group_id)
 
     if paginate:
         query = supabase.table("pantry_items").select("*", count="exact")
     else:
         query = supabase.table("pantry_items").select("*")
 
-    query = query.eq("user_id", target_user_id)
+    query = scope_pantry_query(query, current_user["id"], group_id)
 
     if category:
         query = query.eq("category", category)
@@ -259,6 +253,9 @@ async def create_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
+    # Gate writes to a group pantry by membership (personal is a no-op)
+    verify_pantry_access(current_user["id"], item.group_id)
+
     # Normalize unit prefixes out of the name
     item_name = item.name
     item_unit = item.unit
@@ -273,8 +270,8 @@ async def create_pantry_item(
 
     purchase = item.purchase_date or datetime.now().strftime("%Y-%m-%d")
 
-    # Check for existing item with same name — merge instead of duplicating
-    existing = _find_existing_pantry_item(current_user["id"], item_name)
+    # Check for existing item with same name in the SAME pantry — merge instead of duplicating
+    existing = _find_existing_pantry_item(current_user["id"], item_name, item.group_id)
     if existing:
         merged = _merge_pantry_item(existing, item_qty or 1, purchase)
         return {
@@ -293,6 +290,7 @@ async def create_pantry_item(
 
     response = supabase.table("pantry_items").insert({
         "user_id": current_user["id"],
+        "group_id": item.group_id,
         "name": item_name,
         "quantity": item_qty or 1,
         "unit": item_unit,
@@ -325,6 +323,10 @@ async def auto_populate_pantry_from_expense(
     """Auto-populate pantry from a grocery expense"""
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
+
+    # Gate writes to a group pantry by membership (personal is a no-op)
+    group_id = populate_request.group_id
+    verify_pantry_access(current_user["id"], group_id)
 
     # Verify expense belongs to user
     expense_response = supabase.table("expenses").select("*").eq("id", populate_request.expense_id).eq("user_id", current_user["id"]).execute()
@@ -360,8 +362,8 @@ async def auto_populate_pantry_from_expense(
             item_name = correction["name"]
             corrected_count += 1
 
-        # Check for existing item — merge instead of duplicating
-        existing = _find_existing_pantry_item(current_user["id"], item_name)
+        # Check for existing item in the SAME pantry — merge instead of duplicating
+        existing = _find_existing_pantry_item(current_user["id"], item_name, group_id)
         if existing:
             merged = _merge_pantry_item(existing, item_qty, item_purchase)
             created_items.append(merged)
@@ -375,6 +377,7 @@ async def auto_populate_pantry_from_expense(
 
         response = supabase.table("pantry_items").insert({
             "user_id": current_user["id"],
+            "group_id": group_id,
             "name": item_name,
             "quantity": item_qty,
             "unit": item_unit,
@@ -418,8 +421,11 @@ async def confirm_store_trip(
     items = body.get("items", [])
     store = body.get("store", "Store")
     amount = body.get("amount")  # optional
+    group_id = body.get("group_id")  # optional pantry scope
 
     user_id = current_user["id"]
+    # Gate writes to a group pantry by membership (personal is a no-op)
+    verify_pantry_access(user_id, group_id)
     now = datetime.now().isoformat()
     today_str = datetime.now().strftime("%Y-%m-%d")
 
@@ -447,14 +453,15 @@ async def confirm_store_trip(
         item_unit = item_data["unit"]
         item_category = item_data["category"]
 
-        # Check for existing item and merge if found
-        existing = _find_existing_pantry_item(user_id, item_name)
+        # Check for existing item in the SAME pantry and merge if found
+        existing = _find_existing_pantry_item(user_id, item_name, group_id)
         if existing:
             _merge_pantry_item(existing, item_qty, today_str)
             created_items.append({**existing, "quantity": existing.get("quantity", 1) + item_qty})
         else:
             resp = supabase.table("pantry_items").insert({
                 "user_id": user_id,
+                "group_id": group_id,
                 "name": item_name,
                 "quantity": item_qty,
                 "unit": item_unit,
@@ -504,11 +511,12 @@ async def update_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    # Verify the user owns the item or is a group member of the owner's pantry
-    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    # Verify access by the item's group_id (personal item → owner only; group
+    # item → any member).
+    check_response = supabase.table("pantry_items").select("id, user_id, group_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+    if not _can_access_pantry_item(current_user["id"], check_response.data[0]):
         raise HTTPException(status_code=403, detail="Access denied")
 
     update_data = {}
@@ -558,10 +566,10 @@ async def update_pantry_item_status(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    check_response = supabase.table("pantry_items").select("id, user_id, group_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+    if not _can_access_pantry_item(current_user["id"], check_response.data[0]):
         raise HTTPException(status_code=403, detail="Access denied")
 
     supabase.table("pantry_items").update({
@@ -584,10 +592,12 @@ async def delete_pantry_items_bulk(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    response = supabase.table("pantry_items").delete()\
-        .in_("id", bulk_request.item_ids)\
-        .eq("user_id", current_user["id"])\
-        .execute()
+    # Gate deletes on a group pantry by membership (personal is a no-op)
+    verify_pantry_access(current_user["id"], bulk_request.group_id)
+
+    query = supabase.table("pantry_items").delete().in_("id", bulk_request.item_ids)
+    query = scope_pantry_query(query, current_user["id"], bulk_request.group_id)
+    response = query.execute()
 
     deleted_count = len(response.data) if response.data else 0
     return {"message": f"{deleted_count} item(s) deleted successfully", "deleted_count": deleted_count}
@@ -603,10 +613,10 @@ async def delete_pantry_item(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    check_response = supabase.table("pantry_items").select("id, user_id").eq("id", item_id).execute()
+    check_response = supabase.table("pantry_items").select("id, user_id, group_id").eq("id", item_id).execute()
     if not check_response.data:
         raise HTTPException(status_code=404, detail="Pantry item not found")
-    if not _can_access_item(current_user["id"], check_response.data[0]["user_id"]):
+    if not _can_access_pantry_item(current_user["id"], check_response.data[0]):
         raise HTTPException(status_code=403, detail="Access denied")
 
     response = supabase.table("pantry_items").delete().eq("id", item_id).execute()
@@ -626,15 +636,11 @@ async def get_pantry_stats(
     if supabase is None:
         raise HTTPException(status_code=500, detail="Database not configured")
 
-    target_user_id = current_user["id"]
-    if group_id is not None:
-        if not verify_pantry_group_membership(current_user["id"], group_id):
-            raise HTTPException(status_code=403, detail="Not a member of this pantry group")
-        group_resp = supabase.table("pantry_groups").select("owner_id").eq("id", group_id).execute()
-        if group_resp.data:
-            target_user_id = group_resp.data[0]["owner_id"]
+    verify_pantry_access(current_user["id"], group_id)
 
-    response = supabase.table("pantry_items").select("*").eq("user_id", target_user_id).execute()
+    response = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), current_user["id"], group_id
+    ).execute()
     items = response.data if response.data else []
 
     total_items = len(items)
@@ -671,26 +677,16 @@ async def get_pantry_stats(
     }
 
 
-@router.post("/pantry/seed-demo")
-@limiter.limit("5/minute")
-async def seed_demo_pantry(
-    request: Request,
-    current_user: dict = Depends(get_current_user_dependency)
-):
-    """Bulk-insert demo pantry items for new users. Idempotent — skips if user already has items."""
-    if supabase is None:
-        raise HTTPException(status_code=500, detail="Database not configured")
+# ============================================================================
+# DEMO PANTRY (a real per-user pantry group, seeded from a sample set)
+# ============================================================================
+DEMO_GROUP_NAME = "Demo Pantry"
 
-    # Check if user already has pantry items — return early if so
-    existing = supabase.table("pantry_items").select("id").eq("user_id", current_user["id"]).limit(1).execute()
-    if existing.data:
-        return {"message": "Pantry already has items, skipping demo seed", "seeded": False}
 
-    today = datetime.now().strftime("%Y-%m-%d")
-    now = datetime.now().isoformat()
-    user_id = current_user["id"]
-
-    demo_items = [
+def _demo_sample_items() -> list[dict]:
+    """The canonical demo seed set. Source of truth for both first-login
+    auto-create and the reset endpoint."""
+    return [
         # Produce — staggered expiration for realistic alerts
         {"name": "Bananas", "quantity": 2, "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")},
         {"name": "Spinach", "quantity": 1, "unit": "bag", "category": "Produce", "expiration_date": (datetime.now() + timedelta(days=2)).strftime("%Y-%m-%d")},
@@ -719,16 +715,24 @@ async def seed_demo_pantry(
         {"name": "Granola Bars", "quantity": 6, "category": "Snacks"},
     ]
 
-    created_items = []
-    for item in demo_items:
+
+def _seed_demo_items(owner_id: str, group_id: int) -> list[dict]:
+    """Insert the demo sample set into the given demo group.
+
+    Items carry group_id so the personal GET /pantry (group_id IS NULL) never
+    shows them — no notes-based special-casing needed."""
+    today = datetime.now().strftime("%Y-%m-%d")
+    now = datetime.now().isoformat()
+    rows = []
+    for item in _demo_sample_items():
         expiration_date = item.get("expiration_date")
         expiration_predicted = False
         if not expiration_date:
             expiration_date = predict_expiration(item["name"], item["category"], today)
             expiration_predicted = expiration_date is not None
-
-        row = {
-            "user_id": user_id,
+        rows.append({
+            "user_id": owner_id,
+            "group_id": group_id,
             "name": item["name"],
             "quantity": item.get("quantity", 1),
             "unit": item.get("unit"),
@@ -740,23 +744,91 @@ async def seed_demo_pantry(
             "expiration_predicted": expiration_predicted,
             "created_at": now,
             "updated_at": now,
-        }
-        response = supabase.table("pantry_items").insert(row).execute()
-        if response.data:
-            created_items.append(response.data[0])
+        })
+    if not rows:
+        return []
+    response = supabase.table("pantry_items").insert(rows).execute()
+    return response.data or []
 
-    return {
-        "message": f"Seeded {len(created_items)} demo pantry items",
-        "seeded": True,
-        "count": len(created_items),
-    }
+
+def ensure_demo_group(user_id: str) -> int:
+    """Return the user's demo group id, creating + seeding it once if absent.
+
+    Idempotent: safe to call on every group-list fetch (first-login gate)."""
+    existing = (
+        supabase.table("pantry_groups")
+        .select("id")
+        .eq("owner_id", user_id)
+        .eq("name", DEMO_GROUP_NAME)
+        .execute()
+    )
+    if existing.data:
+        return existing.data[0]["id"]
+
+    now = datetime.now().isoformat()
+    grp = supabase.table("pantry_groups").insert({
+        "name": DEMO_GROUP_NAME,
+        "owner_id": user_id,
+        "created_at": now,
+        "updated_at": now,
+    }).execute()
+    gid = grp.data[0]["id"]
+
+    supabase.table("pantry_group_members").insert({
+        "group_id": gid,
+        "user_id": user_id,
+        "role": "owner",
+        "joined_at": now,
+    }).execute()
+
+    _seed_demo_items(user_id, gid)
+    return gid
+
+
+def _reset_demo_group(user_id: str) -> list[dict]:
+    """Wipe the caller's demo group's items and re-seed the sample set.
+
+    Scoped by group_id, so it can never touch personal (group_id IS NULL) rows."""
+    gid = ensure_demo_group(user_id)
+    supabase.table("pantry_items").delete().eq("group_id", gid).execute()
+    return _seed_demo_items(user_id, gid)
+
+
+@router.post("/pantry/seed-demo")
+@limiter.limit("5/minute")
+async def seed_demo_pantry(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Ensure the caller's Demo Pantry group exists + is seeded. Idempotent."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    gid = ensure_demo_group(current_user["id"])
+    return {"message": "Demo pantry ready", "seeded": True, "group_id": gid}
+
+
+@router.post("/pantry/demo/reset")
+@limiter.limit("10/minute")
+async def reset_demo_pantry(
+    request: Request,
+    current_user: dict = Depends(get_current_user_dependency)
+):
+    """Reset the caller's Demo Pantry: wipe its items and re-seed the sample set."""
+    if supabase is None:
+        raise HTTPException(status_code=500, detail="Database not configured")
+
+    gid = ensure_demo_group(current_user["id"])
+    items = _reset_demo_group(current_user["id"])
+    return {"message": "Demo pantry reset", "group_id": gid, "items": items}
 
 
 @router.post("/pantry/resync")
 @limiter.limit("10/minute")
 async def resync_pantry(
     request: Request,
-    current_user: dict = Depends(get_current_user_dependency)
+    current_user: dict = Depends(get_current_user_dependency),
+    group_id: Optional[int] = None
 ):
     """Full pantry resync: re-categorize, deduplicate, and refresh dates.
 
@@ -771,7 +843,11 @@ async def resync_pantry(
     from shelf_life import _is_non_pantry
     from handlers.pantry_handler import categorize_pantry_item
 
-    response = supabase.table("pantry_items").select("*").eq("user_id", current_user["id"]).execute()
+    # Scope the resync to the selected pantry (personal or a group after membership check)
+    verify_pantry_access(current_user["id"], group_id)
+    response = scope_pantry_query(
+        supabase.table("pantry_items").select("*"), current_user["id"], group_id
+    ).execute()
     items = response.data if response.data else []
 
     recategorized = 0

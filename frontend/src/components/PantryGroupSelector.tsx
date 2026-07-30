@@ -7,7 +7,7 @@
  * Shared group gears show invite code, invite-by-email, and delete.
  * Footer has Create Pantry + Join Pantry buttons for additional groups.
  */
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import {
   Users,
   Plus,
@@ -18,6 +18,7 @@ import {
   Mail,
   ChevronDown,
   Settings,
+  RotateCcw,
 } from "lucide-react";
 import {
   usePantryGroups,
@@ -25,8 +26,10 @@ import {
   useJoinPantryGroup,
   useInviteToPantryGroup,
   useDeletePantryGroup,
+  useResetDemo,
 } from "../hooks";
 import ConfirmDialog from "./ConfirmDialog";
+import { usePantrySelection } from "../context/PantryContext";
 import type { ShowToast, PantryGroup } from "../types";
 import "./PantryGroupSelector.css";
 
@@ -36,12 +39,11 @@ interface GroupWithMeta extends PantryGroup {
 }
 
 interface Props {
-  selectedGroupId: number | null | "demo";
-  onSelectGroup: (groupId: number | null | "demo") => void;
   showToast: ShowToast;
 }
 
-const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, showToast }) => {
+const PantryGroupSelector: React.FC<Props> = ({ showToast }) => {
+  const { selectedGroupId, setSelectedGroupId: onSelectGroup } = usePantrySelection();
   const [showCreateInput, setShowCreateInput] = useState<boolean>(false);
   const [showJoinInput, setShowJoinInput] = useState<boolean>(false);
   const [showInviteInput, setShowInviteInput] = useState<number | null>(null);
@@ -52,18 +54,51 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [isOpen, setIsOpen] = useState<boolean>(false);
   const [confirmDeleteGroupId, setConfirmDeleteGroupId] = useState<number | null>(null);
-  const [pendingSwitchTo, setPendingSwitchTo] = useState<{ id: number | null | "demo"; name: string } | null>(null);
+  const [pendingSwitchTo, setPendingSwitchTo] = useState<{ id: number | null; name: string } | null>(null);
+  const [showResetConfirm, setShowResetConfirm] = useState<boolean>(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
   const { data: groups = [] } = usePantryGroups() as { data: GroupWithMeta[] | undefined };
   const createMutation = useCreatePantryGroup();
   const joinMutation = useJoinPantryGroup();
   const inviteMutation = useInviteToPantryGroup();
   const deleteMutation = useDeletePantryGroup();
+  const resetDemoMutation = useResetDemo();
 
   const selectedGroup = (groups as GroupWithMeta[]).find((g) => g.id === selectedGroupId);
 
-  // The first owned group is tied to "My Pantry" share toggle
-  const ownedGroup = (groups as GroupWithMeta[]).find((g) => g.user_role === "owner");
+  // The demo pantry is a real group named "Demo Pantry" returned by the fetch.
+  const demoGroup = (groups as GroupWithMeta[]).find((g) => g.name === "Demo Pantry");
+  const isDemoSelected = demoGroup != null && selectedGroupId === demoGroup.id;
+
+  // Close the dropdown when clicking outside (mirrors the nav Finance dropdown).
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (event: MouseEvent) => {
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen]);
+
+  const handleResetDemo = async () => {
+    try {
+      await resetDemoMutation.mutateAsync();
+      if (showToast) showToast("Demo pantry reset to sample items", "success");
+    } catch (error: unknown) {
+      if (showToast) showToast((error as Error).message || "Failed to reset demo pantry", "error");
+    }
+    setShowResetConfirm(false);
+  };
+
+  // The first owned group is tied to "My Pantry" share toggle. Exclude the demo
+  // pantry — it is a real owned group, but must never bind to the personal
+  // sharing toggle (disabling sharing would delete the user's demo pantry).
+  const ownedGroup = (groups as GroupWithMeta[]).find(
+    (g) => g.user_role === "owner" && g.name !== "Demo Pantry"
+  );
   const isSharingEnabled = !!ownedGroup;
 
   const handleEnableSharing = async () => {
@@ -145,7 +180,7 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
     setTimeout(() => setCopiedCode(null), 2000);
   };
 
-  const handleSwitchPantry = (id: number | null | "demo", name: string) => {
+  const handleSwitchPantry = (id: number | null, name: string) => {
     if (id === selectedGroupId) {
       setIsOpen(false);
       return;
@@ -169,11 +204,11 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
   };
 
   return (
-    <div className="pantry-group-selector">
+    <div className="pantry-group-selector" ref={rootRef}>
       <div className="group-selector-toggle" onClick={() => setIsOpen(!isOpen)}>
         <div className="group-selector-label">
           <Users size={16} />
-          <span>{selectedGroupId === "demo" ? "Demo Pantry" : selectedGroup ? selectedGroup.name : "My Pantry"}</span>
+          <span>{selectedGroup ? selectedGroup.name : "My Pantry"}</span>
           {selectedGroup && (
             <span className="group-member-count">
               {selectedGroup.member_count || 0} members
@@ -185,6 +220,18 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
 
       {isOpen && (
         <div className="group-dropdown">
+          {/* Reset action — only while the demo pantry is selected */}
+          {isDemoSelected && (
+            <button
+              className="group-action-btn demo-reset-btn"
+              onClick={() => setShowResetConfirm(true)}
+              disabled={resetDemoMutation.isPending}
+            >
+              <RotateCcw size={14} />
+              <span>{resetDemoMutation.isPending ? "Resetting..." : "Reset Demo Pantry"}</span>
+            </button>
+          )}
+
           {/* Personal pantry */}
           <div className="group-option-wrapper">
             <div className="group-option-row">
@@ -245,23 +292,27 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
             )}
           </div>
 
-          {/* Demo pantry — always visible */}
-          <div className="group-option-wrapper">
-            <div className="group-option-row">
-              <button
-                className={`group-option ${selectedGroupId === "demo" ? "active" : ""}`}
-                onClick={() => handleSwitchPantry("demo", "Demo Pantry")}
-              >
-                <div className="group-option-info">
-                  <span>Demo Pantry</span>
-                  <span className="group-meta">Sample items to explore</span>
-                </div>
-              </button>
+          {/* Demo pantry — selectable, but WITHOUT owner-management controls
+              (no invite/delete gear): it is a personal sandbox, not a shareable
+              group. Reset lives at the top of the dropdown when it's selected. */}
+          {demoGroup && (
+            <div className="group-option-wrapper">
+              <div className="group-option-row">
+                <button
+                  className={`group-option ${selectedGroupId === demoGroup.id ? "active" : ""}`}
+                  onClick={() => handleSwitchPantry(demoGroup.id, demoGroup.name)}
+                >
+                  <div className="group-option-info">
+                    <span>{demoGroup.name}</span>
+                    <span className="group-meta">Sandbox</span>
+                  </div>
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Shared groups */}
-          {(groups as GroupWithMeta[]).map((group) => (
+          {/* Shared groups — exclude the demo pantry (rendered above without a gear) */}
+          {(groups as GroupWithMeta[]).filter((group) => group.name !== "Demo Pantry").map((group) => (
             <div key={group.id} className="group-option-wrapper">
               <div className="group-option-row">
                 <button
@@ -419,6 +470,14 @@ const PantryGroupSelector: React.FC<Props> = ({ selectedGroupId, onSelectGroup, 
           danger={false}
           onConfirm={confirmSwitch}
           onCancel={() => setPendingSwitchTo(null)}
+        />
+      )}
+      {showResetConfirm && (
+        <ConfirmDialog
+          message="Reset the demo pantry back to its original sample items? Any changes you made to it will be discarded. Your real pantries are unaffected."
+          confirmLabel="Reset"
+          onConfirm={handleResetDemo}
+          onCancel={() => setShowResetConfirm(false)}
         />
       )}
     </div>

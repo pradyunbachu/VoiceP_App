@@ -10,7 +10,8 @@ import { useState, useRef, useEffect } from "react";
 import type { FC } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { Mic, BarChart3, List, LogOut, Wallet, Package, ChevronDown, DollarSign, ShoppingCart, ArrowLeftRight, ChefHat, Home, Settings, CalendarDays, Heart } from "lucide-react";
-import type { AppView, AppUser } from "../types";
+import type { AppView, AppUser, ShowToast } from "../types";
+import PantryGroupSelector from "./PantryGroupSelector";
 import "./Navigation.css";
 
 interface Props {
@@ -18,9 +19,10 @@ interface Props {
   onViewChange: (view: AppView) => void;
   onLogout: () => void;
   user: AppUser | null;
+  showToast: ShowToast;
 }
 
-const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) => {
+const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user, showToast }) => {
   const [financeOpen, setFinanceOpen] = useState<boolean>(false);
   const financeRef = useRef<HTMLDivElement>(null);
 
@@ -171,6 +173,9 @@ const Navigation: FC<Props> = ({ currentView, onViewChange, onLogout, user }) =>
 
       </div>
       <div className="nav-user">
+        <div className="nav-pantry-switcher" data-tutorial="pantry-switcher">
+          <PantryGroupSelector showToast={showToast} />
+        </div>
         {user && (
           user.avatar_url ? (
             <img
