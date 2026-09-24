@@ -1,7 +1,7 @@
 """Expense extraction routes.
 
 POST /extract-expense        — Primary endpoint. Sends the voice transcript to
-     Groq (Llama 3.3 70B) with a detailed system prompt that covers multi-item
+     Groq (GPT-OSS 120B) with a detailed system prompt that covers multi-item
      expenses, recurring detection, date parsing, and item-name cleanup.
      On Groq failure it retries with a simpler prompt, then falls back to
      regex-based extraction (extract_expense_simple).
@@ -374,7 +374,7 @@ Return JSON array only, no other text."""
 
         try:
             response = groq_client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
+                model="openai/gpt-oss-120b",
                 messages=[
                     {"role": "system", "content": system_prompt},
                     {"role": "user", "content": user_prompt}
@@ -489,7 +489,7 @@ If multiple items with different prices, return array of objects.
 Today is {today_str}. Remove articles (a, an, the) from items."""
 
                 response = groq_client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                    model="openai/gpt-oss-120b",
                     messages=[{"role": "user", "content": simple_prompt}],
                     temperature=0.1
                 )
